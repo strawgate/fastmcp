@@ -308,6 +308,7 @@ class FastMCP(Generic[LifespanResultT]):
         name: str | None = None,
         description: str | None = None,
         tags: set[str] | None = None,
+        delay_registration: bool = False,
     ) -> Callable[[AnyFunction], AnyFunction]:
         """Decorator to register a tool.
 
@@ -344,10 +345,36 @@ class FastMCP(Generic[LifespanResultT]):
             )
 
         def decorator(fn: AnyFunction) -> AnyFunction:
-            self.add_tool(fn, name=name, description=description, tags=tags)
+
+            if delay_registration: # Mark for Delayed registration
+                fn.__perform_registration = lambda prefix, real_fn: self.add_tool(real_fn, name=f"{prefix}_{name or real_fn.__name__}", description=description, tags=tags)
+
+            else: # Register the tool immediately
+                self.add_tool(fn, name=name, description=description, tags=tags)
+            
             return fn
 
         return decorator
+
+    def perform_delayed_registration(self, prefix: str, object: object) -> None:
+        """Perform delayed registration of tools.
+
+        This method is used to register tools that were decorated with @tool(delay_registration=True).
+        It allows the tool to be registered with a prefix that is determined at runtime.
+
+        Args:
+            prefix: The prefix to use for the tool registration
+            object: The object containing methods marked with @tool(delay_registration=True)
+        """
+        
+        methods_to_register = [
+            getattr(object, method_name)
+            for method_name in dir(object)
+            if callable(getattr(object, method_name))
+            if hasattr(getattr(object, method_name), "_FastMCP__perform_registration")
+        ]
+        for method_to_register in methods_to_register:
+            method_to_register._FastMCP__perform_registration(prefix, method_to_register)
 
     def add_resource(self, resource: Resource, key: str | None = None) -> None:
         """Add a resource to the server.
