@@ -1,16 +1,16 @@
 from copy import deepcopy
 from typing import Any
 from unittest.mock import AsyncMock
-from typing import Awaitable
-import pytest
 
+import pytest
+from mcp.types import EmbeddedResource, ImageContent, TextContent
 
 from fastmcp.contrib.tool_transformer.base import ToolParameterOverrideError
 from fastmcp.contrib.tool_transformer.tool_transformer import (
     _apply_hook_parameters,
     _apply_parameter_overrides,
-    _extract_hook_args,
     _create_transformed_function,
+    _extract_hook_args,
     transform_tool,
 )
 from fastmcp.contrib.tool_transformer.types import (
@@ -22,9 +22,6 @@ from fastmcp.contrib.tool_transformer.types import (
     PreToolCallHookProtocol,
     ToolParameterOverride,
 )
-
-from mcp.types import TextContent, ImageContent, EmbeddedResource
-
 from fastmcp.server.server import FastMCP
 from fastmcp.tools import Tool as FastMCPTool
 
@@ -391,11 +388,15 @@ class TestTransformTool:
         """Test that when there are no hooks, the tool is transformed correctly."""
 
         parameter_overrides = {
-            "argument_one": ToolParameterOverride(description="new_desc", required=True),
+            "argument_one": ToolParameterOverride(
+                description="new_desc", required=True
+            ),
             "argument_two": ToolParameterOverride(constant=123, required=False),
         }
 
-        transformed_tool = transform_tool(fast_mcp_tool, fast_mcp_server, parameter_overrides=parameter_overrides)
+        transformed_tool = transform_tool(
+            fast_mcp_tool, fast_mcp_server, parameter_overrides=parameter_overrides
+        )
         assert transformed_tool.name == fast_mcp_tool.name
         assert transformed_tool.description == fast_mcp_tool.description
         assert transformed_tool.parameters != fast_mcp_tool.parameters
@@ -403,7 +404,10 @@ class TestTransformTool:
         assert transformed_tool.serializer == fast_mcp_tool.serializer
 
         # you cannot make a required parameter optional, so argument_two stays required
-        assert transformed_tool.parameters["required"] == ["argument_one", "argument_two"]
+        assert transformed_tool.parameters["required"] == [
+            "argument_one",
+            "argument_two",
+        ]
 
         properties = transformed_tool.parameters["properties"]
 
@@ -495,6 +499,5 @@ class TestTransformTool:
         assert post_call_hook.await_count == 1
 
         pre_call_hook.assert_awaited_once_with(
-            {"argument_one": "arg1", "argument_two": 123},
-            {}
+            {"argument_one": "arg1", "argument_two": 123}, {}
         )

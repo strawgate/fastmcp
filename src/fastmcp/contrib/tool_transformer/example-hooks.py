@@ -29,7 +29,7 @@ async def async_main():
 
         frontend_server = FastMCP("Frontend Server")
 
-        def pre_call_hook(
+        async def pre_call_hook(
             tool_args: dict[str, Any],
             hook_args: dict[str, Any],
         ) -> None:

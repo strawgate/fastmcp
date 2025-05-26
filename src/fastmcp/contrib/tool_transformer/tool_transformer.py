@@ -173,5 +173,3 @@ def transform_tool(
     add_to_server._tool_manager.add_tool(transformed_tool)
 
     return transformed_tool
-
-

@@ -53,5 +53,3 @@ class PreToolCallHookProtocol(Protocol):
 
 class ToolParameterOverride(BaseToolParameterOverride):
     """A parameter override for a tool."""
-
-

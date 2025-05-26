@@ -44,15 +44,19 @@ async def transform_tools_from_server(
     for tool_name, tool in (await source_server.get_tools()).items():
         tool_override = overrides.tools.get(tool_name)
 
-        if not tool_override:
-            continue
-
-        transformed_tool = transform_tool(
-            tool,
-            target_server,
-            name=tool_override.name,
-            description=tool_override.description,
-            parameter_overrides=tool_override.parameter_overrides,
+        transformed_tool = (
+            transform_tool(
+                tool,
+                target_server,
+                name=tool_override.name,
+                description=tool_override.description,
+                parameter_overrides=tool_override.parameter_overrides,
+            )
+            if tool_override
+            else transform_tool(
+                tool,
+                target_server,
+            )
         )
 
         transformed_tools.append(transformed_tool)
