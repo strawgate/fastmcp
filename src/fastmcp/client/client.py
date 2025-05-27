@@ -168,7 +168,7 @@ class Client:
                 self._session = session
                 # Initialize the session
                 try:
-                    with anyio.fail_after(1):
+                    with anyio.fail_after(30):
                         self._initialize_result = await self._session.initialize()
                     yield
                 except TimeoutError:
