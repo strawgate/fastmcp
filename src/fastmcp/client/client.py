@@ -9,6 +9,7 @@ from exceptiongroup import catch
 from mcp import ClientSession
 from pydantic import AnyUrl
 
+import fastmcp
 from fastmcp.client.logging import (
     LogHandler,
     MessageHandler,
@@ -45,8 +46,8 @@ class Client:
     MCP client that delegates connection management to a Transport instance.
 
     The Client class is responsible for MCP protocol logic, while the Transport
-    handles connection establishment and management. Client provides methods
-    for working with resources, prompts, tools and other MCP capabilities.
+    handles connection establishment and management. Client provides methods for
+    working with resources, prompts, tools and other MCP capabilities.
 
     Args:
         transport: Connection source specification, which can be:
@@ -62,18 +63,18 @@ class Client:
         message_handler: Optional handler for protocol messages
         progress_handler: Optional handler for progress notifications
         timeout: Optional timeout for requests (seconds or timedelta)
+        init_timeout: Optional timeout for initial connection (seconds or timedelta).
+            Set to 0 to disable. If None, uses the value in the FastMCP global settings.
 
     Examples:
-        ```python
-        # Connect to FastMCP server
-        client = Client("http://localhost:8080")
+        ```python # Connect to FastMCP server client =
+        Client("http://localhost:8080")
 
         async with client:
-            # List available resources
-            resources = await client.list_resources()
+            # List available resources resources = await client.list_resources()
 
-            # Call a tool
-            result = await client.call_tool("my_tool", {"param": "value"})
+            # Call a tool result = await client.call_tool("my_tool", {"param":
+            "value"})
         ```
     """
 
@@ -93,6 +94,7 @@ class Client:
         message_handler: MessageHandler | None = None,
         progress_handler: ProgressHandler | None = None,
         timeout: datetime.timedelta | float | int | None = None,
+        init_timeout: datetime.timedelta | float | int | None = None,
     ):
         self.transport = infer_transport(transport)
         self._session: ClientSession | None = None
@@ -110,6 +112,17 @@ class Client:
 
         if isinstance(timeout, int | float):
             timeout = datetime.timedelta(seconds=timeout)
+
+        # handle init handshake timeout
+        if init_timeout is None:
+            init_timeout = fastmcp.settings.settings.client_init_timeout
+        if isinstance(init_timeout, datetime.timedelta):
+            init_timeout = init_timeout.total_seconds()
+        elif not init_timeout:
+            init_timeout = None
+        else:
+            init_timeout = float(init_timeout)
+        self._init_timeout = init_timeout
 
         self._session_kwargs: SessionKwargs = {
             "sampling_callback": None,
@@ -168,7 +181,7 @@ class Client:
                 self._session = session
                 # Initialize the session
                 try:
-                    with anyio.fail_after(1):
+                    with anyio.fail_after(self._init_timeout):
                         self._initialize_result = await self._session.initialize()
                     yield
                 except TimeoutError:
