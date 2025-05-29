@@ -1,7 +1,7 @@
 import datetime
 from contextlib import AsyncExitStack, asynccontextmanager
 from pathlib import Path
-from typing import Any, cast
+from typing import Any, Generic, cast, overload
 
 import anyio
 import mcp.types
@@ -28,7 +28,18 @@ from fastmcp.server import FastMCP
 from fastmcp.utilities.exceptions import get_catch_handlers
 from fastmcp.utilities.mcp_config import MCPConfig
 
-from .transports import ClientTransport, SessionKwargs, infer_transport
+from .transports import (
+    ClientTransportT,
+    FastMCP1Server,
+    FastMCPTransport,
+    MCPConfigTransport,
+    NodeStdioTransport,
+    PythonStdioTransport,
+    SessionKwargs,
+    SSETransport,
+    StreamableHttpTransport,
+    infer_transport,
+)
 
 __all__ = [
     "Client",
@@ -41,7 +52,7 @@ __all__ = [
 ]
 
 
-class Client:
+class Client(Generic[ClientTransportT]):
     """
     MCP client that delegates connection management to a Transport instance.
 
@@ -78,9 +89,45 @@ class Client:
         ```
     """
 
+    @overload
+    def __new__(
+        cls,
+        transport: ClientTransportT,
+        **kwargs: Any,
+    ) -> "Client[ClientTransportT]": ...
+
+    @overload
+    def __new__(
+        cls, transport: AnyUrl, **kwargs
+    ) -> "Client[SSETransport|StreamableHttpTransport]": ...
+
+    @overload
+    def __new__(
+        cls, transport: FastMCP | FastMCP1Server, **kwargs
+    ) -> "Client[FastMCPTransport]": ...
+
+    @overload
+    def __new__(
+        cls, transport: Path, **kwargs
+    ) -> "Client[PythonStdioTransport|NodeStdioTransport]": ...
+
+    @overload
+    def __new__(
+        cls, transport: MCPConfig | dict[str, Any], **kwargs
+    ) -> "Client[MCPConfigTransport]": ...
+
+    @overload
+    def __new__(
+        cls, transport: str, **kwargs
+    ) -> "Client[PythonStdioTransport|NodeStdioTransport|SSETransport|StreamableHttpTransport]": ...
+
+    def __new__(cls, transport, **kwargs) -> "Client":
+        instance = super().__new__(cls)
+        return instance
+
     def __init__(
         self,
-        transport: ClientTransport
+        transport: ClientTransportT
         | FastMCP
         | AnyUrl
         | Path
@@ -96,7 +143,7 @@ class Client:
         timeout: datetime.timedelta | float | int | None = None,
         init_timeout: datetime.timedelta | float | int | None = None,
     ):
-        self.transport = infer_transport(transport)
+        self.transport = cast(ClientTransportT, infer_transport(transport))
         self._session: ClientSession | None = None
         self._exit_stack: AsyncExitStack | None = None
         self._nesting_counter: int = 0
@@ -147,6 +194,7 @@ class Client:
             raise RuntimeError(
                 "Client is not connected. Use the 'async with client:' context manager first."
             )
+
         return self._session
 
     @property
@@ -184,6 +232,8 @@ class Client:
                     with anyio.fail_after(self._init_timeout):
                         self._initialize_result = await self._session.initialize()
                     yield
+                except anyio.ClosedResourceError:
+                    raise RuntimeError("Server session was closed unexpectedly")
                 except TimeoutError:
                     raise RuntimeError("Failed to initialize server session")
                 finally:
@@ -215,6 +265,11 @@ class Client:
                     await self._exit_stack.__aexit__(exc_type, exc_val, exc_tb)
                 finally:
                     self._exit_stack = None
+
+    async def close(self):
+        await self.transport.close()
+        self._session = None
+        self._initialize_result = None
 
     # --- MCP Client Methods ---
 

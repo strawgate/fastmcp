@@ -62,7 +62,7 @@ from fastmcp.utilities.mcp_config import MCPConfig
 
 if TYPE_CHECKING:
     from fastmcp.client import Client
-    from fastmcp.client.transports import ClientTransport
+    from fastmcp.client.transports import ClientTransport, ClientTransportT
     from fastmcp.server.openapi import ComponentFn as OpenAPIComponentFn
     from fastmcp.server.openapi import FastMCPOpenAPI, RouteMap
     from fastmcp.server.openapi import RouteMapFn as OpenAPIRouteMapFn
@@ -257,9 +257,15 @@ class FastMCP(Generic[LifespanResultT]):
         """Get all registered tools, indexed by registered key."""
         if (tools := self._cache.get("tools")) is self._cache.NOT_FOUND:
             tools: dict[str, Tool] = {}
-            for server in self._mounted_servers.values():
-                server_tools = await server.get_tools()
-                tools.update(server_tools)
+            for prefix, server in self._mounted_servers.items():
+                try:
+                    server_tools = await server.get_tools()
+                    tools.update(server_tools)
+                except Exception as e:
+                    logger.warning(
+                        f"Failed to get tools from mounted server '{prefix}': {e}"
+                    )
+                    continue
             tools.update(self._tool_manager.get_tools())
             self._cache.set("tools", tools)
         return tools
@@ -268,9 +274,15 @@ class FastMCP(Generic[LifespanResultT]):
         """Get all registered resources, indexed by registered key."""
         if (resources := self._cache.get("resources")) is self._cache.NOT_FOUND:
             resources: dict[str, Resource] = {}
-            for server in self._mounted_servers.values():
-                server_resources = await server.get_resources()
-                resources.update(server_resources)
+            for prefix, server in self._mounted_servers.items():
+                try:
+                    server_resources = await server.get_resources()
+                    resources.update(server_resources)
+                except Exception as e:
+                    logger.warning(
+                        f"Failed to get resources from mounted server '{prefix}': {e}"
+                    )
+                    continue
             resources.update(self._resource_manager.get_resources())
             self._cache.set("resources", resources)
         return resources
@@ -281,9 +293,16 @@ class FastMCP(Generic[LifespanResultT]):
             templates := self._cache.get("resource_templates")
         ) is self._cache.NOT_FOUND:
             templates: dict[str, ResourceTemplate] = {}
-            for server in self._mounted_servers.values():
-                server_templates = await server.get_resource_templates()
-                templates.update(server_templates)
+            for prefix, server in self._mounted_servers.items():
+                try:
+                    server_templates = await server.get_resource_templates()
+                    templates.update(server_templates)
+                except Exception as e:
+                    logger.warning(
+                        "Failed to get resource templates from mounted server "
+                        f"'{prefix}': {e}"
+                    )
+                    continue
             templates.update(self._resource_manager.get_templates())
             self._cache.set("resource_templates", templates)
         return templates
@@ -294,9 +313,15 @@ class FastMCP(Generic[LifespanResultT]):
         """
         if (prompts := self._cache.get("prompts")) is self._cache.NOT_FOUND:
             prompts: dict[str, Prompt] = {}
-            for server in self._mounted_servers.values():
-                server_prompts = await server.get_prompts()
-                prompts.update(server_prompts)
+            for prefix, server in self._mounted_servers.items():
+                try:
+                    server_prompts = await server.get_prompts()
+                    prompts.update(server_prompts)
+                except Exception as e:
+                    logger.warning(
+                        f"Failed to get prompts from mounted server '{prefix}': {e}"
+                    )
+                    continue
             prompts.update(self._prompt_manager.get_prompts())
             self._cache.set("prompts", prompts)
         return prompts
@@ -802,7 +827,7 @@ class FastMCP(Generic[LifespanResultT]):
         """
         host = host or self.settings.host
         port = port or self.settings.port
-        default_log_level_to_use = log_level or self.settings.log_level.lower()
+        default_log_level_to_use = (log_level or self.settings.log_level).lower()
 
         app = self.http_app(path=path, transport=transport, middleware=middleware)
 
@@ -1263,7 +1288,7 @@ class FastMCP(Generic[LifespanResultT]):
     @classmethod
     def as_proxy(
         cls,
-        backend: Client
+        backend: Client[ClientTransportT]
         | ClientTransport
         | FastMCP[Any]
         | AnyUrl
@@ -1291,7 +1316,9 @@ class FastMCP(Generic[LifespanResultT]):
         return FastMCPProxy(client=client, **settings)
 
     @classmethod
-    def from_client(cls, client: Client, **settings: Any) -> FastMCPProxy:
+    def from_client(
+        cls, client: Client[ClientTransportT], **settings: Any
+    ) -> FastMCPProxy:
         """
         Create a FastMCP proxy server from a FastMCP client.
         """
