@@ -1,64 +1,56 @@
+import json
 from pathlib import Path
+from typing import Any
 
 import yaml
-from pydantic import BaseModel, Field
 
-from fastmcp.contrib.tool_transformer.tool_transformer import transform_tool
-from fastmcp.contrib.tool_transformer.types import ToolParameterOverride
+from fastmcp.client.client import Client
+from fastmcp.contrib.tool_transformer.models import ToolOverride
+from fastmcp.contrib.tool_transformer.tool_transformer import proxy_tool
 from fastmcp.server.server import FastMCP
-from fastmcp.tools.tool import Tool as FastMCPTool
+from fastmcp.utilities.mcp_config import MCPConfig
 
 
-class ToolOverride(BaseModel):
-    """A set of overrides for a tool."""
-
-    name: str | None = None
-    description: str | None = None
-    parameter_overrides: dict[str, ToolParameterOverride] = Field(default_factory=dict)
-
-
-class ToolOverrides(BaseModel):
-    """A set of overrides for a tool."""
-
-    tools: dict[str, ToolOverride] = Field(default_factory=dict)
-
-    @classmethod
-    def from_yaml(cls, string: str) -> "ToolOverrides":
-        as_dict = yaml.safe_load(string)
-        return cls.model_validate(as_dict)
-
-    @classmethod
-    def from_yaml_file(cls, path: Path) -> "ToolOverrides":
-        with path.open("r") as f:
-            return cls.model_validate(**yaml.safe_load(f))
+def overrides_from_dict(obj: dict[str, Any]) -> dict[str, ToolOverride]:
+    return {
+        tool_name: ToolOverride.model_validate(tool_override)
+        for tool_name, tool_override in obj.items()
+    }
 
 
-async def transform_tools_from_server(
-    source_server: FastMCP,
-    target_server: FastMCP,
-    *,
-    overrides: ToolOverrides,
-) -> list[FastMCPTool]:
-    transformed_tools: list[FastMCPTool] = []
+def overrides_from_yaml(yaml_str: str) -> dict[str, ToolOverride]:
+    return overrides_from_dict(yaml.safe_load(yaml_str))
 
-    for tool_name, tool in (await source_server.get_tools()).items():
-        tool_override = overrides.tools.get(tool_name)
 
-        transformed_tool = (
-            transform_tool(
-                tool,
-                target_server,
-                name=tool_override.name,
-                description=tool_override.description,
-                parameter_overrides=tool_override.parameter_overrides,
-            )
-            if tool_override
-            else transform_tool(
-                tool,
-                target_server,
-            )
-        )
+def overrides_from_yaml_file(yaml_file: Path) -> dict[str, ToolOverride]:
+    with Path(yaml_file).open(encoding="utf-8") as f:
+        return overrides_from_yaml(yaml_str=f.read())
 
-        transformed_tools.append(transformed_tool)
 
-    return transformed_tools
+def overrides_from_json(json_str: str) -> dict[str, ToolOverride]:
+    return overrides_from_dict(json.loads(json_str))
+
+
+def overrides_from_json_file(json_file: Path) -> dict[str, ToolOverride]:
+    with Path(json_file).open(encoding="utf-8") as f:
+        return overrides_from_json(f.read())
+
+
+async def proxy_mcp_server_with_overrides(
+    config: MCPConfig,
+    tool_override: ToolOverride,
+    client_kwargs: dict[str, Any] = {},
+    server_kwargs: dict[str, Any] = {},
+) -> FastMCP:
+    """Run a MCP server with overrides."""
+
+    client = Client(config, **client_kwargs)
+
+    server = FastMCP.as_proxy(client, **server_kwargs)
+
+    server_tools = await server.get_tools()
+
+    for tool in server_tools.values():
+        proxy_tool(tool, server, override=tool_override)
+
+    return server

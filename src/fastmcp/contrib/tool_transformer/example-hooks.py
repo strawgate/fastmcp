@@ -5,10 +5,8 @@ from typing import Any
 
 from fastmcp import FastMCP
 from fastmcp.client import Client
-from fastmcp.contrib.tool_transformer.tool_transformer import (
-    transform_tool,
-)
-from fastmcp.tools.tool_manager import ToolError
+from fastmcp.contrib.tool_transformer.tool_transformer import proxy_tool
+from fastmcp.exceptions import ToolError
 
 third_party_mcp_config = {
     "time": {
@@ -36,9 +34,11 @@ async def async_main():
             if tool_args.get("source_timezone") == "America/New_York":
                 raise ToolError("New Yorkers are not allowed to use this tool.")
 
-        transform_tool(
+        proxy_tool(
             proxied_tools["convert_time"],
             frontend_server,
+            name="transformed_convert_time",
+            description="Converts a time from New York to another timezone.",
             pre_call_hook=pre_call_hook,
         )
 

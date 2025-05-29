@@ -4,10 +4,10 @@ import asyncio
 
 from fastmcp import FastMCP
 from fastmcp.client import Client
+from fastmcp.contrib.tool_transformer.models import ToolParameter
 from fastmcp.contrib.tool_transformer.tool_transformer import (
-    transform_tool,
+    proxy_tool,
 )
-from fastmcp.contrib.tool_transformer.types import ToolParameterOverride
 
 third_party_mcp_config = {
     "time": {
@@ -21,29 +21,31 @@ third_party_mcp_config = {
 
 
 async def async_main():
-    async with Client(third_party_mcp_config) as remote_mcp_client:
+    async with Client(third_party_mcp_config, timeout=30) as remote_mcp_client:
         proxied_mcp_server = FastMCP.as_proxy(remote_mcp_client)
 
         proxied_tools = await proxied_mcp_server.get_tools()
 
         frontend_server = FastMCP("Frontend Server")
 
-        transform_tool(
+        proxy_tool(
             proxied_tools["convert_time"],
-            frontend_server,
+            server=frontend_server,
             name="transformed_convert_time",
             description="Converts a time from New York to another timezone.",
-            parameter_overrides={
-                "source_timezone": ToolParameterOverride(
+            parameter_overrides=[
+                ToolParameter[str](
+                    name="source_timezone",
                     description="The timezone of the time to convert.",
                     constant="America/New_York",  # Source Timezone is now required to be America/New_York
                 ),
-                "time": ToolParameterOverride(
+                ToolParameter[str](
+                    name="time",
                     description="The time to convert. Must be in the format HH:MM. Default is 3:00.",
                     default="3:00",  # Time now defaults to 3:00
                 ),
                 # No override of the override the target_timezone parameter
-            },
+            ],
         )
 
         await frontend_server.run_async(transport="sse")

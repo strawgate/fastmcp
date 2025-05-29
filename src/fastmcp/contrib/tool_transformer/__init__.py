@@ -1,30 +1,26 @@
-from fastmcp.contrib.tool_transformer.base import (
-    ToolParameterOverrideError,
-    TransformedToolError,
-)
-from fastmcp.contrib.tool_transformer.tool_transformer import transform_tool
-
-
-from fastmcp.contrib.tool_transformer.types import (
-    ExtraParameterNumber,
-    ExtraParameterString,
-    ExtraParameterBoolean,
-    ExtraToolParameterTypes,
+from fastmcp.contrib.tool_transformer.models import (
+    BooleanToolParameter,
+    FloatToolParameter,
+    IntToolParameter,
     PostToolCallHookProtocol,
     PreToolCallHookProtocol,
-    ToolParameterOverride,
+    StringToolParameter,
+    ToolOverride,
+    ToolParameter,
+    ToolParameterTypes,
 )
-
+from fastmcp.contrib.tool_transformer.tool_transformer import proxy_tool, transform_tool
 
 __all__ = [
-    "ExtraParameterBoolean",
-    "ExtraParameterNumber",
-    "ExtraParameterString",
-    "ExtraToolParameterTypes",
+    "BooleanToolParameter",
+    "FloatToolParameter",
+    "IntToolParameter",
     "PostToolCallHookProtocol",
     "PreToolCallHookProtocol",
-    "ToolParameterOverride",
-    "ToolParameterOverrideError",
-    "TransformedToolError",
+    "StringToolParameter",
+    "ToolOverride",
+    "ToolParameter",
+    "ToolParameterTypes",
+    "proxy_tool",
     "transform_tool",
 ]

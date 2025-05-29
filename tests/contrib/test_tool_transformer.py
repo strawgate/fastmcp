@@ -5,7 +5,15 @@ from unittest.mock import AsyncMock
 import pytest
 from mcp.types import EmbeddedResource, ImageContent, TextContent
 
-from fastmcp.contrib.tool_transformer.base import ToolParameterOverrideError
+from fastmcp.contrib.tool_transformer.errors import ToolParameterNotFoundError
+from fastmcp.contrib.tool_transformer.models import (
+    BooleanToolParameter,
+    IntToolParameter,
+    PostToolCallHookProtocol,
+    PreToolCallHookProtocol,
+    StringToolParameter,
+    ToolParameterTypes,
+)
 from fastmcp.contrib.tool_transformer.tool_transformer import (
     _apply_hook_parameters,
     _apply_parameter_overrides,
@@ -13,16 +21,6 @@ from fastmcp.contrib.tool_transformer.tool_transformer import (
     _extract_hook_args,
     transform_tool,
 )
-from fastmcp.contrib.tool_transformer.types import (
-    ExtraParameterBoolean,
-    ExtraParameterNumber,
-    ExtraParameterString,
-    ExtraToolParameterTypes,
-    PostToolCallHookProtocol,
-    PreToolCallHookProtocol,
-    ToolParameterOverride,
-)
-from fastmcp.server.server import FastMCP
 from fastmcp.tools import Tool as FastMCPTool
 
 
@@ -42,11 +40,9 @@ class TestExtractHookArgs:
     async def test_extract_hook_args_with_extra_params(self):
         """Test that hook args are properly extracted from the tool args."""
 
-        extra_parameters: list[ExtraToolParameterTypes] = [
-            ExtraParameterString(name="hook_param_str", description="d", required=True),
-            ExtraParameterNumber(
-                name="hook_param_num", description="d", required=False
-            ),
+        extra_parameters: list[ToolParameterTypes] = [
+            StringToolParameter(name="hook_param_str", description="d", required=True),
+            IntToolParameter(name="hook_param_num", description="d", required=False),
         ]
         tool_call_kwargs = {
             "arg1": "val1",
@@ -62,9 +58,9 @@ class TestExtractHookArgs:
 
     async def test_extract_hook_args_some_defined_extra_params_not_in_call(self):
         """Test that hook args are properly extracted from the tool args, even if some of the extra parameters are not in the call."""
-        extra_parameters: list[ExtraToolParameterTypes] = [
-            ExtraParameterString(name="hook_param1", description="d1", required=True),
-            ExtraParameterString(name="hook_param2", description="d2", required=False),
+        extra_parameters: list[ToolParameterTypes] = [
+            StringToolParameter(name="hook_param1", description="d1", required=True),
+            StringToolParameter(name="hook_param2", description="d2", required=False),
         ]
         tool_call_kwargs = {"arg1": "val1", "hook_param1": "hook_val1"}
 
@@ -90,8 +86,8 @@ class TestApplyHookParameters:
         """Test that when there is a single required hook parameter, it is added to the schema."""
         schema = {"properties": {"existing_param": {"type": "integer"}}}
 
-        hook_parameters: list[ExtraToolParameterTypes] = [
-            ExtraParameterString(name="hp1", description="Hook Param 1", required=True)
+        hook_parameters: list[ToolParameterTypes] = [
+            StringToolParameter(name="hp1", description="Hook Param 1", required=True)
         ]
 
         transformed_schema = _apply_hook_parameters(schema, hook_parameters)
@@ -106,17 +102,15 @@ class TestApplyHookParameters:
         """Test that when there are multiple hook parameters, they are added to the schema."""
         schema = {"properties": {}}
 
-        hook_parameters: list[ExtraToolParameterTypes] = [
-            ExtraParameterString(
+        hook_parameters: list[ToolParameterTypes] = [
+            StringToolParameter(
                 name="hp_str",
                 description="Hook String",
                 required=False,
                 default="default_val",
             ),
-            ExtraParameterNumber(
-                name="hp_num", description="Hook Number", required=True
-            ),
-            ExtraParameterBoolean(
+            IntToolParameter(name="hp_num", description="Hook Number", required=True),
+            BooleanToolParameter(
                 name="hp_bool", description="Hook Bool", required=False
             ),
         ]
@@ -131,7 +125,7 @@ class TestApplyHookParameters:
         assert "hp_num" in transformed_schema["required"]
 
         assert "hp_bool" in transformed_schema["properties"]
-        assert transformed_schema["properties"]["hp_bool"]["default"] is None
+        assert "default" not in transformed_schema["properties"]["hp_bool"]
         assert "hp_bool" not in transformed_schema.get("required", [])
 
 
@@ -143,7 +137,7 @@ class TestApplyParameterOverrides:
             "required": ["param1"],
         }
         original_schema = deepcopy(schema)
-        parameter_overrides = {}
+        parameter_overrides = []
 
         transformed_schema = _apply_parameter_overrides(schema, parameter_overrides)
         assert transformed_schema == original_schema
@@ -153,7 +147,9 @@ class TestApplyParameterOverrides:
         """Test that when there is a parameter override, the schema is modified."""
         schema = {"properties": {"p1": {"description": "old_desc", "type": "string"}}}
 
-        parameter_overrides = {"p1": ToolParameterOverride(description="new_desc")}
+        parameter_overrides: list[ToolParameterTypes] = [
+            StringToolParameter(name="p1", description="new_desc")
+        ]
 
         transformed_schema = _apply_parameter_overrides(schema, parameter_overrides)
 
@@ -164,7 +160,9 @@ class TestApplyParameterOverrides:
         """Test for `constant` parameter overrides."""
         schema = {"properties": {"p1": {"type": "integer"}}}
 
-        parameter_overrides = {"p1": ToolParameterOverride(constant=123)}
+        parameter_overrides: list[ToolParameterTypes] = [
+            IntToolParameter(name="p1", constant=123)
+        ]
 
         transformed_schema = _apply_parameter_overrides(schema, parameter_overrides)
         assert transformed_schema["properties"]["p1"]["const"] == 123
@@ -173,7 +171,9 @@ class TestApplyParameterOverrides:
         """Test for `default` parameter overrides."""
         schema = {"properties": {"p1": {"type": "string"}}}
 
-        parameter_overrides = {"p1": ToolParameterOverride(default="default_val")}
+        parameter_overrides: list[ToolParameterTypes] = [
+            StringToolParameter(name="p1", default="default_val")
+        ]
 
         transformed_schema = _apply_parameter_overrides(schema, parameter_overrides)
         assert transformed_schema["properties"]["p1"]["default"] == "default_val"
@@ -182,41 +182,41 @@ class TestApplyParameterOverrides:
         """Test for `required` parameter overrides."""
         schema = {"properties": {"p1": {"type": "boolean"}}}  # p1 is optional
 
-        parameter_overrides = {"p1": ToolParameterOverride(required=True)}
+        parameter_overrides: list[ToolParameterTypes] = [
+            BooleanToolParameter(name="p1", required=True)
+        ]
         transformed_schema = _apply_parameter_overrides(schema, parameter_overrides)
         assert "p1" in transformed_schema["required"], (
             "Not required parameter should be made required"
         )
 
-        parameter_overrides = {"p1": ToolParameterOverride(required=False)}
-        transformed_schema = _apply_parameter_overrides(schema, parameter_overrides)
-        assert "required" not in transformed_schema, (
-            "Not required parameter should remain not required"
-        )
-
         schema = {"properties": {"p1": {"type": "boolean"}}, "required": ["p1"]}
 
-        parameter_overrides = {"p1": ToolParameterOverride(required=True)}
+        parameter_overrides: list[ToolParameterTypes] = [
+            BooleanToolParameter(name="p1", required=True)
+        ]
         transformed_schema = _apply_parameter_overrides(schema, parameter_overrides)
         assert "p1" in transformed_schema["required"], (
             "Required parameter should remain required"
         )
 
-        parameter_overrides = {"p1": ToolParameterOverride(required=False)}
+        parameter_overrides: list[ToolParameterTypes] = [
+            BooleanToolParameter(name="p1", required=False)
+        ]
         transformed_schema = _apply_parameter_overrides(schema, parameter_overrides)
         assert "p1" in transformed_schema["required"], (
             "You cannot make a required parameter optional"
         )
 
     async def test_apply_parameter_overrides_non_existent_param_raises_error(self):
-        """Test that overriding anon-existent parameter raises an error."""
+        """Test that overriding a non-existent parameter raises an error."""
 
         schema = {"properties": {"existing": {"type": "string"}}}
-        parameter_overrides = {
-            "non_existent_param": ToolParameterOverride(description="new")
-        }
+        parameter_overrides: list[ToolParameterTypes] = [
+            StringToolParameter(name="non_existent_param", description="new")
+        ]
 
-        with pytest.raises(ToolParameterOverrideError) as excinfo:
+        with pytest.raises(ToolParameterNotFoundError) as excinfo:
             _apply_parameter_overrides(schema, parameter_overrides)
 
         assert "Parameter non_existent_param not found in tool." in str(excinfo.value)
@@ -232,11 +232,11 @@ class TestApplyParameterOverrides:
             "required": ["p1"],
         }
 
-        parameter_overrides = {
-            "p1": ToolParameterOverride(description="new_d1", default="default_p1"),
-            "p2": ToolParameterOverride(constant=99, required=True),
-            "p3": ToolParameterOverride(required=True),
-        }
+        parameter_overrides: list[ToolParameterTypes] = [
+            StringToolParameter(name="p1", description="new_d1", default="default_p1"),
+            IntToolParameter(name="p2", constant=99, required=True),
+            BooleanToolParameter(name="p3", required=True),
+        ]
         transformed_schema = _apply_parameter_overrides(schema, parameter_overrides)
 
         assert transformed_schema["properties"]["p1"]["description"] == "new_d1"
@@ -298,11 +298,9 @@ class TestCreateTransformedFunction:
         post_call_hook_mock = AsyncMock(wraps=post_call_hook)
         pre_call_hook_mock = AsyncMock(wraps=pre_call_hook)
 
-        extra_parameters: list[ExtraToolParameterTypes] = [
-            ExtraParameterString(name="hook_param_str", description="d", required=True),
-            ExtraParameterNumber(
-                name="hook_param_num", description="d", required=False
-            ),
+        extra_parameters: list[ToolParameterTypes] = [
+            StringToolParameter(name="hook_param_str", description="d", required=True),
+            IntToolParameter(name="hook_param_num", description="d", required=False),
         ]
 
         transformed_function = _create_transformed_function(
@@ -350,10 +348,6 @@ class TestTransformTool:
         return FastMCPTool.from_function(tool)
 
     @pytest.fixture
-    def fast_mcp_server(self) -> FastMCP:
-        return FastMCP()
-
-    @pytest.fixture
     def pre_call_hook(self) -> PreToolCallHookProtocol:
         async def pre_call_hook(tool_args: dict[str, Any], hook_args: dict[str, Any]):
             pass
@@ -371,31 +365,28 @@ class TestTransformTool:
 
         return post_call_hook
 
-    async def test_transform_tool_no_hooks(
-        self, fast_mcp_tool: FastMCPTool, fast_mcp_server: FastMCP
-    ):
+    async def test_transform_tool_no_hooks(self, fast_mcp_tool: FastMCPTool):
         """Test that when there are no hooks, the tool is transformed correctly."""
-        transformed_tool = transform_tool(fast_mcp_tool, fast_mcp_server)
+        transformed_tool = transform_tool(fast_mcp_tool, override=None)
         assert transformed_tool.name == fast_mcp_tool.name
         assert transformed_tool.description == fast_mcp_tool.description
         assert transformed_tool.parameters == fast_mcp_tool.parameters
         assert transformed_tool.annotations == fast_mcp_tool.annotations
         assert transformed_tool.serializer == fast_mcp_tool.serializer
 
-    async def test_transform_tool_parameter_overrides(
-        self, fast_mcp_tool: FastMCPTool, fast_mcp_server: FastMCP
-    ):
+    async def test_transform_tool_parameter_overrides(self, fast_mcp_tool: FastMCPTool):
         """Test that when there are no hooks, the tool is transformed correctly."""
 
-        parameter_overrides = {
-            "argument_one": ToolParameterOverride(
-                description="new_desc", required=True
+        parameter_overrides: list[ToolParameterTypes] = [
+            StringToolParameter(
+                name="argument_one", description="new_desc", required=True
             ),
-            "argument_two": ToolParameterOverride(constant=123, required=False),
-        }
+            IntToolParameter(name="argument_two", constant=123, required=False),
+        ]
 
         transformed_tool = transform_tool(
-            fast_mcp_tool, fast_mcp_server, parameter_overrides=parameter_overrides
+            fast_mcp_tool,
+            parameter_overrides=parameter_overrides,
         )
         assert transformed_tool.name == fast_mcp_tool.name
         assert transformed_tool.description == fast_mcp_tool.description
@@ -417,7 +408,6 @@ class TestTransformTool:
     async def test_transform_tool_with_hooks_extra_parameters(
         self,
         fast_mcp_tool: FastMCPTool,
-        fast_mcp_server: FastMCP,
         pre_call_hook: PreToolCallHookProtocol,
         post_call_hook: PostToolCallHookProtocol,
     ):
@@ -426,17 +416,14 @@ class TestTransformTool:
         pre_call_hook = AsyncMock(wraps=pre_call_hook)
         post_call_hook = AsyncMock(wraps=post_call_hook)
 
-        extra_parameters: list[ExtraToolParameterTypes] = [
-            ExtraParameterString(name="hook_param_str", description="d", required=True),
-            ExtraParameterNumber(
-                name="hook_param_num", description="d", required=False
-            ),
+        hook_parameters: list[ToolParameterTypes] = [
+            StringToolParameter(name="hook_param_str", description="d", required=True),
+            IntToolParameter(name="hook_param_num", description="d", required=False),
         ]
 
         transformed_tool = transform_tool(
             fast_mcp_tool,
-            fast_mcp_server,
-            hook_parameters=extra_parameters,
+            hook_parameters=hook_parameters,
             pre_call_hook=pre_call_hook,
             post_call_hook=post_call_hook,
         )
@@ -467,7 +454,6 @@ class TestTransformTool:
     async def test_transform_tool_with_hooks_no_extra_parameters(
         self,
         fast_mcp_tool: FastMCPTool,
-        fast_mcp_server: FastMCP,
         pre_call_hook: PreToolCallHookProtocol,
         post_call_hook: PostToolCallHookProtocol,
     ):
@@ -478,7 +464,6 @@ class TestTransformTool:
 
         transformed_tool = transform_tool(
             fast_mcp_tool,
-            fast_mcp_server,
             pre_call_hook=pre_call_hook,
             post_call_hook=post_call_hook,
         )
