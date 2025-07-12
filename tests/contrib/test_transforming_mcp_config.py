@@ -21,13 +21,12 @@ def sample_tool() -> FastMCPTool:
 
 
 async def test_transform_stdio_server(sample_tool: FastMCPTool):
-    print("Hello from fastmcp-experiments!")
-
     mcp_config = TransformingMCPConfig(
         mcpServers={
             "stdio": TransformingStdioMCPServer(
                 command="uvx",
                 args=["mcp-server-fetch"],
+                env={"PYTHONIOENCODING": "utf-8"},
                 tools={
                     "fetch": ToolTransformRequest(
                         name="run_spot_run",
@@ -59,14 +58,14 @@ async def test_transform_stdio_server(sample_tool: FastMCPTool):
 
 
 async def test_transform_stdio_server_from_yaml(sample_tool: FastMCPTool):
-    print("Hello from fastmcp-experiments!")
-
     yaml_config = """
     mcpServers:
         fetch:
             command: uvx
             args:
                 - mcp-server-fetch
+            env:
+                PYTHONIOENCODING: utf-8
             tools:
                 fetch:
                     name: run_spot_run
@@ -94,13 +93,12 @@ async def test_transform_stdio_server_from_yaml(sample_tool: FastMCPTool):
 
 
 async def test_transform_stdio_server_from_dict(sample_tool: FastMCPTool):
-    print("Hello from fastmcp-experiments!")
-
     mcp_config = {
         "mcpServers": {
             "fetch": {
                 "command": "uvx",
                 "args": ["mcp-server-fetch"],
+                "env": {"PYTHONIOENCODING": "utf-8"},
                 "tools": {
                     "fetch": {
                         "name": "run_spot_run",
