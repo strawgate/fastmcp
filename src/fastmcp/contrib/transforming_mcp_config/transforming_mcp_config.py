@@ -12,7 +12,7 @@ from fastmcp.utilities.types import FastMCPBaseModel
 
 
 class WrappedMCPServerMixin(FastMCPBaseModel):
-    """A mixin that enables wrapping an MCP Server (Or a FastMCP Agents Server) with tool transforms."""
+    """A mixin that enables wrapping an MCP Server with tool transforms."""
 
     tools: dict[str, ToolTransformRequest] = Field(default_factory=dict)
     """The multi-tool transform to apply to the tools."""
