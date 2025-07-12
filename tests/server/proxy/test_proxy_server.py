@@ -130,15 +130,16 @@ class TestTools:
                 name="transformed_greet",
                 arguments={
                     "name": ArgTransformRequest(
-                        name="transformed_name", description="The transformed name to greet"
+                        name="transformed_name",
+                        description="The transformed name to greet",
                     )
-                }
+                },
             ),
         )
         tools = await proxy_server.get_tools()
         assert "transformed_greet" in tools
         assert "greet" not in tools
-        
+
         transformed_greet = tools["transformed_greet"]
 
         assert isinstance(transformed_greet, TransformedTool)

@@ -1,14 +1,10 @@
-from abc import ABC
-import asyncio
+from typing import Any
 
 from pydantic import Field
 
 from fastmcp import FastMCP
-from fastmcp.client.client import Client
 from fastmcp.client.transports import ClientTransport, FastMCPTransport
 from fastmcp.mcp_config import MCPConfig, RemoteMCPServer, StdioMCPServer
-from fastmcp.server.proxy import FastMCPProxy
-from fastmcp.tools.tool import Tool
 from fastmcp.tools.tool_transform import (
     ToolTransformRequest,
 )
@@ -112,10 +108,12 @@ class WrappedMCPServerMixin(FastMCPBaseModel):
 
         wrapped_mcp_server = FastMCP.as_proxy(transport)
 
-        [wrapped_mcp_server.add_tool_transform(name, transform) for name, transform in self.tools.items()]
+        [
+            wrapped_mcp_server.add_tool_transform(name, transform)
+            for name, transform in self.tools.items()
+        ]
 
         return FastMCPTransport(wrapped_mcp_server)
-
 
     # def as_proxy(self) -> TransformingFastMCPProxy:
     #     """Get the transport for the server."""
@@ -183,6 +181,20 @@ class TransformingMCPConfig(MCPConfig):
         Field(default_factory=dict)
     )
     """The MCP servers."""
+
+    @classmethod
+    def _validate_stdio_server(
+        cls, server_config: dict[str, Any]
+    ) -> TransformingStdioMCPServer:
+        """Validate a stdio server configuration."""
+        return TransformingStdioMCPServer.model_validate(server_config)
+
+    @classmethod
+    def _validate_remote_server(
+        cls, server_config: dict[str, Any]
+    ) -> TransformingRemoteMCPServer:
+        """Validate a remote server configuration."""
+        return TransformingRemoteMCPServer.model_validate(server_config)
 
 
 # class MCPConfigTransport(FastMCPConfigTransport):

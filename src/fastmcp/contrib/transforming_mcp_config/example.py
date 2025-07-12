@@ -5,7 +5,6 @@ from fastmcp.contrib.transforming_mcp_config.transforming_mcp_config import (
     TransformingMCPConfig,
     TransformingStdioMCPServer,
 )
-from fastmcp.tools.tool import Tool as FastMCPTool
 from fastmcp.tools.tool_transform import ArgTransformRequest, ToolTransformRequest
 
 
@@ -26,7 +25,7 @@ async def main():
                                 description="bark bark bark",
                                 default="woof woof woof",
                             )
-                        }
+                        },
                     )
                 },
             )

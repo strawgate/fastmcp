@@ -94,7 +94,7 @@ class ProxyToolManager(ToolManager):
     async def call_tool(self, key: str, arguments: dict[str, Any]) -> ToolResult:
         """Calls a tool, trying local/mounted first, then proxy if not found."""
 
-        if tool :=  await self.get_tool(key):
+        if tool := await self.get_tool(key):
             return await tool.run(arguments)
 
         raise NotFoundError(f"Tool {key!r} not found")
@@ -488,13 +488,16 @@ class FastMCPProxy(FastMCP):
         )
         self._prompt_manager = ProxyPromptManager(client_factory=self.client_factory)
 
-    def add_tool_transform(self, tool_name: str, transform: ToolTransformRequest) -> None:
+    def add_tool_transform(
+        self, tool_name: str, transform: ToolTransformRequest
+    ) -> None:
         """Add a tool transform to the proxy server."""
         self._tool_manager.tool_transforms[tool_name] = transform
 
     def remove_tool_transform(self, tool_name: str) -> None:
         """Remove a tool transform from the proxy server."""
         self._tool_manager.tool_transforms.pop(tool_name, None)
+
 
 async def default_proxy_roots_handler(
     context: RequestContext[ClientSession, LifespanContextT],
