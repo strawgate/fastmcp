@@ -91,3 +91,43 @@ async def test_transform_stdio_server_from_yaml(sample_tool: FastMCPTool):
 
     with pytest.raises(ToolError, match="Input should be a valid URL"):
         _ = await run_spot_run.run(arguments={"bark": "woof woof woof"})
+
+
+async def test_transform_stdio_server_from_dict(sample_tool: FastMCPTool):
+    print("Hello from fastmcp-experiments!")
+
+    mcp_config = {
+        "mcpServers": {
+            "fetch": {
+                "command": "uvx",
+                "args": ["mcp-server-fetch"],
+                "tools": {
+                    "fetch": {
+                        "name": "run_spot_run",
+                        "arguments": {
+                            "url": {
+                                "name": "bark",
+                                "description": "bark bark bark",
+                                "default": "woof woof woof",
+                            }
+                        },
+                    }
+                },
+            }
+        }
+    }
+
+    mcp_config = TransformingMCPConfig.from_dict(mcp_config)
+
+    proxy = FastMCP.as_proxy(mcp_config)
+
+    tools = await proxy.get_tools()
+
+    assert "run_spot_run" in tools
+
+    run_spot_run = tools["run_spot_run"]
+
+    assert run_spot_run.name == "run_spot_run"
+
+    with pytest.raises(ToolError, match="Input should be a valid URL"):
+        _ = await run_spot_run.run(arguments={"bark": "woof woof woof"})

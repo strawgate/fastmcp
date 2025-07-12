@@ -204,10 +204,18 @@ class ArgTransformRequest(FastMCPBaseModel):
     """A model for requesting a single argument transform."""
 
     name: str | None = Field(default=None, description="The new name for the argument.")
-    description: str | None = Field(default=None, description="The new description for the argument.")
-    default: str | int | float | bool | None = Field(default=None, description="The new default value for the argument.")
-    hide: bool = Field(default=False, description="Whether to hide the argument from the tool.")
-    required: Literal[True] | None = Field(default=None, description="Whether the argument is required.")
+    description: str | None = Field(
+        default=None, description="The new description for the argument."
+    )
+    default: str | int | float | bool | None = Field(
+        default=None, description="The new default value for the argument."
+    )
+    hide: bool = Field(
+        default=False, description="Whether to hide the argument from the tool."
+    )
+    required: Literal[True] | None = Field(
+        default=None, description="Whether the argument is required."
+    )
     examples: Any | None = Field(default=None, description="Examples of the argument.")
 
     def to_arg_transform(self) -> ArgTransform:
@@ -820,7 +828,10 @@ class ToolTransformRequest(FastMCPComponent):
 
     name: str | None = Field(default=None, description="The new name for the tool.")
 
-    arguments: dict[str, ArgTransformRequest] = Field(default_factory=dict, description="A dictionary of argument transforms to apply to the tool.")
+    arguments: dict[str, ArgTransformRequest] = Field(
+        default_factory=dict,
+        description="A dictionary of argument transforms to apply to the tool.",
+    )
 
     def apply(self, tool: Tool) -> Tool:
         """Apply the transform to the tool."""
