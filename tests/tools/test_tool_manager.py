@@ -15,7 +15,6 @@ from fastmcp.tools.tool import Tool
 from fastmcp.tools.tool_transform import ArgTransformConfig, ToolTransformConfig
 from fastmcp.utilities.tests import caplog_for_fastmcp
 from fastmcp.utilities.types import Image
-from tests.server.proxy.test_proxy_server import fastmcp_server
 
 
 class TestAddTools:
@@ -496,13 +495,19 @@ class TestCallTools:
                 description=None,
                 tags={"enabled_tools"},
                 arguments={
-                    "a": ArgTransformConfig(name="a_transformed", description=None, default=1),
-                    "b": ArgTransformConfig(name="b_transformed", description=None, default=2),
+                    "a": ArgTransformConfig(
+                        name="a_transformed", description=None, default=1
+                    ),
+                    "b": ArgTransformConfig(
+                        name="b_transformed", description=None, default=2
+                    ),
                 },
             ),
         )
 
-        result = await manager.call_tool("add_transformed", {"a_transformed": 1, "b_transformed": 2})
+        result = await manager.call_tool(
+            "add_transformed", {"a_transformed": 1, "b_transformed": 2}
+        )
         assert result.content[0].text == "3"  # type: ignore[attr-defined]
         assert result.structured_content == {"result": 3}
 

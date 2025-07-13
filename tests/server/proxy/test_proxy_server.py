@@ -1,7 +1,6 @@
 import json
 from typing import Any
 
-import yaml
 import pytest
 from anyio import create_task_group
 from dirty_equals import Contains
@@ -14,9 +13,7 @@ from fastmcp.client.transports import FastMCPTransport, StreamableHttpTransport
 from fastmcp.exceptions import ToolError
 from fastmcp.server.proxy import FastMCPProxy, ProxyClient
 from fastmcp.tools.tool_transform import (
-    ArgTransformConfig,
     ToolTransformConfig,
-    TransformedTool,
 )
 
 USERS = [
@@ -124,14 +121,17 @@ class TestTools:
         assert "error_tool" in tools
         assert "tool_without_description" in tools
 
-    async def test_get_transformed_tools(self, fastmcp_server: FastMCP, proxy_server: FastMCPProxy):
-        """An explicit None description should change the tool description to None."""       
-        
-        fastmcp_server.add_tool_transformation("add", ToolTransformConfig(name="add_transformed"))
+    async def test_get_transformed_tools(
+        self, fastmcp_server: FastMCP, proxy_server: FastMCPProxy
+    ):
+        """An explicit None description should change the tool description to None."""
+
+        fastmcp_server.add_tool_transformation(
+            "add", ToolTransformConfig(name="add_transformed")
+        )
         tools = await proxy_server.get_tools()
         assert "add_transformed" in tools
         assert "add" not in tools
-
 
     async def test_tool_without_description(self, proxy_server):
         tools = await proxy_server.get_tools()

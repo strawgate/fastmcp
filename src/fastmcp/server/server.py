@@ -809,7 +809,9 @@ class FastMCP(Generic[LifespanResultT]):
         except RuntimeError:
             pass  # No context available
 
-    def add_tool_transformation(self, tool_name: str, transformation: ToolTransformConfig) -> None:
+    def add_tool_transformation(
+        self, tool_name: str, transformation: ToolTransformConfig
+    ) -> None:
         """Add a tool transformation."""
         self._tool_manager.add_tool_transformation(tool_name, transformation)
 

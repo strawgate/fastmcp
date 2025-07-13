@@ -86,23 +86,11 @@ class ToolManager:
         # Finally, add local tools, which always take precedence
         all_tools.update(self._tools)
 
-        transformed_tools = ToolTransformConfig.apply_to_tools(self.transformations, all_tools)
+        transformed_tools = ToolTransformConfig.apply_to_tools(
+            self.transformations, all_tools
+        )
 
         return transformed_tools
-
-    # def _apply_transformations(self, tools: dict[str, Tool]) -> dict[str, Tool]:
-    #     """Apply the tool transformation configurations to the tools dictionary."""
-
-    #     transformed_tools = {}
-
-    #     for tool_name, tool in tools.items():
-    #         if transformation := self.get_tool_transformation(tool_name):
-    #             transformed_tools[transformation.name or tool_name] = transformation.apply(tool)
-    #             continue
-            
-    #         transformed_tools[tool_name] = tool
-
-    #     return transformed_tools
 
     async def has_tool(self, key: str) -> bool:
         """Check if a tool exists."""
@@ -180,7 +168,9 @@ class ToolManager:
             self._tools[tool.key] = tool
         return tool
 
-    def add_tool_transformation(self, tool_name: str, transformation: ToolTransformConfig) -> None:
+    def add_tool_transformation(
+        self, tool_name: str, transformation: ToolTransformConfig
+    ) -> None:
         """Add a tool transformation."""
         self.transformations[tool_name] = transformation
 

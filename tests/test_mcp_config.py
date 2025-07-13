@@ -1,4 +1,3 @@
-from fastmcp.client.transports import MCPConfigTransport
 import inspect
 import tempfile
 from collections.abc import AsyncGenerator
@@ -6,27 +5,23 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-import yaml
 
-from fastmcp import FastMCP
 from fastmcp.client.auth.bearer import BearerAuth
 from fastmcp.client.auth.oauth import OAuthClientProvider
 from fastmcp.client.client import Client
 from fastmcp.client.logging import LogMessage
 from fastmcp.client.transports import (
+    MCPConfigTransport,
     SSETransport,
     StdioTransport,
     StreamableHttpTransport,
 )
-from fastmcp.exceptions import ToolError
 from fastmcp.mcp_config import (
     MCPConfig,
     RemoteMCPServer,
     StdioMCPServer,
-    TransformingStdioMCPServer,
 )
 from fastmcp.tools.tool import Tool as FastMCPTool
-from fastmcp.tools.tool_transform import ArgTransformConfig, ToolTransformConfig
 
 
 def test_parse_single_stdio_config():
@@ -57,10 +52,27 @@ def test_parse_extra_keys():
         "root_extra": "root_extra",
     }
     mcp_config = MCPConfig.from_dict(config)
-    
+
     serialized_mcp_config = mcp_config.model_dump()
     assert serialized_mcp_config["root_extra"] == "root_extra"
-    assert serialized_mcp_config["mcpServers"]["test_server"]["leaf_extra"] == "leaf_extra"
+    assert (
+        serialized_mcp_config["mcpServers"]["test_server"]["leaf_extra"] == "leaf_extra"
+    )
+
+
+def test_parse_mcpservers_at_root():
+    config = {
+        "test_server": {
+            "command": "echo",
+            "args": ["hello"],
+        }
+    }
+
+    mcp_config = MCPConfig.from_dict(config)
+
+    serialized_mcp_config = mcp_config.model_dump()
+    assert serialized_mcp_config["mcpServers"]["test_server"]["command"] == "echo"
+    assert serialized_mcp_config["mcpServers"]["test_server"]["args"] == ["hello"]
 
 
 def test_parse_single_remote_config():
@@ -400,113 +412,3 @@ async def test_script(tmp_path: Path) -> AsyncGenerator[Path, Any]:
         yield Path(f.name)
 
     pass
-
-
-# async def test_transform_stdio_server(sample_tool: FastMCPTool, test_script: Path):
-#     mcp_config = TransformingMCPConfig(
-#         mcpServers={
-#             "stdio": TransformingStdioMCPServer(
-#                 command="python",
-#                 args=[str(test_script)],
-#                 tools={
-#                     "fetch": ToolTransformConfig(
-#                         name="run_spot_run",
-#                         arguments={
-#                             "url": ArgTransformConfig(
-#                                 name="bark",
-#                                 description="bark bark bark",
-#                                 default="woof woof woof",
-#                             )
-#                         },
-#                     )
-#                 },
-#             )
-#         }
-#     )
-
-#     proxy = FastMCP.as_proxy(mcp_config)
-
-#     tools = await proxy.get_tools()
-
-#     assert "run_spot_run" in tools
-
-#     run_spot_run = tools["run_spot_run"]
-
-#     assert run_spot_run.name == "run_spot_run"
-
-#     with pytest.raises(ToolError, match="Input should be a valid URL"):
-#         _ = await run_spot_run.run(arguments={"bark": "woof woof woof"})
-
-
-# async def test_transform_stdio_server_from_yaml(sample_tool: FastMCPTool, test_script: Path):
-#     yaml_config = f"""
-#     mcpServers:
-#         fetch:
-#             command: python
-#             args:
-#                 - {str(test_script)}
-#             env:
-#                 PYTHONIOENCODING: utf-8
-#             tools:
-#                 fetch:
-#                     name: run_spot_run
-#                     arguments:
-#                         url:
-#                             name: bark
-#                             description: bark bark bark
-#                             default: woof woof woof
-#     """
-
-#     mcp_config = TransformingMCPConfig.from_dict(yaml.safe_load(yaml_config))
-
-#     proxy = FastMCP.as_proxy(mcp_config)
-
-#     tools = await proxy.get_tools()
-
-#     assert "run_spot_run" in tools
-
-#     run_spot_run = tools["run_spot_run"]
-
-#     assert run_spot_run.name == "run_spot_run"
-
-#     with pytest.raises(ToolError, match="Input should be a valid URL"):
-#         _ = await run_spot_run.run(arguments={"bark": "woof woof woof"})
-
-
-# async def test_transform_stdio_server_from_dict(sample_tool: FastMCPTool, test_script: Path):
-#     mcp_config = {
-#         "mcpServers": {
-#             "fetch": {
-#                 "command": "python",
-#                 "args": [str(test_script)],
-#                 "env": {"PYTHONIOENCODING": "utf-8"},
-#                 "tools": {
-#                     "fetch": {
-#                         "name": "run_spot_run",
-#                         "arguments": {
-#                             "url": {
-#                                 "name": "bark",
-#                                 "description": "bark bark bark",
-#                                 "default": "woof woof woof",
-#                             }
-#                         },
-#                     }
-#                 },
-#             }
-#         }
-#     }
-
-#     mcp_config = TransformingMCPConfig.from_dict(mcp_config)
-
-#     proxy = FastMCP.as_proxy(mcp_config)
-
-#     tools = await proxy.get_tools()
-
-#     assert "run_spot_run" in tools
-
-#     run_spot_run = tools["run_spot_run"]
-
-#     assert run_spot_run.name == "run_spot_run"
-
-#     with pytest.raises(ToolError, match="Input should be a valid URL"):
-#         _ = await run_spot_run.run(arguments={"bark": "woof woof woof"})

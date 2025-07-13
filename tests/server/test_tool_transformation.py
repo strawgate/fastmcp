@@ -1,9 +1,4 @@
-from typing import Any
-
-import pytest
-
-from fastmcp import Client, FastMCP
-from fastmcp.tools.tool import Tool
+from fastmcp import FastMCP
 from fastmcp.tools.tool_transform import ToolTransformConfig
 
 
@@ -37,7 +32,9 @@ async def test_transformed_tool_filtering():
     tools = list(await mcp._list_tools())
     assert len(tools) == 0
 
-    mcp.add_tool_transformation("echo", ToolTransformConfig(name="echo_transformed", tags={"enabled_tools"}))
+    mcp.add_tool_transformation(
+        "echo", ToolTransformConfig(name="echo_transformed", tags={"enabled_tools"})
+    )
 
     tools = list(await mcp._list_tools())
-    assert(len(tools) == 1)
+    assert len(tools) == 1

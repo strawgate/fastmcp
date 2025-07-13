@@ -72,7 +72,9 @@ class ProxyToolManager(ToolManager):
             else:
                 raise e
 
-        transformed_tools = ToolTransformConfig.apply_to_tools(self.transformations, all_tools)
+        transformed_tools = ToolTransformConfig.apply_to_tools(
+            self.transformations, all_tools
+        )
 
         return transformed_tools
 

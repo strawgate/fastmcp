@@ -853,15 +853,19 @@ class ToolTransformConfig(FastMCPComponent):
         )
 
     @classmethod
-    def apply_to_tools(cls, transformations: dict[str, ToolTransformConfig], tools: dict[str, Tool]) -> dict[str, Tool]:
+    def apply_to_tools(
+        cls, transformations: dict[str, ToolTransformConfig], tools: dict[str, Tool]
+    ) -> dict[str, Tool]:
         """Apply the transform to the tools."""
 
         transformed_tools = {}
         for tool_name, tool in tools.items():
             if transformation := transformations.get(tool_name):
-                transformed_tools[transformation.name or tool_name] = transformation.apply(tool)
+                transformed_tools[transformation.name or tool_name] = (
+                    transformation.apply(tool)
+                )
                 continue
-            
+
             transformed_tools[tool_name] = tool
 
         return transformed_tools
