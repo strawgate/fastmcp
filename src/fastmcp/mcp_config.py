@@ -23,15 +23,21 @@ Example configuration:
 from __future__ import annotations
 
 import datetime
-import json
 import re
 from pathlib import Path
 from typing import TYPE_CHECKING, Annotated, Any, Literal
 from urllib.parse import urlparse
 
 import httpx
-from pydantic import AnyUrl, BaseModel, ConfigDict, Field
-from pydantic.type_adapter import TypeAdapter
+from pydantic import (
+    AnyUrl,
+    BaseModel,
+    ConfigDict,
+    Field,
+    ValidationInfo,
+    model_validator,
+)
+from typing_extensions import Self, override
 
 from fastmcp.tools.tool_transform import ToolTransformConfig
 from fastmcp.utilities.types import FastMCPBaseModel
@@ -66,7 +72,7 @@ def infer_transport_type_from_url(
         return "http"
 
 
-class WrappedMCPServerMixin(FastMCPBaseModel):
+class _TransformingMCPServerMixin(FastMCPBaseModel):
     """A mixin that enables wrapping an MCP Server with tool transforms."""
 
     tools: dict[str, ToolTransformConfig] = Field(...)
@@ -141,7 +147,7 @@ class StdioMCPServer(BaseModel):
         )
 
 
-class TransformingStdioMCPServer(WrappedMCPServerMixin, StdioMCPServer):
+class TransformingStdioMCPServer(_TransformingMCPServerMixin, StdioMCPServer):
     """A Stdio server with tool transforms."""
 
 
@@ -206,97 +212,106 @@ class RemoteMCPServer(BaseModel):
             )
 
 
-class TransformingRemoteMCPServer(WrappedMCPServerMixin, RemoteMCPServer):
+class TransformingRemoteMCPServer(_TransformingMCPServerMixin, RemoteMCPServer):
     """A Remote server with tool transforms."""
 
 
-MCPServerTypes = (
-    TransformingStdioMCPServer
-    | StdioMCPServer
-    | TransformingRemoteMCPServer
-    | RemoteMCPServer
-)
+TransformingMCPServerTypes = TransformingStdioMCPServer | TransformingRemoteMCPServer
+
+CanonicalMCPServerTypes = StdioMCPServer | RemoteMCPServer
+
+MCPServerTypes = TransformingMCPServerTypes | CanonicalMCPServerTypes
 
 
 class MCPConfig(BaseModel):
-    """Canonical MCP configuration format.
+    """A configuration object for MCP Servers that conforms to the canonical MCP configuration format
+    while adding additional fields for enabling FastMCP-specific features like tool transformations
+    and filtering by tags.
 
-    This defines the standard configuration format for Model Context Protocol servers.
-    The format is designed to be client-agnostic and extensible for future use cases.
+    For an MCPConfig that is strictly canonical, see the `CanonicalMCPConfig` class.
     """
 
     mcpServers: dict[str, MCPServerTypes]
 
     model_config = ConfigDict(extra="allow")  # Preserve unknown top-level fields
 
-    @classmethod
-    def from_dict(cls, config: dict[str, Any]) -> MCPConfig:
-        """Parse MCP configuration from dictionary format."""
+    @model_validator(mode="before")
+    def validate_mcp_servers(self, info: ValidationInfo) -> dict[str, Any]:
+        """Validate the MCP servers."""
+        if not isinstance(self, dict):
+            raise ValueError("MCPConfig format requires a dictionary of servers.")
 
-        type_adapter = TypeAdapter(dict[str, MCPServerTypes] | MCPConfig)
+        if "mcpServers" not in self:
+            self = {"mcpServers": self}
 
-        # Allow deserializing a config that has the contents of McpServers at the top-level
-        result: dict[str, MCPServerTypes] | MCPConfig = type_adapter.validate_python(
-            config
-        )
-
-        return result if isinstance(result, MCPConfig) else cls(mcpServers=result)
-
-    def to_dict(self) -> dict[str, Any]:
-        """Convert MCPConfig to dictionary format, preserving all fields."""
-        return self.model_dump(exclude_none=True, serialize_as_any=True)
-
-    def write_to_file(self, file_path: Path) -> None:
-        """Write configuration to JSON file."""
-        file_path.parent.mkdir(parents=True, exist_ok=True)
-        file_path.write_text(json.dumps(self.to_dict(), indent=2))
-
-    @classmethod
-    def from_file(cls, file_path: Path) -> MCPConfig:
-        """Load configuration from JSON file."""
-        if not file_path.exists():
-            return cls(mcpServers={})
-        if not (content := file_path.read_text().strip()):
-            return cls(mcpServers={})
-        data = json.loads(content)
-        return cls.from_dict(data)
+        return self
 
     def add_server(self, name: str, server: MCPServerTypes) -> None:
         """Add or update a server in the configuration."""
         self.mcpServers[name] = server
 
-    def remove_server(self, name: str) -> None:
-        """Remove a server from the configuration."""
-        if name in self.mcpServers:
-            del self.mcpServers[name]
+    @classmethod
+    def from_dict(cls, config: dict[str, Any]) -> Self:
+        """Parse MCP configuration from dictionary format."""
+        return cls.model_validate(config)
+
+    def to_dict(self) -> dict[str, Any]:
+        """Convert MCPConfig to dictionary format, preserving all fields."""
+        return self.model_dump(exclude_none=True)
+
+    def write_to_file(self, file_path: Path) -> None:
+        """Write configuration to JSON file."""
+        file_path.parent.mkdir(parents=True, exist_ok=True)
+        file_path.write_text(self.model_dump_json(indent=2))
+
+    @classmethod
+    def from_file(cls, file_path: Path) -> Self:
+        """Load configuration from JSON file."""
+        if file_path.exists():
+            if content := file_path.read_text().strip():
+                return cls.model_validate_json(content)
+
+        return cls(mcpServers={})
+
+
+class CanonicalMCPConfig(MCPConfig):
+    """Canonical MCP configuration format.
+
+    This defines the standard configuration format for Model Context Protocol servers.
+    The format is designed to be client-agnostic and extensible for future use cases.
+    """
+
+    mcpServers: dict[str, CanonicalMCPServerTypes]
+
+    @override
+    def add_server(self, name: str, server: CanonicalMCPServerTypes) -> None:
+        """Add or update a server in the configuration."""
+        self.mcpServers[name] = server
 
 
 def update_config_file(
     file_path: Path,
     server_name: str,
-    server_config: MCPServerTypes,
+    server_config: CanonicalMCPServerTypes,
 ) -> None:
-    """Update MCP configuration file with new server, preserving existing fields."""
+    """Update an MCP configuration file from a server object, preserving existing fields.
+
+    This is used for updating the mcpServer configurations of third-party tools so we do not
+    worry about transforming server objects here."""
     config = MCPConfig.from_file(file_path)
 
     # If updating an existing server, merge with existing configuration
     # to preserve any unknown fields
-    if server_name in config.mcpServers:
-        existing_server = config.mcpServers[server_name]
+    if existing_server := config.mcpServers.get(server_name):
         # Get the raw dict representation of both servers
         existing_dict = existing_server.model_dump()
+
         new_dict = server_config.model_dump(exclude_none=True)
 
         # Merge, with new values taking precedence
-        merged_dict = {**existing_dict, **new_dict}
+        merged_config = server_config.model_validate({**existing_dict, **new_dict})
 
-        # Create new server instance with merged data
-        if "command" in merged_dict:
-            merged_server = StdioMCPServer.model_validate(merged_dict)
-        else:
-            merged_server = RemoteMCPServer.model_validate(merged_dict)
-
-        config.add_server(server_name, merged_server)
+        config.add_server(server_name, merged_config)
     else:
         config.add_server(server_name, server_config)
 

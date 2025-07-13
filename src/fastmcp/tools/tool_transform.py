@@ -871,6 +871,7 @@ class ToolTransformConfig(FastMCPComponent):
             transform_args={k: v.to_arg_transform() for k, v in self.arguments.items()},
         )
 
+
 def apply_transformations_to_tools(
     tools: dict[str, Tool],
     transformations: dict[str, ToolTransformConfig],
@@ -883,8 +884,8 @@ def apply_transformations_to_tools(
 
     for tool_name, tool in tools.items():
         if transformation := transformations.get(tool_name):
-            transformed_tools[transformation.name or tool_name] = (
-                transformation.apply(tool)
+            transformed_tools[transformation.name or tool_name] = transformation.apply(
+                tool
             )
             continue
 

@@ -17,9 +17,13 @@ from fastmcp.client.transports import (
     StreamableHttpTransport,
 )
 from fastmcp.mcp_config import (
+    CanonicalMCPConfig,
+    CanonicalMCPServerTypes,
     MCPConfig,
+    MCPServerTypes,
     RemoteMCPServer,
     StdioMCPServer,
+    TransformingStdioMCPServer,
 )
 from fastmcp.tools.tool import Tool as FastMCPTool
 
@@ -53,7 +57,7 @@ def test_parse_extra_keys():
     }
     mcp_config = MCPConfig.from_dict(config)
 
-    serialized_mcp_config = mcp_config.model_dump()
+    serialized_mcp_config = mcp_config.to_dict()
     assert serialized_mcp_config["root_extra"] == "root_extra"
     assert (
         serialized_mcp_config["mcpServers"]["test_server"]["leaf_extra"] == "leaf_extra"
@@ -73,6 +77,39 @@ def test_parse_mcpservers_at_root():
     serialized_mcp_config = mcp_config.model_dump()
     assert serialized_mcp_config["mcpServers"]["test_server"]["command"] == "echo"
     assert serialized_mcp_config["mcpServers"]["test_server"]["args"] == ["hello"]
+
+
+def test_parse_mcpservers_discriminator():
+    """Test that the MCPConfig discriminator produces StdioMCPServer for a non-transforming server
+    and TransformingStdioMCPServer for a transforming server."""
+
+    config = {
+        "test_server": {
+            "command": "echo",
+            "args": ["hello"],
+        },
+        "test_server_two": {"command": "echo", "args": ["hello"], "tools": {}},
+    }
+
+    mcp_config = MCPConfig.from_dict(config)
+
+    test_server: MCPServerTypes = mcp_config.mcpServers["test_server"]
+    assert isinstance(test_server, StdioMCPServer)
+
+    test_server_two: MCPServerTypes = mcp_config.mcpServers["test_server_two"]
+    assert isinstance(test_server_two, TransformingStdioMCPServer)
+
+    canonical_mcp_config = CanonicalMCPConfig.from_dict(config)
+
+    canonical_test_server: CanonicalMCPServerTypes = canonical_mcp_config.mcpServers[
+        "test_server"
+    ]
+    assert isinstance(canonical_test_server, StdioMCPServer)
+
+    canonical_test_server_two: CanonicalMCPServerTypes = (
+        canonical_mcp_config.mcpServers["test_server_two"]
+    )
+    assert isinstance(canonical_test_server_two, StdioMCPServer)
 
 
 def test_parse_single_remote_config():
@@ -340,9 +377,59 @@ async def test_multi_client_with_transforms(tmp_path: Path):
         assert len(tools) == 2
         assert "test_1_transformed_add" in tools_by_name
 
-async def test_multi_client_with_filtering(tmp_path: Path):
+
+async def test_canonical_multi_client_with_transforms(tmp_path: Path):
+    """Test that transforms are not applied to servers in a canonical MCPConfig."""
+    server_script = inspect.cleandoc("""
+        from fastmcp import FastMCP
+
+        mcp = FastMCP()
+
+        @mcp.tool
+        def add(a: int, b: int) -> int:
+            return a + b
+
+        if __name__ == '__main__':
+            mcp.run()
+        """)
+
+    script_path = tmp_path / "test.py"
+    script_path.write_text(server_script)
+
+    config = CanonicalMCPConfig(
+        mcpServers={
+            "test_1": {
+                "command": "python",
+                "args": [str(script_path)],
+                "tools": {  # <--- Will be ignored as its not valid for a canonical MCPConfig
+                    "add": {
+                        "name": "transformed_add",
+                        "arguments": {
+                            "a": {"name": "transformed_a"},
+                            "b": {"name": "transformed_b"},
+                        },
+                    }
+                },
+            },
+            "test_2": {
+                "command": "python",
+                "args": [str(script_path)],
+            },
+        }  # type: ignore[reportUnknownArgumentType]
+    )
+
+    client = Client(config)
+
+    async with client:
+        tools = await client.list_tools()
+        tools_by_name = {tool.name: tool for tool in tools}
+        assert len(tools) == 2
+        assert "test_1_transformed_add" not in tools_by_name
+
+
+async def test_multi_client_transform_with_filtering(tmp_path: Path):
     """
-    Tests that filtering is properly applied to the tools.
+    Tests that tag-based filtering works when using a transforming MCPConfig.
     """
     server_script = inspect.cleandoc("""
         from fastmcp import FastMCP
@@ -379,7 +466,7 @@ async def test_multi_client_with_filtering(tmp_path: Path):
                         },
                     },
                 },
-                "include_tags": ["keep"]
+                "include_tags": ["keep"],
             },
             "test_2": {
                 "command": "python",
@@ -399,6 +486,7 @@ async def test_multi_client_with_filtering(tmp_path: Path):
         assert "test_1_subtract" not in tools_by_name
         assert "test_2_add" in tools_by_name
         assert "test_2_subtract" in tools_by_name
+
 
 async def test_multi_client_with_elicitation(tmp_path: Path):
     """
