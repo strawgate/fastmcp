@@ -197,14 +197,14 @@ class TransformingRemoteMCPServer(WrappedMCPServerMixin, RemoteMCPServer):
     """A Remote server with tool transforms."""
 
 
-MCPServersTypes = (
+MCPServerTypes = (
     StdioMCPServer
     | TransformingStdioMCPServer
     | RemoteMCPServer
     | TransformingRemoteMCPServer
 )
 
-McpServersType = dict[str, MCPServersTypes]
+McpServersType = dict[str, MCPServerTypes]
 
 
 class MCPConfig(BaseModel):
@@ -248,7 +248,7 @@ class MCPConfig(BaseModel):
         data = json.loads(content)
         return cls.from_dict(data)
 
-    def add_server(self, name: str, server: MCPServersTypes) -> None:
+    def add_server(self, name: str, server: MCPServerTypes) -> None:
         """Add or update a server in the configuration."""
         self.mcpServers[name] = server
 
@@ -261,7 +261,7 @@ class MCPConfig(BaseModel):
 def update_config_file(
     file_path: Path,
     server_name: str,
-    server_config: MCPServersTypes,
+    server_config: MCPServerTypes,
 ) -> None:
     """Update MCP configuration file with new server, preserving existing fields."""
     config = MCPConfig.from_file(file_path)
