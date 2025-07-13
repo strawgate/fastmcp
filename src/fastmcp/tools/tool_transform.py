@@ -200,7 +200,7 @@ class ArgTransform:
             )
 
 
-class ArgTransformRequest(FastMCPBaseModel):
+class ArgTransformConfig(FastMCPBaseModel):
     """A model for requesting a single argument transform."""
 
     name: str | None = Field(default=None, description="The new name for the argument.")
@@ -220,7 +220,8 @@ class ArgTransformRequest(FastMCPBaseModel):
 
     def to_arg_transform(self) -> ArgTransform:
         """Convert the argument transform to a FastMCP argument transform."""
-        return ArgTransform(**self.model_dump(exclude_none=True))  # pyright: ignore[reportAny]
+
+        return ArgTransform(**self.model_dump(exclude_unset=True))  # pyright: ignore[reportAny]
 
 
 class TransformedTool(Tool):
@@ -830,12 +831,12 @@ class TransformedTool(Tool):
         )
 
 
-class ToolTransformRequest(FastMCPComponent):
+class ToolTransformConfig(FastMCPComponent):
     """Provides a way to transform a tool."""
 
     name: str | None = Field(default=None, description="The new name for the tool.")
 
-    arguments: dict[str, ArgTransformRequest] = Field(
+    arguments: dict[str, ArgTransformConfig] = Field(
         default_factory=dict,
         description="A dictionary of argument transforms to apply to the tool.",
     )
@@ -843,10 +844,24 @@ class ToolTransformRequest(FastMCPComponent):
     def apply(self, tool: Tool) -> Tool:
         """Apply the transform to the tool."""
 
-        tool_changes = self.model_dump(exclude_none=True, exclude={"arguments"})
+        tool_changes = self.model_dump(exclude_unset=True, exclude={"arguments"})
 
         return TransformedTool.from_tool(
             tool=tool,
             **tool_changes,
             transform_args={k: v.to_arg_transform() for k, v in self.arguments.items()},
         )
+
+    @classmethod
+    def apply_to_tools(cls, transformations: dict[str, ToolTransformConfig], tools: dict[str, Tool]) -> dict[str, Tool]:
+        """Apply the transform to the tools."""
+
+        transformed_tools = {}
+        for tool_name, tool in tools.items():
+            if transformation := transformations.get(tool_name):
+                transformed_tools[transformation.name or tool_name] = transformation.apply(tool)
+                continue
+            
+            transformed_tools[tool_name] = tool
+
+        return transformed_tools

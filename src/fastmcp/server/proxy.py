@@ -36,7 +36,7 @@ from fastmcp.server.dependencies import get_context
 from fastmcp.server.server import FastMCP
 from fastmcp.tools.tool import Tool, ToolResult
 from fastmcp.tools.tool_manager import ToolManager
-from fastmcp.tools.tool_transform import ToolTransformRequest
+from fastmcp.tools.tool_transform import ToolTransformConfig
 from fastmcp.utilities.components import MirroredComponent
 from fastmcp.utilities.logging import get_logger
 
@@ -49,15 +49,9 @@ logger = get_logger(__name__)
 class ProxyToolManager(ToolManager):
     """A ToolManager that sources its tools from a remote client in addition to local and mounted tools."""
 
-    def __init__(
-        self,
-        client_factory: Callable[[], Client],
-        tool_transforms: dict[str, ToolTransformRequest] | None = None,
-        **kwargs,
-    ):
+    def __init__(self, client_factory: Callable[[], Client], **kwargs):
         super().__init__(**kwargs)
         self.client_factory = client_factory
-        self.tool_transforms = tool_transforms or {}
 
     async def get_tools(self) -> dict[str, Tool]:
         """Gets the unfiltered tool inventory including local, mounted, and proxy tools."""
@@ -78,13 +72,9 @@ class ProxyToolManager(ToolManager):
             else:
                 raise e
 
-        # Apply tool transforms
-        for tool_name, transform in self.tool_transforms.items():
-            if tool_name in all_tools:
-                original_tool = all_tools.pop(tool_name)
-                all_tools[transform.name or tool_name] = transform.apply(original_tool)
+        transformed_tools = ToolTransformConfig.apply_to_tools(self.transformations, all_tools)
 
-        return all_tools
+        return transformed_tools
 
     async def list_tools(self) -> list[Tool]:
         """Gets the filtered list of tools including local, mounted, and proxy tools."""
@@ -93,11 +83,18 @@ class ProxyToolManager(ToolManager):
 
     async def call_tool(self, key: str, arguments: dict[str, Any]) -> ToolResult:
         """Calls a tool, trying local/mounted first, then proxy if not found."""
-
-        if tool := await self.get_tool(key):
-            return await tool.run(arguments)
-
-        raise NotFoundError(f"Tool {key!r} not found")
+        try:
+            # First try local and mounted tools
+            return await super().call_tool(key, arguments)
+        except NotFoundError:
+            # If not found locally, try proxy
+            client = self.client_factory()
+            async with client:
+                result = await client.call_tool(key, arguments)
+                return ToolResult(
+                    content=result.content,
+                    structured_content=result.structured_content,
+                )
 
 
 class ProxyResourceManager(ResourceManager):
@@ -431,7 +428,6 @@ class FastMCPProxy(FastMCP):
         client: Client | None = None,
         *,
         client_factory: Callable[[], Client] | None = None,
-        tool_transforms: dict[str, ToolTransformRequest] | None = None,
         **kwargs,
     ):
         """
@@ -475,28 +471,16 @@ class FastMCPProxy(FastMCP):
         else:
             raise ValueError("Must specify 'client_factory'")
 
-        if tool_transforms is None:
-            tool_transforms = {}
-
         # Replace the default managers with our specialized proxy managers.
         self._tool_manager = ProxyToolManager(
             client_factory=self.client_factory,
-            tool_transforms=tool_transforms,
+            # Propagate the transformations from the base class tool manager
+            transformations=self._tool_manager.transformations,
         )
         self._resource_manager = ProxyResourceManager(
             client_factory=self.client_factory
         )
         self._prompt_manager = ProxyPromptManager(client_factory=self.client_factory)
-
-    def add_tool_transform(
-        self, tool_name: str, transform: ToolTransformRequest
-    ) -> None:
-        """Add a tool transform to the proxy server."""
-        self._tool_manager.tool_transforms[tool_name] = transform
-
-    def remove_tool_transform(self, tool_name: str) -> None:
-        """Remove a tool transform from the proxy server."""
-        self._tool_manager.tool_transforms.pop(tool_name, None)
 
 
 async def default_proxy_roots_handler(

@@ -60,6 +60,7 @@ from fastmcp.server.middleware import Middleware, MiddlewareContext
 from fastmcp.settings import Settings
 from fastmcp.tools import ToolManager
 from fastmcp.tools.tool import FunctionTool, Tool, ToolResult
+from fastmcp.tools.tool_transform import ToolTransformConfig
 from fastmcp.utilities.cache import TimedCache
 from fastmcp.utilities.cli import log_server_banner
 from fastmcp.utilities.components import FastMCPComponent
@@ -138,6 +139,7 @@ class FastMCP(Generic[LifespanResultT]):
         resource_prefix_format: Literal["protocol", "path"] | None = None,
         mask_error_details: bool | None = None,
         tools: list[Tool | Callable[..., Any]] | None = None,
+        tool_transformations: dict[str, ToolTransformConfig] | None = None,
         dependencies: list[str] | None = None,
         include_tags: set[str] | None = None,
         exclude_tags: set[str] | None = None,
@@ -167,6 +169,7 @@ class FastMCP(Generic[LifespanResultT]):
         self._tool_manager = ToolManager(
             duplicate_behavior=on_duplicate_tools,
             mask_error_details=mask_error_details,
+            transformations=tool_transformations,
         )
         self._resource_manager = ResourceManager(
             duplicate_behavior=on_duplicate_resources,
@@ -805,6 +808,14 @@ class FastMCP(Generic[LifespanResultT]):
             context._queue_tool_list_changed()  # type: ignore[private-use]
         except RuntimeError:
             pass  # No context available
+
+    def add_tool_transformation(self, tool_name: str, transformation: ToolTransformConfig) -> None:
+        """Add a tool transformation."""
+        self._tool_manager.add_tool_transformation(tool_name, transformation)
+
+    def remove_tool_transformation(self, tool_name: str) -> None:
+        """Remove a tool transformation."""
+        self._tool_manager.remove_tool_transformation(tool_name)
 
     @overload
     def tool(
