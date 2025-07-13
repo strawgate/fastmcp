@@ -36,7 +36,9 @@ from fastmcp.server.dependencies import get_context
 from fastmcp.server.server import FastMCP
 from fastmcp.tools.tool import Tool, ToolResult
 from fastmcp.tools.tool_manager import ToolManager
-from fastmcp.tools.tool_transform import ToolTransformConfig
+from fastmcp.tools.tool_transform import (
+    apply_transformations_to_tools,
+)
 from fastmcp.utilities.components import MirroredComponent
 from fastmcp.utilities.logging import get_logger
 
@@ -72,8 +74,9 @@ class ProxyToolManager(ToolManager):
             else:
                 raise e
 
-        transformed_tools = ToolTransformConfig.apply_to_tools(
-            self.transformations, all_tools
+        transformed_tools = apply_transformations_to_tools(
+            tools=all_tools,
+            transformations=self.transformations,
         )
 
         return transformed_tools

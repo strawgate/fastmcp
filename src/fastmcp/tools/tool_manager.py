@@ -10,7 +10,10 @@ from fastmcp import settings
 from fastmcp.exceptions import NotFoundError, ToolError
 from fastmcp.settings import DuplicateBehavior
 from fastmcp.tools.tool import Tool, ToolResult
-from fastmcp.tools.tool_transform import ToolTransformConfig
+from fastmcp.tools.tool_transform import (
+    ToolTransformConfig,
+    apply_transformations_to_tools,
+)
 from fastmcp.utilities.logging import get_logger
 
 if TYPE_CHECKING:
@@ -86,8 +89,9 @@ class ToolManager:
         # Finally, add local tools, which always take precedence
         all_tools.update(self._tools)
 
-        transformed_tools = ToolTransformConfig.apply_to_tools(
-            self.transformations, all_tools
+        transformed_tools = apply_transformations_to_tools(
+            tools=all_tools,
+            transformations=self.transformations,
         )
 
         return transformed_tools
@@ -120,7 +124,10 @@ class ToolManager:
     @property
     def _tools_transformed(self) -> dict[str, Tool]:
         """Get the local tools."""
-        return ToolTransformConfig.apply_to_tools(self.transformations, self._tools)
+        return apply_transformations_to_tools(
+            tools=self._tools,
+            transformations=self.transformations,
+        )
 
     def add_tool_from_fn(
         self,

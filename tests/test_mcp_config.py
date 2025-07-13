@@ -340,6 +340,65 @@ async def test_multi_client_with_transforms(tmp_path: Path):
         assert len(tools) == 2
         assert "test_1_transformed_add" in tools_by_name
 
+async def test_multi_client_with_filtering(tmp_path: Path):
+    """
+    Tests that filtering is properly applied to the tools.
+    """
+    server_script = inspect.cleandoc("""
+        from fastmcp import FastMCP
+
+        mcp = FastMCP()
+
+        @mcp.tool
+        def add(a: int, b: int) -> int:
+            return a + b
+
+        @mcp.tool
+        def subtract(a: int, b: int) -> int:
+            return a - b
+
+        if __name__ == '__main__':
+            mcp.run()
+        """)
+
+    script_path = tmp_path / "test.py"
+    script_path.write_text(server_script)
+
+    config = {
+        "mcpServers": {
+            "test_1": {
+                "command": "python",
+                "args": [str(script_path)],
+                "tools": {
+                    "add": {
+                        "name": "transformed_add",
+                        "tags": ["keep"],
+                        "arguments": {
+                            "a": {"name": "transformed_a"},
+                            "b": {"name": "transformed_b"},
+                        },
+                    },
+                },
+                "include_tags": ["keep"]
+            },
+            "test_2": {
+                "command": "python",
+                "args": [str(script_path)],
+            },
+        }
+    }
+
+    client = Client[MCPConfigTransport](config)
+
+    async with client:
+        tools = await client.list_tools()
+        tools_by_name = {tool.name: tool for tool in tools}
+        assert len(tools) == 3
+        assert "test_1_transformed_add" in tools_by_name
+        assert "test_1_add" not in tools_by_name
+        assert "test_1_subtract" not in tools_by_name
+        assert "test_2_add" in tools_by_name
+        assert "test_2_subtract" in tools_by_name
 
 async def test_multi_client_with_elicitation(tmp_path: Path):
     """

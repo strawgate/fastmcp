@@ -69,8 +69,18 @@ def infer_transport_type_from_url(
 class WrappedMCPServerMixin(FastMCPBaseModel):
     """A mixin that enables wrapping an MCP Server with tool transforms."""
 
-    tools: dict[str, ToolTransformConfig] = Field(default_factory=dict)
+    tools: dict[str, ToolTransformConfig] = Field(...)
     """The multi-tool transform to apply to the tools."""
+
+    include_tags: set[str] | None = Field(
+        default=None,
+        description="The tags to include in the proxy.",
+    )
+
+    exclude_tags: set[str] | None = Field(
+        default=None,
+        description="The tags to exclude in the proxy.",
+    )
 
     def to_transport(self) -> FastMCPTransport:
         """Get the transport for the server."""
@@ -81,7 +91,10 @@ class WrappedMCPServerMixin(FastMCPBaseModel):
         transport: ClientTransport = super().to_transport()  # pyright: ignore[reportUnknownMemberType, reportAttributeAccessIssue, reportUnknownVariableType]
 
         wrapped_mcp_server = FastMCP.as_proxy(
-            transport, tool_transformations=self.tools
+            transport,
+            tool_transformations=self.tools,
+            include_tags=self.include_tags,
+            exclude_tags=self.exclude_tags,
         )
 
         return FastMCPTransport(wrapped_mcp_server)
@@ -198,13 +211,11 @@ class TransformingRemoteMCPServer(WrappedMCPServerMixin, RemoteMCPServer):
 
 
 MCPServerTypes = (
-    StdioMCPServer
-    | TransformingStdioMCPServer
-    | RemoteMCPServer
+    TransformingStdioMCPServer
+    | StdioMCPServer
     | TransformingRemoteMCPServer
+    | RemoteMCPServer
 )
-
-McpServersType = dict[str, MCPServerTypes]
 
 
 class MCPConfig(BaseModel):
@@ -214,7 +225,7 @@ class MCPConfig(BaseModel):
     The format is designed to be client-agnostic and extensible for future use cases.
     """
 
-    mcpServers: McpServersType
+    mcpServers: dict[str, MCPServerTypes]
 
     model_config = ConfigDict(extra="allow")  # Preserve unknown top-level fields
 
@@ -222,10 +233,12 @@ class MCPConfig(BaseModel):
     def from_dict(cls, config: dict[str, Any]) -> MCPConfig:
         """Parse MCP configuration from dictionary format."""
 
-        type_adapter = TypeAdapter(McpServersType | MCPConfig)
+        type_adapter = TypeAdapter(dict[str, MCPServerTypes] | MCPConfig)
 
         # Allow deserializing a config that has the contents of McpServers at the top-level
-        result: McpServersType | MCPConfig = type_adapter.validate_python(config)
+        result: dict[str, MCPServerTypes] | MCPConfig = type_adapter.validate_python(
+            config
+        )
 
         return result if isinstance(result, MCPConfig) else cls(mcpServers=result)
 

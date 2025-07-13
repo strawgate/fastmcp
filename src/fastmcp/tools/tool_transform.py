@@ -4,14 +4,15 @@ import inspect
 from collections.abc import Callable
 from contextvars import ContextVar
 from dataclasses import dataclass
-from typing import Any, Literal
+from typing import Annotated, Any, Literal
 
 from mcp.types import ToolAnnotations
 from pydantic import ConfigDict
 from pydantic.fields import Field
+from pydantic.functional_validators import BeforeValidator
 
 from fastmcp.tools.tool import ParsedFunction, Tool, ToolResult, _convert_to_content
-from fastmcp.utilities.components import FastMCPComponent
+from fastmcp.utilities.components import FastMCPComponent, _convert_set_default_none
 from fastmcp.utilities.logging import get_logger
 from fastmcp.utilities.types import (
     FastMCPBaseModel,
@@ -836,13 +837,31 @@ class ToolTransformConfig(FastMCPComponent):
 
     name: str | None = Field(default=None, description="The new name for the tool.")
 
+    title: str | None = Field(
+        default=None,
+        description="The new title of the tool.",
+    )
+    description: str | None = Field(
+        default=None,
+        description="The new description of the tool.",
+    )
+    tags: Annotated[set[str], BeforeValidator(_convert_set_default_none)] = Field(
+        default_factory=set,
+        description="The new tags for the tool.",
+    )
+
+    enabled: bool = Field(
+        default=True,
+        description="Whether the tool is enabled.",
+    )
+
     arguments: dict[str, ArgTransformConfig] = Field(
         default_factory=dict,
         description="A dictionary of argument transforms to apply to the tool.",
     )
 
-    def apply(self, tool: Tool) -> Tool:
-        """Apply the transform to the tool."""
+    def apply(self, tool: Tool) -> TransformedTool:
+        """Create a TransformedTool from a provided tool and this transformation configuration."""
 
         tool_changes = self.model_dump(exclude_unset=True, exclude={"arguments"})
 
@@ -852,20 +871,23 @@ class ToolTransformConfig(FastMCPComponent):
             transform_args={k: v.to_arg_transform() for k, v in self.arguments.items()},
         )
 
-    @classmethod
-    def apply_to_tools(
-        cls, transformations: dict[str, ToolTransformConfig], tools: dict[str, Tool]
-    ) -> dict[str, Tool]:
-        """Apply the transform to the tools."""
+def apply_transformations_to_tools(
+    tools: dict[str, Tool],
+    transformations: dict[str, ToolTransformConfig],
+) -> dict[str, Tool]:
+    """Apply a list of transformations to a list of tools. Tools that do not have any transforamtions
+    are left unchanged.
+    """
 
-        transformed_tools = {}
-        for tool_name, tool in tools.items():
-            if transformation := transformations.get(tool_name):
-                transformed_tools[transformation.name or tool_name] = (
-                    transformation.apply(tool)
-                )
-                continue
+    transformed_tools = {}
 
-            transformed_tools[tool_name] = tool
+    for tool_name, tool in tools.items():
+        if transformation := transformations.get(tool_name):
+            transformed_tools[transformation.name or tool_name] = (
+                transformation.apply(tool)
+            )
+            continue
 
-        return transformed_tools
+        transformed_tools[tool_name] = tool
+
+    return transformed_tools
