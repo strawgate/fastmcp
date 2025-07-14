@@ -38,7 +38,11 @@ from fastmcp.server.elicitation import (
 )
 from fastmcp.server.server import FastMCP
 from fastmcp.utilities.logging import get_logger
-from fastmcp.utilities.types import get_cached_typeadapter
+from fastmcp.utilities.types import (
+    CompletionMessage,
+    CompletionMessages,
+    get_cached_typeadapter,
+)
 
 logger = get_logger(__name__)
 
@@ -270,6 +274,46 @@ class Context:
         """Send a prompt list changed notification to the client."""
         await self.session.send_prompt_list_changed()
 
+    @overload
+    async def completion(
+        self,
+        system_prompt: str,
+        messages: CompletionMessages,
+        *,
+        response_type: Literal["mcp", "llm"],
+        **kwargs: Any,
+    ) -> ContentBlock: ...
+
+    @overload
+    async def completion(
+        self,
+        system_prompt: str,
+        messages: CompletionMessages,
+        *,
+        response_type: Literal["mcp"],
+        **kwargs: Any,
+    ) -> CompletionMessage: ...
+
+    async def completion(
+        self,
+        system_prompt: str,
+        messages: CompletionMessages,
+        *,
+        response_type: Literal["mcp", "llm"],
+        **kwargs: Any,
+    ) -> CompletionMessage | ContentBlock:
+        """Send a completions request to the client and await the response."""
+
+        if self.fastmcp.llm_completions is None:
+            raise ValueError("Server does not support completions")
+
+        result = await self.fastmcp.llm_completions(system_prompt, messages, **kwargs)
+
+        if response_type == "mcp":
+            return self.fastmcp.llm_completions.get_content_block_from_completion(result)
+        else:
+            return result
+
     async def sample(
         self,
         messages: str | list[str | SamplingMessage],
@@ -287,13 +331,14 @@ class Context:
         """
 
         if (
-            self.fastmcp.sampling_always_fallback
-            or not self.session.check_client_capability(
+            self.fastmcp.sampling_fallback is not None
+            and not self.session.check_client_capability(
                 capability=ClientCapabilities(sampling=SamplingCapability())
             )
         ):
-            if self.fastmcp.sampling_fallback is None:
-                raise ValueError("Client does not support sampling")
+            if self.fastmcp.llm_completions is None:
+                raise ValueError("Server does not support completions")
+
             return await self.fastmcp.sampling_fallback(
                 messages, system_prompt, temperature, max_tokens, model_preferences
             )

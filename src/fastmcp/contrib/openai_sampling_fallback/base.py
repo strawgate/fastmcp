@@ -12,10 +12,10 @@ from openai.types.chat import (
 )
 from openai.types.shared.chat_model import ChatModel
 
-from fastmcp.utilities.types import ContextSamplingFallbackProtocol
+from fastmcp.utilities.types import SamplingFallbackProtocol
 
 
-class BaseOpenAICompatibleSamplingFallback(ContextSamplingFallbackProtocol, ABC):
+class BaseOpenAICompatibleSamplingFallback(SamplingFallbackProtocol, ABC):
     def _iter_models_from_preferences(
         self, model_preferences: ModelPreferences | str | list[str] | None
     ) -> Iterator[str]:
