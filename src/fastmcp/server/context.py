@@ -14,11 +14,13 @@ from mcp.server.lowlevel.helper_types import ReadResourceContents
 from mcp.server.lowlevel.server import request_ctx
 from mcp.shared.context import RequestContext
 from mcp.types import (
+    ClientCapabilities,
     ContentBlock,
     CreateMessageResult,
     ModelHint,
     ModelPreferences,
     Root,
+    SamplingCapability,
     SamplingMessage,
     TextContent,
 )
@@ -283,6 +285,18 @@ class Context:
         completion from the client. The client must be appropriately configured,
         or the request will error.
         """
+
+        if (
+            self.fastmcp.sampling_always_fallback
+            or not self.session.check_client_capability(
+                capability=ClientCapabilities(sampling=SamplingCapability())
+            )
+        ):
+            if self.fastmcp.sampling_fallback is None:
+                raise ValueError("Client does not support sampling")
+            return await self.fastmcp.sampling_fallback(
+                messages, system_prompt, temperature, max_tokens, model_preferences
+            )
 
         if max_tokens is None:
             max_tokens = 512
