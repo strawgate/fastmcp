@@ -8,11 +8,11 @@ from openai.types.chat import (
 from openai.types.shared.chat_model import ChatModel
 
 from fastmcp.contrib.openai_sampling_fallback.base import (
-    BaseOpenAICompatibleSamplingFallback,
+    BaseOpenAICompatibleSampling,
 )
 
 
-class OpenAISamplingFallback(BaseOpenAICompatibleSamplingFallback):
+class OpenAISampling(BaseOpenAICompatibleSampling):
     def __init__(self, default_model: ChatModel, client: OpenAI | None = None):
         self.client: OpenAI = client or OpenAI()
         self.default_model: ChatModel = default_model

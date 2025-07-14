@@ -5,7 +5,13 @@ from mcp.types import ContentBlock
 from openai import OpenAI
 
 from fastmcp import FastMCP
-from fastmcp.contrib.openai_completions import OpenAILLMCompletions
+from fastmcp.contrib.openai_completions import (
+    OpenAILLMCompletions,
+)
+from fastmcp.contrib.openai_completions.curator import (
+    ReadOnlyCuratorAgent,
+    ToolCallingCuratorAgent,
+)
 from fastmcp.server.context import Context
 
 
@@ -22,8 +28,8 @@ async def async_main():
     )
 
     @server.tool
-    async def test_completion(ctx: Context) -> ContentBlock:
-        result = await ctx.completion(
+    async def text(ctx: Context) -> ContentBlock:
+        result = await ctx.completions.text(
             system_prompt="You are a helpful assistant.",
             messages=[
                 {"role": "user", "content": "What is the capital of France?"},
@@ -32,6 +38,18 @@ async def async_main():
         )
 
         return result
+
+    @server.tool
+    async def get_capital_of_country(ctx: Context, country: str) -> str:
+        return "Paris"
+
+    @server.tool
+    async def read_only_curator(ctx: Context, task: str) -> ContentBlock:
+        return await ReadOnlyCuratorAgent(name="ask_curator")(ctx, task)
+
+    @server.tool
+    async def tool_calling_curator(ctx: Context, task: str) -> list[ContentBlock]:
+        return await ToolCallingCuratorAgent(name="tell_curator")(ctx, task)
 
     await server.run_sse_async()
 

@@ -1,3 +1,3 @@
-from .openai_sampling_fallback import OpenAISamplingFallback
+from .openai_sampling_fallback import OpenAISampling
 
-__all__ = ["OpenAISamplingFallback"]
+__all__ = ["OpenAISampling"]

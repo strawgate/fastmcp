@@ -62,13 +62,12 @@ from fastmcp.tools import ToolManager
 from fastmcp.tools.tool import FunctionTool, Tool, ToolResult
 from fastmcp.utilities.cache import TimedCache
 from fastmcp.utilities.cli import log_server_banner
+from fastmcp.utilities.completions import LLMCompletionsProtocol, SamplingProtocol
 from fastmcp.utilities.components import FastMCPComponent
 from fastmcp.utilities.logging import get_logger
 from fastmcp.utilities.types import (
-    LLMCompletionsProtocol,
     NotSet,
     NotSetT,
-    SamplingFallbackProtocol,
 )
 
 if TYPE_CHECKING:
@@ -161,7 +160,7 @@ class FastMCP(Generic[LifespanResultT]):
         json_response: bool | None = None,
         stateless_http: bool | None = None,
         llm_completions: LLMCompletionsProtocol | None = None,
-        sampling_fallback: SamplingFallbackProtocol | None = None,
+        sampling_fallback: SamplingProtocol | None = None,
     ):
         self.resource_prefix_format: Literal["protocol", "path"] = (
             resource_prefix_format or fastmcp.settings.resource_prefix_format

@@ -5,14 +5,14 @@ from mcp.types import ContentBlock
 from openai import OpenAI
 
 from fastmcp import FastMCP
-from fastmcp.contrib.openai_sampling_fallback import OpenAISamplingFallback
+from fastmcp.contrib.openai_sampling_fallback import OpenAISampling
 from fastmcp.server.context import Context
 
 
 async def async_main():
     server = FastMCP(
         name="OpenAI Sampling Fallback Example",
-        sampling_fallback=OpenAISamplingFallback(
+        sampling_fallback=OpenAISampling(
             default_model=os.getenv("MODEL") or "gpt-4o-mini",  # pyright: ignore[reportArgumentType]
             client=OpenAI(
                 api_key=os.getenv("API_KEY"),
