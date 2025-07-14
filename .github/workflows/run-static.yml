@@ -41,6 +41,6 @@ jobs:
         with:
           python-version: "3.12"
       - name: Install dependencies
-        run: uv sync --dev
+        run: uv sync --dev --all-groups
       - name: Run pre-commit
         uses: pre-commit/action@v3.0.1
