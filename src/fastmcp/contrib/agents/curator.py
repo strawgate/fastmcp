@@ -1,11 +1,10 @@
 from textwrap import dedent
 
 from mcp.types import ContentBlock
-from pydantic import Field
+from pydantic import BaseModel, Field
 
+from fastmcp.contrib.agents.base import BaseAgent
 from fastmcp.server.context import Context
-from fastmcp.utilities.completions import FastMCPToolCall
-from fastmcp.utilities.components import FastMCPComponent
 
 RO_CURATOR_DESCRIPTION = """
 Ask the Server's Tool Curator for help with your task. They will determine which tools to use
@@ -33,12 +32,14 @@ The next message is the task you are being asked to assist with.
 """
 
 
-class ReadOnlyCuratorAgent(FastMCPComponent):
+class AskCuratorAgent(BaseAgent):
+    """A curator that gets asked what to do and then returns a recommendation for which tools to use."""
+
     description: str = Field(default=RO_CURATOR_DESCRIPTION)
 
     system_prompt: str = Field(default=RO_CURATOR_SYSTEM_PROMPT)
 
-    async def __call__(self, ctx: Context, task: str) -> ContentBlock:
+    async def __call__(self, ctx: Context, task: str) -> BaseModel:
         tools = await ctx.fastmcp.get_tools()
 
         tools_strs: list[str] = [
@@ -53,7 +54,7 @@ class ReadOnlyCuratorAgent(FastMCPComponent):
             for tool in tools.values()
         ]
 
-        return await ctx.completions.text(
+        _, text_result = await ctx.completions.text(
             system_prompt=self.system_prompt.format(
                 name=self.name,
                 description=self.description,
@@ -61,6 +62,8 @@ class ReadOnlyCuratorAgent(FastMCPComponent):
             ),
             messages=task,
         )
+
+        return text_result
 
 
 CURATOR_DESCRIPTION = """
@@ -81,11 +84,8 @@ The next message is the task you are being asked to assist with.
 """
 
 
-class ToolCallingCuratorAgent(FastMCPComponent):
-    """
-    A tool calling curator agent that we tell can call tools on behalf of the user but really it can't
-    and we just return the tool calls it would have made back to the user.
-    """
+class TellCuratorAgent(BaseAgent):
+    """A curator that gets told what to do and then calls tools on behalf of the user."""
 
     description: str = Field(default=CURATOR_DESCRIPTION)
 
@@ -94,14 +94,15 @@ class ToolCallingCuratorAgent(FastMCPComponent):
     async def __call__(self, ctx: Context, task: str) -> list[ContentBlock]:
         tools = await ctx.fastmcp.get_tools()
 
-        recommended_tool_call: FastMCPToolCall = await ctx.completions.tools(
+        _, recommended_tool_call = await ctx.completions.tool(
             system_prompt=self.system_prompt.format(
                 name=self.name,
                 description=self.description,
             ),
             messages=task,
-            parallel_tool_calls=False,
             tools=tools,
         )
 
-        return await ctx.completions.call_tool(recommended_tool_call)
+        _, text_result = await recommended_tool_call.run()
+
+        return text_result.content

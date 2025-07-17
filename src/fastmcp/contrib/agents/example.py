@@ -1,10 +1,11 @@
 import asyncio
 import os
 
-from mcp.types import ContentBlock
 from openai import OpenAI
 
 from fastmcp import FastMCP
+from fastmcp.contrib.agents.base import AgentTool
+from fastmcp.contrib.agents.curator import AskCuratorAgent, TellCuratorAgent
 from fastmcp.contrib.openai_completions import OpenAILLMCompletions
 from fastmcp.server.context import Context
 
@@ -19,16 +20,11 @@ async def async_main():
                 base_url=os.getenv("BASE_URL"),
             ),
         ),
+        tools=[
+            AgentTool.from_agent(AskCuratorAgent(name="ask_curator")),
+            AgentTool.from_agent(TellCuratorAgent(name="tell_curator")),
+        ],
     )
-
-    @server.tool
-    async def capital_of_france_agent(ctx: Context) -> ContentBlock:  # noqa: F811
-        _, text_result = await ctx.completions.text(
-            system_prompt="You are a helpful assistant.",
-            messages=["What is the capital of France?"],
-        )
-
-        return text_result
 
     @server.tool
     async def get_capital_of_country_tool(ctx: Context, country: str) -> str:

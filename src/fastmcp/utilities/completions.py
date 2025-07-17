@@ -1,4 +1,6 @@
-from typing import Any, Literal, Protocol, overload
+from abc import ABC, abstractmethod
+from collections.abc import Mapping, Sequence
+from typing import Any, Protocol, runtime_checkable
 
 from mcp.types import (
     ContentBlock,
@@ -8,6 +10,7 @@ from mcp.types import (
 from pydantic import BaseModel
 
 from fastmcp.tools import Tool
+from fastmcp.tools.tool import ToolResult
 
 
 class SamplingProtocol(Protocol):
@@ -21,108 +24,87 @@ class SamplingProtocol(Protocol):
     ) -> ContentBlock: ...
 
 
-CompletionMessage = dict[str, Any] | BaseModel
-CompletionMessages = list[CompletionMessage]
-
-FastMCPToolCall = tuple[Tool, dict[str, Any]]
+CompletionMessageType = Mapping[str, Any] | str
 
 
+class BasePendingToolCall(BaseModel, ABC):
+    """A base class for a pending tool call to be implemented by a LLMCompletionsProtocol implementation.
+
+    This class is overriden by concrete implementations so they can ensure that the conversation entry created
+    with the tool call result is valid for the provider."""
+
+    tool: Tool
+    arguments: dict[str, Any]
+
+    @abstractmethod
+    def _tool_result_to_completion_message(
+        self, tool_result: ToolResult
+    ) -> CompletionMessageType: ...
+
+    async def run(self) -> tuple[CompletionMessageType, ToolResult]:
+        """Runs the tool call and returns the completion message and tool result."""
+        tool_result: ToolResult = await self.tool.run(self.arguments)
+
+        return self._tool_result_to_completion_message(tool_result), tool_result
+
+
+@runtime_checkable
 class LLMCompletionsProtocol(Protocol):
-    @overload
-    async def text(
-        self,
-        system_prompt: str,
-        messages: str | CompletionMessages,
-        response_type: Literal["mcp"] = "mcp",
-        **kwargs: Any,
-    ) -> ContentBlock: ...
-
-    @overload
-    async def text(
-        self,
-        system_prompt: str,
-        messages: str | CompletionMessages,
-        response_type: Literal["raw"],
-        **kwargs: Any,
-    ) -> CompletionMessage: ...
+    """A protocol for LLM completions."""
 
     async def text(
         self,
         system_prompt: str,
-        messages: str | CompletionMessages,
-        response_type: Literal["mcp", "raw"] = "mcp",
+        messages: Sequence[CompletionMessageType | str] | CompletionMessageType | str,
         **kwargs: Any,
-    ) -> CompletionMessage | ContentBlock: ...
+    ) -> tuple[CompletionMessageType, ContentBlock]:
+        """Performs a text completion using the configured LLM.
 
-    """Performs a text completion using the configured LLM.
+        Args:
+            system_prompt: The system prompt to use for the completion.
+            messages: The messages to use for the completion.
+            **kwargs: Additional keyword arguments to pass to the completion.
 
-    Args:
-        system_prompt: The system prompt to use for the completion.
-        messages: The messages to use for the completion.
-        response_type: The type of response to return: A ContentBlock if "mcp", a raw CompletionMessage if "raw".
-        **kwargs: Additional keyword arguments to pass to the completion.
-    """
+        Returns:
+            A tuple containing the completion message and the content block.
+        """
+        ...
 
-    @overload
-    async def tools(
+    async def tool(
         self,
         system_prompt: str,
-        messages: str | CompletionMessages,
-        tools: list[Tool] | dict[str, Tool],
-        parallel_tool_calls: Literal[True] = True,
-        response_type: Literal["fastmcp"] = "fastmcp",
+        messages: Sequence[CompletionMessageType | str] | CompletionMessageType | str,
+        tools: Sequence[Tool] | dict[str, Tool],
         **kwargs: Any,
-    ) -> list[FastMCPToolCall]: ...
+    ) -> tuple[CompletionMessageType, BasePendingToolCall]:
+        """Ask the LLM which single tool to call to advance the conversation.
 
-    @overload
-    async def tools(
-        self,
-        system_prompt: str,
-        messages: str | CompletionMessages,
-        tools: list[Tool] | dict[str, Tool],
-        parallel_tool_calls: Literal[False] = False,
-        response_type: Literal["fastmcp"] = "fastmcp",
-        **kwargs: Any,
-    ) -> FastMCPToolCall: ...
+        Args:
+            system_prompt: The system prompt to use for the tool call.
+            messages: The messages to use for the tool call.
+            tools: The tools to use for the tool call.
+            **kwargs: Additional keyword arguments to pass to the tool call.
 
-    @overload
-    async def tools(
-        self,
-        system_prompt: str,
-        messages: str | CompletionMessages,
-        tools: list[Tool] | dict[str, Tool],
-        parallel_tool_calls: Literal[False] = False,
-        response_type: Literal["raw"] = "raw",
-        **kwargs: Any,
-    ) -> CompletionMessage: ...
+        Returns:
+            A tuple containing the completion message and the pending tool call.
+        """
+        ...
 
     async def tools(
         self,
         system_prompt: str,
-        messages: str | CompletionMessages,
-        tools: list[Tool] | dict[str, Tool],
-        parallel_tool_calls: bool = False,
-        response_type: Literal["raw", "fastmcp"] = "fastmcp",
+        messages: Sequence[CompletionMessageType | str] | CompletionMessageType | str,
+        tools: Sequence[Tool] | dict[str, Tool],
         **kwargs: Any,
-    ) -> CompletionMessage | list[FastMCPToolCall] | FastMCPToolCall: ...
+    ) -> tuple[CompletionMessageType, Sequence[BasePendingToolCall]]:
+        """Ask the LLM which tools to call to advance the conversation.
 
-    """Picks tools to call based on the system prompt and messages.
+        Args:
+            system_prompt: The system prompt to use for the tool call.
+            messages: The messages to use for the tool call.
+            tools: The tools to use for the tool call.
 
-    Args:
-        system_prompt: The system prompt to use for the tool picking.
-        messages: The messages to use for the tool picking.
-        tools: The tools to pick from.
-        parallel_tool_calls: Whether to call tools in parallel.
-        response_type: The type of response to return: A list of FastMCP Tools with call arguments if "fastmcp", a raw CompletionMessage if "raw".
-        **kwargs: Additional keyword arguments to pass to the tool picking.
-    """
-
-    @staticmethod
-    async def call_tool(
-        fastmcp_tool_call: FastMCPToolCall,
-    ) -> list[ContentBlock]:
-        tool, arguments = fastmcp_tool_call
-
-        tool_call_result = await tool.run(arguments)
-
-        return tool_call_result.content
+        Returns:
+            A tuple containing the completion message and the list of pending tool calls.
+        """
+        ...

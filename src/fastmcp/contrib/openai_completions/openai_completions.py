@@ -1,37 +1,76 @@
-import json
+from collections.abc import Sequence
 from copy import deepcopy
-from typing import Any, Literal
+from typing import Any
 
 from mcp.types import (
-    CallToolRequestParams,
     ContentBlock,
     TextContent,
 )
 from openai import OpenAI
 from openai.types.chat import (
     ChatCompletion,
+    ChatCompletionContentPartTextParam,
     ChatCompletionMessage,
     ChatCompletionMessageParam,
     ChatCompletionSystemMessageParam,
+    ChatCompletionToolMessageParam,
     ChatCompletionToolParam,
     ChatCompletionUserMessageParam,
 )
 from openai.types.shared.chat_model import ChatModel
 from openai.types.shared_params.function_definition import FunctionDefinition
-from pydantic import TypeAdapter
+from pydantic.type_adapter import TypeAdapter
 from typing_extensions import override
 
 from fastmcp.tools import Tool
+from fastmcp.tools.tool import ToolResult
 from fastmcp.utilities.completions import (
-    CompletionMessage,
-    CompletionMessages,
-    FastMCPToolCall,
+    BasePendingToolCall,
+    CompletionMessageType,
     LLMCompletionsProtocol,
 )
 
+MESSAGE_PARAM_TYPE_ADAPTER: TypeAdapter[ChatCompletionMessageParam] = TypeAdapter(
+    ChatCompletionMessageParam
+)
+
+TOOL_ARGUMENTS_TYPE_ADAPTER: TypeAdapter[dict[str, Any]] = TypeAdapter(dict[str, Any])
+
+
+class OpenAIPendingToolCall(BasePendingToolCall):
+    tool_call_id: str
+
+    @override
+    def _tool_result_to_completion_message(
+        self, tool_result: ToolResult
+    ) -> ChatCompletionToolMessageParam:
+        """Convert a tool result to a chat completion tool message."""
+
+        content_parts: list[ChatCompletionContentPartTextParam] = []
+
+        for content_block in tool_result.content:
+            match content_block:
+                case TextContent():
+                    content_parts.append(
+                        ChatCompletionContentPartTextParam(
+                            type="text", text=content_block.text
+                        )
+                    )
+                case _:
+                    msg = "Only TextContent is supported for tool results."
+                    raise ValueError(msg)
+
+        return ChatCompletionToolMessageParam(
+            role="tool",
+            tool_call_id=self.tool_call_id,
+            content=content_parts,
+        )
+
 
 class OpenAILLMCompletions(LLMCompletionsProtocol):
-    def __init__(self, default_model: ChatModel, client: OpenAI | None = None):
+    """An implementation of the LLMCompletionsProtocol for OpenAI."""
+
+    def __init__(self, default_model: ChatModel, client: OpenAI | None = None) -> None:
         self.client: OpenAI = client or OpenAI()
         self.default_model: ChatModel = default_model
 
@@ -39,136 +78,180 @@ class OpenAILLMCompletions(LLMCompletionsProtocol):
     async def text(
         self,
         system_prompt: str,
-        messages: str | CompletionMessages,
-        response_type: Literal["mcp", "llm"] = "mcp",
-        **kwargs: Any,
-    ) -> CompletionMessage | ContentBlock:
+        messages: Sequence[CompletionMessageType] | CompletionMessageType,
+        **kwargs: Any,  # pyright: ignore[reportAny]
+    ) -> tuple[CompletionMessageType, ContentBlock]:
         openai_messages = convert_messages_to_openai_messages(system_prompt, messages)
 
         response: ChatCompletion = self.client.chat.completions.create(
             model=self.default_model,
             messages=openai_messages,
-            **kwargs,
+            stream=False,
+            **kwargs,  # pyright: ignore[reportAny]
         )
 
-        if len(response.choices) == 0:
-            raise ValueError("No response for completion")
+        first_choice = extract_first_choice_completion(response)
 
-        first_choice = response.choices[0]
+        return first_choice.model_dump(), get_content_block_from_completion_message(
+            first_choice
+        )
 
-        if message := first_choice.message:
-            if isinstance(message, ChatCompletionMessage):
-                if response_type == "mcp":
-                    return get_content_block_from_completion_message(message)
-                return message
+    async def _tools(
+        self,
+        system_prompt: str,
+        messages: Sequence[CompletionMessageType] | CompletionMessageType,
+        tools: Sequence[Tool] | dict[str, Tool],
+        multiple_tool_calls: bool,
+        **kwargs: Any,  # pyright: ignore[reportAny]
+    ) -> tuple[CompletionMessageType, list[OpenAIPendingToolCall]]:
+        openai_messages = convert_messages_to_openai_messages(system_prompt, messages)
+        openai_tools = convert_fastmcp_tools_to_openai_tools(tools)
 
-        raise ValueError("No content in response from completion")
+        completion: ChatCompletion = self.client.chat.completions.create(
+            model=self.default_model,
+            messages=openai_messages,
+            parallel_tool_calls=multiple_tool_calls,
+            tools=openai_tools,
+            tool_choice="required",
+            stream=False,
+            **kwargs,  # pyright: ignore[reportAny]
+        )
+
+        assistant_message = extract_first_choice_completion(completion)
+
+        pending_tool_calls = convert_chat_completion_message_to_pending_tool_calls(
+            tools, assistant_message
+        )
+
+        return assistant_message.model_dump(), pending_tool_calls
+
+    @override
+    async def tool(
+        self,
+        system_prompt: str,
+        messages: Sequence[CompletionMessageType] | CompletionMessageType,
+        tools: Sequence[Tool] | dict[str, Tool],
+        **kwargs: Any,  # pyright: ignore[reportAny]
+    ) -> tuple[CompletionMessageType, OpenAIPendingToolCall]:
+        assistant_message, pending_tool_calls = await self._tools(
+            system_prompt, messages, tools, False, **kwargs
+        )
+
+        return assistant_message, pending_tool_calls[0]
 
     @override
     async def tools(
         self,
         system_prompt: str,
-        messages: str | CompletionMessages,
-        tools: list[Tool] | dict[str, Tool],
-        parallel_tool_calls: bool = True,
-        response_type: Literal["fastmcp", "raw"] = "fastmcp",
-        **kwargs: Any,
-    ) -> CompletionMessage | list[FastMCPToolCall] | FastMCPToolCall:
-        openai_messages = convert_messages_to_openai_messages(system_prompt, messages)
+        messages: Sequence[CompletionMessageType] | CompletionMessageType,
+        tools: Sequence[Tool] | dict[str, Tool],
+        **kwargs: Any,  # pyright: ignore[reportAny]
+    ) -> tuple[CompletionMessageType, list[OpenAIPendingToolCall]]:
+        return await self._tools(system_prompt, messages, tools, True, **kwargs)
 
-        if isinstance(tools, dict):
-            tools = list(tools.values())
 
-        openai_tools = [
-            convert_fastmcp_tool_to_openai_tool_param_message(tool) for tool in tools
-        ]
+def extract_first_choice_completion(
+    chat_completion: ChatCompletion,
+) -> ChatCompletionMessage:
+    """Extracts the first choice completion from a ChatCompletion."""
+    if len(chat_completion.choices) == 0:
+        msg = "No choices to pick from in the chat completion response."
+        raise ValueError(msg)
 
-        completion_message: ChatCompletion = self.client.chat.completions.create(
-            model=self.default_model,
-            messages=openai_messages,
-            parallel_tool_calls=parallel_tool_calls,
-            tools=openai_tools,
-            tool_choice="required",
-            **kwargs,
-        )
+    if len(chat_completion.choices) > 1:
+        msg = "Multiple choices to pick from in the chat completion response."
+        raise ValueError(msg)
 
-        if not (first_choice := completion_message.choices[0]):
-            raise ValueError("No choices to pick from in the chat completion response.")
-
-        if not isinstance(first_choice.message, ChatCompletionMessage):
-            raise TypeError(
-                "Unexpected message type in the first choice of the chat completion response."
-            )
-
-        if response_type == "fastmcp":
-            fastmcp_tool_calls = convert_chat_completion_message_to_fastmcp_tool_calls(
-                tools, first_choice.message
-            )
-            if parallel_tool_calls:
-                return fastmcp_tool_calls
-
-            return fastmcp_tool_calls[0]
-
-        return first_choice.message
+    return chat_completion.choices[0].message
 
 
 def convert_messages_to_openai_messages(
     system_prompt: str,
-    messages: str | CompletionMessages,
+    messages: Sequence[CompletionMessageType] | CompletionMessageType,
 ) -> list[ChatCompletionMessageParam]:
-    """Convert messages to OpenAI messages."""
+    """Convert messages dictionaries to OpenAI Messages."""
 
     openai_messages: list[ChatCompletionMessageParam] = [
         ChatCompletionSystemMessageParam(role="system", content=system_prompt)
     ]
 
-    if isinstance(messages, str):
-        openai_messages.append(
-            ChatCompletionUserMessageParam(role="user", content=messages)
-        )
-
-        return openai_messages
-
-    type_adapter = TypeAdapter(ChatCompletionMessageParam)
-
     for message in messages:
-        openai_messages.append(type_adapter.validate_python(message))
+        if isinstance(message, str):
+            openai_messages.append(
+                ChatCompletionUserMessageParam(role="user", content=message)
+            )
+        else:
+            openai_messages.append(MESSAGE_PARAM_TYPE_ADAPTER.validate_python(message))
 
     return openai_messages
 
 
-def convert_chat_completion_message_to_fastmcp_tool_calls(
-    tools: list[Tool],
+def convert_chat_completion_message_to_pending_tool_calls(
+    tools: Sequence[Tool] | dict[str, Tool],
     chat_completion_message: ChatCompletionMessage,
-) -> list[tuple[Tool, dict[str, Any]]]:
+) -> list[OpenAIPendingToolCall]:
+    """Converts the tool calls from a chat completion message to a list of pending tool calls.
+
+    Args:
+        tools: The list of tools to use for the tool calls.
+        chat_completion_message: The chat completion message to create the pending tool calls from.
+
+    Returns:
+        A list of pending tool calls.
+    """
     if not (tool_calls := chat_completion_message.tool_calls):
-        raise ValueError("No tool_call in the chat completion message.")
+        msg = "No tool_call in the chat completion message."
+        raise ValueError(msg)
+
+    if isinstance(tools, dict):
+        tools = list(tools.values())
 
     tools_by_name = {tool.name: tool for tool in tools}
 
-    fastmcp_tool_calls: list[tuple[Tool, dict[str, Any]]] = []
+    fastmcp_tool_calls: list[OpenAIPendingToolCall] = []
 
     for tool_call in tool_calls:
         if not (function_call := tool_call.function):
-            raise ValueError("No function call in the tool call.")
+            msg = "No function call in the tool call."
+            raise ValueError(msg)
 
         if not (tool_name := tool_call.function.name):
-            raise ValueError("No name in the function call of the tool call.")
+            msg = "No name in the function call of the tool call."
+            raise ValueError(msg)
 
         if tool_name not in tools_by_name:
-            raise ValueError(f"Tool {tool_name} not found in the list of tools.")
+            msg = f"Tool {tool_name} not found in the list of tools."
+            raise ValueError(msg)
 
         tool = tools_by_name[tool_name]
 
-        fastmcp_tool_calls.append((tool, json.loads(function_call.arguments)))
+        fastmcp_tool_calls.append(
+            OpenAIPendingToolCall(
+                tool_call_id=tool_call.id,
+                tool=tool,
+                arguments=TOOL_ARGUMENTS_TYPE_ADAPTER.validate_json(
+                    function_call.arguments
+                ),
+            )
+        )
 
     return fastmcp_tool_calls
 
 
-def convert_fastmcp_tool_to_openai_tool_param_message(
+def convert_fastmcp_tools_to_openai_tools(
+    fastmcp_tools: Sequence[Tool] | dict[str, Tool],
+) -> list[ChatCompletionToolParam]:
+    """Create a list of OpenAI Tool Definitions from a list of FastMCP Tools."""
+    if isinstance(fastmcp_tools, dict):
+        fastmcp_tools = list(fastmcp_tools.values())
+
+    return [convert_fastmcp_tool_to_openai_tool(tool) for tool in fastmcp_tools]
+
+
+def convert_fastmcp_tool_to_openai_tool(
     fastmcp_tool: Tool,
 ) -> ChatCompletionToolParam:
-    """Convert an FastMCP tool to an OpenAI tool."""
+    """Create an OpenAI Tool Definition from a FastMCP Tool."""
 
     tool_name = fastmcp_tool.name
     tool_description = fastmcp_tool.description or ""
@@ -185,42 +268,14 @@ def convert_fastmcp_tool_to_openai_tool_param_message(
     )
 
 
-def get_call_tool_request_params_from_completion_message(
-    chat_completion_message: ChatCompletionMessage,
-) -> list[CallToolRequestParams]:
-    if not (tool_calls := chat_completion_message.tool_calls):
-        raise ValueError("No tool_call in the chat completion message.")
-
-    if len(tool_calls) == 0:
-        raise ValueError("Zero tool calls in the chat completion message.")
-
-    call_tool_request_params: list[CallToolRequestParams] = []
-
-    for tool_call in tool_calls:
-        if not (function_call := tool_call.function):
-            raise ValueError("No function call in the tool call.")
-
-        call_tool_request_params.append(
-            CallToolRequestParams(
-                name=function_call.name,
-                arguments=json.loads(function_call.arguments),
-            )
-        )
-
-    return call_tool_request_params
-
-
 def get_content_block_from_completion_message(
-    completion_message: CompletionMessage,
+    completion_message: ChatCompletionMessage,
 ) -> ContentBlock:
-    if isinstance(completion_message, dict):
-        return TextContent(type="text", text=completion_message["content"])
+    """Retrieves an MCP TextContent block from a chat completion."""
 
-    if isinstance(completion_message, ChatCompletionMessage):
-        if content := completion_message.content:
-            return TextContent(type="text", text=content)
-        if refusal := completion_message.refusal:
-            return TextContent(type="text", text=refusal)
-        raise ValueError("Only Text content is supported.")
-
-    raise ValueError("Only Text content is supported.")
+    if content := completion_message.content:
+        return TextContent(type="text", text=content)
+    if refusal := completion_message.refusal:
+        return TextContent(type="text", text=refusal)
+    msg = "Only Text content is supported."
+    raise ValueError(msg)
