@@ -773,6 +773,8 @@ class MCPConfigTransport(ClientTransport):
     """
 
     def __init__(self, config: MCPConfig | dict, name_as_prefix: bool = True):
+        from fastmcp.utilities.mcp_config import composite_server_from_mcp_config
+
         if isinstance(config, dict):
             config = MCPConfig.from_dict(config)
         self.config = config
@@ -787,15 +789,11 @@ class MCPConfigTransport(ClientTransport):
 
         # otherwise create a composite client
         else:
-            composite_server = FastMCP()
-
-            for name, server in self.config.mcpServers.items():
-                composite_server.mount(
-                    prefix=name if name_as_prefix else None,
-                    server=FastMCP.as_proxy(backend=server.to_transport()),
+            self.transport = FastMCPTransport(
+                mcp=composite_server_from_mcp_config(
+                    self.config, name_as_prefix=name_as_prefix
                 )
-
-            self.transport = FastMCPTransport(mcp=composite_server)
+            )
 
     @contextlib.asynccontextmanager
     async def connect_session(

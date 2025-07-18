@@ -90,7 +90,6 @@ class _TransformingMCPServerMixin(FastMCPBaseModel):
 
     def to_transport(self) -> FastMCPTransport:
         """Get the transport for the server."""
-
         from fastmcp.client.transports import FastMCPTransport
         from fastmcp.server.server import FastMCP
 
