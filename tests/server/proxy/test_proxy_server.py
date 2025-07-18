@@ -133,6 +133,18 @@ class TestTools:
         assert "add_transformed" in tools
         assert "add" not in tools
 
+    async def test_call_transformed_tools(
+        self, fastmcp_server: FastMCP, proxy_server: FastMCPProxy
+    ):
+        """An explicit None description should change the tool description to None."""
+
+        fastmcp_server.add_tool_transformation(
+            "add", ToolTransformConfig(name="add_transformed")
+        )
+        async with Client(proxy_server) as client:
+            result = await client.call_tool("add_transformed", {"a": 1, "b": 2})
+        assert result.data == 3
+
     async def test_tool_without_description(self, proxy_server):
         tools = await proxy_server.get_tools()
         assert tools["tool_without_description"].description is None

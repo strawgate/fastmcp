@@ -122,12 +122,13 @@ class ToolManager:
         return list(tools_dict.values())
 
     @property
-    def _tools_transformed(self) -> dict[str, Tool]:
+    def _tools_transformed(self) -> list[str]:
         """Get the local tools."""
-        return apply_transformations_to_tools(
-            tools=self._tools,
-            transformations=self.transformations,
-        )
+
+        return [
+            transformation.name or tool_name
+            for tool_name, transformation in self.transformations.items()
+        ]
 
     def add_tool_from_fn(
         self,
@@ -210,7 +211,7 @@ class ToolManager:
         filtered protocol path.
         """
         # 1. Check local tools first. The server will have already applied its filter.
-        if key in self._tools_transformed:
+        if key in self._tools or key in self._tools_transformed:
             tool = await self.get_tool(key)
             if not tool:
                 raise NotFoundError(f"Tool {key!r} not found")

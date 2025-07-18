@@ -26,6 +26,7 @@ from mcp.server.lowlevel.server import LifespanResultT, NotificationOptions
 from mcp.server.stdio import stdio_server
 from mcp.types import (
     AnyFunction,
+    CallToolRequestParams,
     ContentBlock,
     GetPromptResult,
     ToolAnnotations,
@@ -653,7 +654,7 @@ class FastMCP(Generic[LifespanResultT]):
                 key=context.message.name, arguments=context.message.arguments or {}
             )
 
-        mw_context = MiddlewareContext(
+        mw_context = MiddlewareContext[CallToolRequestParams](
             message=mcp.types.CallToolRequestParams(name=key, arguments=arguments),
             source="client",
             type="request",

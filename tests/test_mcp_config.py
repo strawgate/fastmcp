@@ -377,6 +377,11 @@ async def test_multi_client_with_transforms(tmp_path: Path):
         assert len(tools) == 2
         assert "test_1_transformed_add" in tools_by_name
 
+        result = await client.call_tool(
+            "test_1_transformed_add", {"transformed_a": 1, "transformed_b": 2}
+        )
+        assert result.data == 3
+
 
 async def test_canonical_multi_client_with_transforms(tmp_path: Path):
     """Test that transforms are not applied to servers in a canonical MCPConfig."""
