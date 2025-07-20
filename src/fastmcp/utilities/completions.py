@@ -9,6 +9,7 @@ from mcp.types import (
 )
 from pydantic import BaseModel
 
+from fastmcp.exceptions import ToolError
 from fastmcp.tools import Tool
 from fastmcp.tools.tool import ToolResult
 
@@ -41,12 +42,19 @@ class BasePendingToolCall(BaseModel, ABC):
         self, tool_result: ToolResult
     ) -> CompletionMessageType: ...
 
-    async def run(self) -> tuple[CompletionMessageType, ToolResult]:
+    @abstractmethod
+    def _tool_error_to_completion_message(
+        self, tool_error: ToolError
+    ) -> CompletionMessageType: ...
+
+    async def run(self) -> tuple[CompletionMessageType, ToolResult | ToolError]:
         """Runs the tool call and returns the completion message and tool result."""
-        tool_result: ToolResult = await self.tool.run(self.arguments)
+        try:
+            tool_result: ToolResult = await self.tool.run(arguments=self.arguments)
 
-        return self._tool_result_to_completion_message(tool_result), tool_result
-
+            return self._tool_result_to_completion_message(tool_result), tool_result
+        except ToolError as e:
+            return self._tool_error_to_completion_message(tool_error=e), e
 
 @runtime_checkable
 class LLMCompletionsProtocol(Protocol):
