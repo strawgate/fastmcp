@@ -24,7 +24,7 @@ class SamplingProtocol(Protocol):
         model_preferences: ModelPreferences | str | list[str] | None = None,
     ) -> ContentBlock: ...
 
-
+CompletionType = Mapping[str, Any]
 CompletionMessageType = Mapping[str, Any] | str
 
 
@@ -65,7 +65,7 @@ class LLMCompletionsProtocol(Protocol):
         system_prompt: str,
         messages: Sequence[CompletionMessageType | str] | CompletionMessageType | str,
         **kwargs: Any,
-    ) -> tuple[CompletionMessageType, ContentBlock]:
+    ) -> tuple[CompletionType, CompletionMessageType, ContentBlock]:
         """Performs a text completion using the configured LLM.
 
         Args:
@@ -84,7 +84,7 @@ class LLMCompletionsProtocol(Protocol):
         messages: Sequence[CompletionMessageType | str] | CompletionMessageType | str,
         tools: Sequence[Tool] | dict[str, Tool],
         **kwargs: Any,
-    ) -> tuple[CompletionMessageType, BasePendingToolCall]:
+    ) -> tuple[CompletionType, CompletionMessageType, BasePendingToolCall]:
         """Ask the LLM which single tool to call to advance the conversation.
 
         Args:
@@ -94,7 +94,7 @@ class LLMCompletionsProtocol(Protocol):
             **kwargs: Additional keyword arguments to pass to the tool call.
 
         Returns:
-            A tuple containing the completion message and the pending tool call.
+            A tuple containing the completion, the completion conversation entry, and the pending tool call.
         """
         ...
 
@@ -104,7 +104,7 @@ class LLMCompletionsProtocol(Protocol):
         messages: Sequence[CompletionMessageType | str] | CompletionMessageType | str,
         tools: Sequence[Tool] | dict[str, Tool],
         **kwargs: Any,
-    ) -> tuple[CompletionMessageType, Sequence[BasePendingToolCall]]:
+    ) -> tuple[CompletionType, CompletionMessageType, Sequence[BasePendingToolCall]]:
         """Ask the LLM which tools to call to advance the conversation.
 
         Args:
@@ -113,6 +113,6 @@ class LLMCompletionsProtocol(Protocol):
             tools: The tools to use for the tool call.
 
         Returns:
-            A tuple containing the completion message and the list of pending tool calls.
+            A tuple containing the completion, the completion conversation entry, and the list of pending tool calls.
         """
         ...
