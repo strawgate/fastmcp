@@ -158,6 +158,7 @@
                   "integrations/mcp-json-configuration",
                   "integrations/openai",
                   "integrations/openapi",
+                  "integrations/permit",
                   "integrations/starlette"
                 ]
               },
@@ -222,7 +223,7 @@
                       "python-sdk/fastmcp-cli-install-claude_code",
                       "python-sdk/fastmcp-cli-install-claude_desktop",
                       "python-sdk/fastmcp-cli-install-cursor",
-                      "python-sdk/fastmcp-cli-install-mcp_config",
+                      "python-sdk/fastmcp-cli-install-mcp_json",
                       "python-sdk/fastmcp-cli-install-shared"
                     ]
                   },
@@ -333,6 +334,7 @@
                   "python-sdk/fastmcp-utilities-json_schema",
                   "python-sdk/fastmcp-utilities-json_schema_type",
                   "python-sdk/fastmcp-utilities-logging",
+                  "python-sdk/fastmcp-utilities-mcp_config",
                   "python-sdk/fastmcp-utilities-openapi",
                   "python-sdk/fastmcp-utilities-tests",
                   "python-sdk/fastmcp-utilities-types"
