@@ -4,7 +4,9 @@ from fastmcp.mcp_config import MCPConfig
 from fastmcp.server.server import FastMCP
 
 
-def composite_server_from_mcp_config(config: MCPConfig, name_as_prefix: bool = True) -> FastMCP[None]:
+def composite_server_from_mcp_config(
+    config: MCPConfig, name_as_prefix: bool = True
+) -> FastMCP[None]:
     """A utility function to create a composite server from an MCPConfig."""
     composite_server = FastMCP[None]()
 

@@ -12,7 +12,7 @@ from pydantic.fields import Field
 from pydantic.functional_validators import BeforeValidator
 
 from fastmcp.tools.tool import ParsedFunction, Tool, ToolResult, _convert_to_content
-from fastmcp.utilities.components import FastMCPComponent, _convert_set_default_none
+from fastmcp.utilities.components import _convert_set_default_none
 from fastmcp.utilities.logging import get_logger
 from fastmcp.utilities.types import (
     FastMCPBaseModel,
@@ -863,7 +863,9 @@ class ToolTransformConfig(FastMCPBaseModel):
     def apply(self, tool: Tool) -> TransformedTool:
         """Create a TransformedTool from a provided tool and this transformation configuration."""
 
-        tool_changes: dict[str, Any] = self.model_dump(exclude_unset=True, exclude={"arguments"})
+        tool_changes: dict[str, Any] = self.model_dump(
+            exclude_unset=True, exclude={"arguments"}
+        )
 
         return TransformedTool.from_tool(
             tool=tool,
