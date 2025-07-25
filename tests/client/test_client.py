@@ -14,7 +14,7 @@ from pydantic import AnyUrl
 
 from fastmcp.client import Client
 from fastmcp.client.auth.bearer import BearerAuth
-from fastmcp.client.client import CallToolResult, Client
+from fastmcp.client.client import CallToolResult
 from fastmcp.client.transports import (
     FastMCPTransport,
     MCPConfigTransport,
