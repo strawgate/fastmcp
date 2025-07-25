@@ -832,7 +832,7 @@ class TransformedTool(Tool):
         )
 
 
-class ToolTransformConfig(FastMCPComponent):
+class ToolTransformConfig(FastMCPBaseModel):
     """Provides a way to transform a tool."""
 
     name: str | None = Field(default=None, description="The new name for the tool.")
@@ -863,7 +863,7 @@ class ToolTransformConfig(FastMCPComponent):
     def apply(self, tool: Tool) -> TransformedTool:
         """Create a TransformedTool from a provided tool and this transformation configuration."""
 
-        tool_changes = self.model_dump(exclude_unset=True, exclude={"arguments"})
+        tool_changes: dict[str, Any] = self.model_dump(exclude_unset=True, exclude={"arguments"})
 
         return TransformedTool.from_tool(
             tool=tool,
@@ -880,7 +880,7 @@ def apply_transformations_to_tools(
     are left unchanged.
     """
 
-    transformed_tools = {}
+    transformed_tools: dict[str, Tool] = {}
 
     for tool_name, tool in tools.items():
         if transformation := transformations.get(tool_name):
