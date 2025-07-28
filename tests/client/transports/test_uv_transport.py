@@ -2,14 +2,13 @@ import inspect
 import tempfile
 from pathlib import Path
 
-import pytest
-
 from fastmcp.client import Client
 from fastmcp.client.client import CallToolResult
-from fastmcp.client.transports import UvStdioTransport
+from fastmcp.client.transports import (
+    UvStdioTransport,
+)
 
 
-@pytest.mark.forked
 async def test_uv_transport():
     with tempfile.TemporaryDirectory() as tmpdir:
         script: str = inspect.cleandoc('''
@@ -39,7 +38,6 @@ async def test_uv_transport():
         assert sum == 3
 
 
-@pytest.mark.forked
 async def test_uv_transport_module():
     with tempfile.TemporaryDirectory() as tmpdir:
         module_dir = Path(tmpdir) / "my_module"
