@@ -12,16 +12,6 @@ from fastmcp.client.transports import (
 )
 
 
-@pytest.fixture(autouse=True)
-async def cleanup_event_loop():
-    """Ensure clean event loop state for each test."""
-    yield
-    # Force garbage collection to clean up any lingering client process handles
-    import gc
-
-    gc.collect()
-
-
 @pytest.mark.timeout(10)
 @pytest.mark.client_process
 @pytest.mark.skipif(
