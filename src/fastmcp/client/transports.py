@@ -566,6 +566,8 @@ class UvStdioTransport(StdioTransport):
 
         # Build uv arguments
         uv_args: list[str] = ["run"]
+        if project_directory:
+            uv_args.extend(["--directory", str(project_directory)])
         if python_version:
             uv_args.extend(["--python", python_version])
         for pkg in with_packages or []:
@@ -582,14 +584,18 @@ class UvStdioTransport(StdioTransport):
 
         # Get environment with any additional variables
         env: dict[str, str] | None = None
-        if env_vars:
+        if env_vars or project_directory:
             env = os.environ.copy()
+            if project_directory:
+                env["UV_PROJECT_DIR"] = str(project_directory)
+            if env_vars:
+                env.update(env_vars)
 
         super().__init__(
             command="uv",
             args=uv_args,
             env=env,
-            cwd=project_directory,
+            cwd=None,  # Use --directory flag instead of cwd
             keep_alive=keep_alive,
         )
 
