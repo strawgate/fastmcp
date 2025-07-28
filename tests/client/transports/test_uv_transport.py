@@ -31,7 +31,7 @@ async def test_uv_transport():
         _ = script_file.write_text(script)
 
         client: Client[UvStdioTransport] = Client(
-            transport=UvStdioTransport(command=str(script_file))
+            transport=UvStdioTransport(command=str(script_file), keep_alive=False)
         )
 
         async with client:
@@ -72,6 +72,7 @@ async def test_uv_transport_module():
                 command="my_module",
                 module=True,
                 project_directory=tmpdir,
+                keep_alive=False,
             )
         )
 
