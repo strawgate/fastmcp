@@ -11,7 +11,18 @@ from fastmcp.client.transports import (
 )
 
 
+@pytest.fixture(autouse=True)
+async def cleanup_event_loop():
+    """Ensure clean event loop state for each test."""
+    yield
+    # Force garbage collection to clean up any lingering subprocess handles
+    import gc
+
+    gc.collect()
+
+
 @pytest.mark.timeout(10)
+@pytest.mark.subprocess
 async def test_uv_transport():
     with tempfile.TemporaryDirectory() as tmpdir:
         script: str = inspect.cleandoc('''
@@ -38,10 +49,13 @@ async def test_uv_transport():
             result: CallToolResult = await client.call_tool("add", {"x": 1, "y": 2})
             sum: int = result.data  # pyright: ignore[reportAny]
 
+        # Explicitly close the transport to ensure subprocess cleanup
+        await client.transport.close()
         assert sum == 3
 
 
 @pytest.mark.timeout(10)
+@pytest.mark.subprocess
 async def test_uv_transport_module():
     with tempfile.TemporaryDirectory() as tmpdir:
         module_dir = Path(tmpdir) / "my_module"
@@ -80,4 +94,6 @@ async def test_uv_transport_module():
             result: CallToolResult = await client.call_tool("add", {"x": 1, "y": 2})
             sum: int = result.data  # pyright: ignore[reportAny]
 
+        # Explicitly close the transport to ensure subprocess cleanup
+        await client.transport.close()
         assert sum == 3
