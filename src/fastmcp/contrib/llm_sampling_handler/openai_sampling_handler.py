@@ -1,8 +1,16 @@
-from abc import ABC
-from collections.abc import Iterator
+from collections.abc import Iterator, Sequence
 from typing import get_args
 
-from mcp.types import ContentBlock, ModelPreferences, SamplingMessage, TextContent
+from mcp import ClientSession
+from mcp.shared.context import LifespanContextT, RequestContext
+from mcp.types import CreateMessageRequestParams as SamplingParams
+from mcp.types import (
+    CreateMessageResult,
+    ModelPreferences,
+    SamplingMessage,
+    TextContent,
+)
+from openai import NOT_GIVEN, OpenAI
 from openai.types.chat import (
     ChatCompletion,
     ChatCompletionAssistantMessageParam,
@@ -12,10 +20,39 @@ from openai.types.chat import (
 )
 from openai.types.shared.chat_model import ChatModel
 
-from fastmcp.utilities.types import ContextSamplingFallbackProtocol
+from fastmcp.contrib.llm_sampling_handler.base import BaseLLMSamplingHandler
 
 
-class BaseOpenAICompatibleSamplingFallback(ContextSamplingFallbackProtocol, ABC):
+class OpenAISamplingHandler(BaseLLMSamplingHandler):
+    def __init__(self, default_model: ChatModel, client: OpenAI | None = None):
+        self.client: OpenAI = client or OpenAI()
+        self.default_model: ChatModel = default_model
+
+    async def __call__(
+        self,
+        messages: list[SamplingMessage],
+        params: SamplingParams,
+        context: RequestContext[ClientSession, LifespanContextT],
+    ) -> CreateMessageResult:
+        openai_messages: list[ChatCompletionMessageParam] = (
+            self._convert_to_openai_messages(
+                system_prompt=params.systemPrompt,
+                messages=messages,
+            )
+        )
+
+        model: ChatModel = self._select_model_from_preferences(params.modelPreferences)
+
+        response = self.client.chat.completions.create(
+            model=model,
+            messages=openai_messages,
+            temperature=params.temperature or NOT_GIVEN,
+            max_tokens=params.maxTokens,
+            stop=params.stopSequences or NOT_GIVEN,
+        )
+
+        return self._chat_completion_to_create_message_result(response)
+
     def _iter_models_from_preferences(
         self, model_preferences: ModelPreferences | str | list[str] | None
     ) -> Iterator[str]:
@@ -41,7 +78,7 @@ class BaseOpenAICompatibleSamplingFallback(ContextSamplingFallbackProtocol, ABC)
                 yield name
 
     def _convert_to_openai_messages(
-        self, system_prompt: str | None, messages: str | list[str | SamplingMessage]
+        self, system_prompt: str | None, messages: Sequence[SamplingMessage]
     ) -> list[ChatCompletionMessageParam]:
         openai_messages: list[ChatCompletionMessageParam] = []
 
@@ -92,15 +129,29 @@ class BaseOpenAICompatibleSamplingFallback(ContextSamplingFallbackProtocol, ABC)
 
         return openai_messages
 
-    def _chat_completion_to_mcp_content(
+    def _chat_completion_to_create_message_result(
         self, chat_completion: ChatCompletion
-    ) -> ContentBlock:
+    ) -> CreateMessageResult:
         if len(chat_completion.choices) == 0:
             raise ValueError("No response for completion")
 
         first_choice = chat_completion.choices[0]
 
         if content := first_choice.message.content:
-            return TextContent(type="text", text=content)
+            return CreateMessageResult(
+                content=TextContent(type="text", text=content),
+                role="assistant",
+                model=chat_completion.model,
+            )
 
         raise ValueError("No content in response from completion")
+
+    def _select_model_from_preferences(
+        self, model_preferences: ModelPreferences | str | list[str] | None
+    ) -> ChatModel:
+        for model_option in self._iter_models_from_preferences(model_preferences):
+            if model_option in get_args(ChatModel):
+                chosen_model: ChatModel = model_option  # pyright: ignore[reportAssignmentType]
+                return chosen_model
+
+        return self.default_model

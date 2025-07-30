@@ -64,10 +64,11 @@ from fastmcp.utilities.cache import TimedCache
 from fastmcp.utilities.cli import log_server_banner
 from fastmcp.utilities.components import FastMCPComponent
 from fastmcp.utilities.logging import get_logger
-from fastmcp.utilities.types import ContextSamplingFallbackProtocol, NotSet, NotSetT
+from fastmcp.utilities.types import NotSet, NotSetT
 
 if TYPE_CHECKING:
     from fastmcp.client import Client
+    from fastmcp.client.sampling import SamplingHandler
     from fastmcp.client.transports import ClientTransport, ClientTransportT
     from fastmcp.server.openapi import ComponentFn as OpenAPIComponentFn
     from fastmcp.server.openapi import FastMCPOpenAPI, RouteMap
@@ -155,8 +156,8 @@ class FastMCP(Generic[LifespanResultT]):
         streamable_http_path: str | None = None,
         json_response: bool | None = None,
         stateless_http: bool | None = None,
-        sampling_fallback: ContextSamplingFallbackProtocol | None = None,
-        sampling_always_fallback: bool | None = None,
+        sampling_handler: SamplingHandler[LifespanResultT] | None = None,
+        sampling_handler_behavior: Literal["default", "fallback"] = "fallback",
     ):
         self.resource_prefix_format: Literal["protocol", "path"] = (
             resource_prefix_format or fastmcp.settings.resource_prefix_format
@@ -211,8 +212,8 @@ class FastMCP(Generic[LifespanResultT]):
         self._setup_handlers()
         self.dependencies = dependencies or fastmcp.settings.server_dependencies
 
-        self.sampling_fallback = sampling_fallback
-        self.sampling_always_fallback = sampling_always_fallback
+        self.sampling_handler = sampling_handler
+        self.sampling_handler_behavior = sampling_handler_behavior
 
         # handle deprecated settings
         self._handle_deprecated_settings(
