@@ -1,7 +1,7 @@
 from collections.abc import Iterator, Sequence
 from typing import get_args
 
-from mcp import ClientSession
+from mcp import ServerSession
 from mcp.shared.context import LifespanContextT, RequestContext
 from mcp.types import CreateMessageRequestParams as SamplingParams
 from mcp.types import (
@@ -32,7 +32,7 @@ class OpenAISamplingHandler(BaseLLMSamplingHandler):
         self,
         messages: list[SamplingMessage],
         params: SamplingParams,
-        context: RequestContext[ClientSession, LifespanContextT],
+        context: RequestContext[ServerSession, LifespanContextT],
     ) -> CreateMessageResult:
         openai_messages: list[ChatCompletionMessageParam] = (
             self._convert_to_openai_messages(
