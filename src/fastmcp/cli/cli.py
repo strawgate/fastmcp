@@ -360,11 +360,10 @@ def run(
 
     cli_server.run_server()
 
+
 @list_app.command(name="tools")
 async def list_tools(
-    cli_server: Annotated[
-        UvCliServer | CliServer, cyclopts.Parameter(name="*")
-    ],
+    cli_server: Annotated[UvCliServer | CliServer, cyclopts.Parameter(name="*")],
     *server_args: str,
 ) -> None:
     """List tools on the server."""
@@ -378,6 +377,43 @@ async def list_tools(
             console.print(f"{tool.name}: {tool.description}")
 
         await client.close()
+
+
+@list_app.command(name="resources")
+async def list_resources(
+    cli_server: Annotated[UvCliServer | CliServer, cyclopts.Parameter(name="*")],
+    *server_args: str,
+) -> None:
+    """List resources on the server."""
+
+    cli_server.server_args.extend(server_args)
+
+    async with cli_server.client as client:
+        resources = await client.list_resources()
+
+        for resource in resources:
+            console.print(f"{resource.name}: {resource.description}")
+
+        await client.close()
+
+
+@list_app.command(name="prompts")
+async def list_prompts(
+    cli_server: Annotated[UvCliServer | CliServer, cyclopts.Parameter(name="*")],
+    *server_args: str,
+) -> None:
+    """List prompts on the server."""
+
+    cli_server.server_args.extend(server_args)
+
+    async with cli_server.client as client:
+        prompts = await client.list_prompts()
+
+        for prompt in prompts:
+            console.print(f"{prompt.name}: {prompt.description}")
+
+        await client.close()
+
 
 # @list_app.command(name="tools")
 # async def call_tools(
@@ -394,7 +430,7 @@ async def list_tools(
 
 #     async with cli_server.client:
 #         tools = await cli_server.client.list_tools()
-        
+
 #         args = json.loads(json_args) if json_args else {}
 
 #         result = await cli_server.client.call_tool(tool, args)
