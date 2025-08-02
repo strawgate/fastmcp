@@ -4,7 +4,7 @@ import asyncio
 import copy
 import inspect
 import warnings
-from collections.abc import Generator
+from collections.abc import Generator, Mapping
 from contextlib import contextmanager
 from contextvars import ContextVar, Token
 from dataclasses import dataclass
@@ -51,6 +51,18 @@ _current_context: ContextVar[Context | None] = ContextVar("context", default=Non
 _flush_lock = asyncio.Lock()
 
 
+@dataclass
+class LogData:
+    """Data object for passing log arguments to client-side handlers.
+
+    This provides an interface to match the Python standard library logging,
+    for compatibility with structured logging.
+    """
+
+    msg: str
+    extra: Mapping[str, Any] | None = None
+
+
 @contextmanager
 def set_context(context: Context) -> Generator[Context, None, None]:
     token = _current_context.set(context)
@@ -89,8 +101,8 @@ class Context:
         client_id = ctx.client_id
 
         # Manage state across the request
-        ctx.set_state_value("key", "value")
-        value = ctx.get_state_value("key")
+        ctx.set_state("key", "value")
+        value = ctx.get_state("key")
 
         return str(x)
     ```
@@ -188,6 +200,7 @@ class Context:
         message: str,
         level: LoggingLevel | None = None,
         logger_name: str | None = None,
+        extra: Mapping[str, Any] | None = None,
     ) -> None:
         """Send a log message to the client.
 
@@ -196,12 +209,14 @@ class Context:
             level: Optional log level. One of "debug", "info", "notice", "warning", "error", "critical",
                 "alert", or "emergency". Default is "info".
             logger_name: Optional logger name
+            extra: Optional mapping for additional arguments
         """
         if level is None:
             level = "info"
+        data = LogData(msg=message, extra=extra)
         await self.session.send_log_message(
             level=level,
-            data=message,
+            data=data,
             logger=logger_name,
             related_request_id=self.request_id,
         )
@@ -270,21 +285,49 @@ class Context:
         return self.request_context.session
 
     # Convenience methods for common log levels
-    async def debug(self, message: str, logger_name: str | None = None) -> None:
+    async def debug(
+        self,
+        message: str,
+        logger_name: str | None = None,
+        extra: Mapping[str, Any] | None = None,
+    ) -> None:
         """Send a debug log message."""
-        await self.log(level="debug", message=message, logger_name=logger_name)
+        await self.log(
+            level="debug", message=message, logger_name=logger_name, extra=extra
+        )
 
-    async def info(self, message: str, logger_name: str | None = None) -> None:
+    async def info(
+        self,
+        message: str,
+        logger_name: str | None = None,
+        extra: Mapping[str, Any] | None = None,
+    ) -> None:
         """Send an info log message."""
-        await self.log(level="info", message=message, logger_name=logger_name)
+        await self.log(
+            level="info", message=message, logger_name=logger_name, extra=extra
+        )
 
-    async def warning(self, message: str, logger_name: str | None = None) -> None:
+    async def warning(
+        self,
+        message: str,
+        logger_name: str | None = None,
+        extra: Mapping[str, Any] | None = None,
+    ) -> None:
         """Send a warning log message."""
-        await self.log(level="warning", message=message, logger_name=logger_name)
+        await self.log(
+            level="warning", message=message, logger_name=logger_name, extra=extra
+        )
 
-    async def error(self, message: str, logger_name: str | None = None) -> None:
+    async def error(
+        self,
+        message: str,
+        logger_name: str | None = None,
+        extra: Mapping[str, Any] | None = None,
+    ) -> None:
         """Send an error log message."""
-        await self.log(level="error", message=message, logger_name=logger_name)
+        await self.log(
+            level="error", message=message, logger_name=logger_name, extra=extra
+        )
 
     async def list_roots(self) -> list[Root]:
         """List the roots available to the server, as indicated by the client."""

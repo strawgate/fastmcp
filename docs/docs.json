@@ -93,7 +93,12 @@
                   {
                     "group": "Authentication",
                     "icon": "shield-check",
-                    "pages": ["servers/auth/verifiers"]
+                    "pages": [
+                      "servers/auth/authentication",
+                      "servers/auth/remote-oauth",
+                      "servers/auth/token-verification",
+                      "servers/auth/full-oauth-server"
+                    ]
                   }
                 ]
               },
@@ -137,6 +142,7 @@
                 "group": "Integrations",
                 "pages": [
                   "integrations/anthropic",
+                  "integrations/authkit",
                   "integrations/chatgpt",
                   "integrations/claude-code",
                   "integrations/claude-desktop",
@@ -269,10 +275,12 @@
                         "pages": [
                           "python-sdk/fastmcp-server-auth-providers-__init__",
                           "python-sdk/fastmcp-server-auth-providers-bearer",
-                          "python-sdk/fastmcp-server-auth-providers-bearer_env",
-                          "python-sdk/fastmcp-server-auth-providers-in_memory"
+                          "python-sdk/fastmcp-server-auth-providers-in_memory",
+                          "python-sdk/fastmcp-server-auth-providers-jwt",
+                          "python-sdk/fastmcp-server-auth-providers-workos"
                         ]
-                      }
+                      },
+                      "python-sdk/fastmcp-server-auth-registry"
                     ]
                   },
                   "python-sdk/fastmcp-server-context",
@@ -309,7 +317,6 @@
                 "group": "fastmcp.utilities",
                 "pages": [
                   "python-sdk/fastmcp-utilities-__init__",
-                  "python-sdk/fastmcp-utilities-cache",
                   "python-sdk/fastmcp-utilities-cli",
                   "python-sdk/fastmcp-utilities-components",
                   "python-sdk/fastmcp-utilities-exceptions",

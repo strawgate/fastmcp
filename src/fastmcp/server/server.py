@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import datetime
 import inspect
 import re
 import warnings
@@ -50,8 +49,8 @@ from fastmcp.prompts import Prompt, PromptManager
 from fastmcp.prompts.prompt import FunctionPrompt
 from fastmcp.resources import Resource, ResourceManager
 from fastmcp.resources.template import ResourceTemplate
-from fastmcp.server.auth.auth import OAuthProvider, TokenVerifier
-from fastmcp.server.auth.verifiers import EnvJWTVerifier
+from fastmcp.server.auth.auth import AuthProvider
+from fastmcp.server.auth.registry import get_registered_provider
 from fastmcp.server.http import (
     StarletteWithLifespan,
     create_sse_app,
@@ -63,7 +62,6 @@ from fastmcp.settings import Settings
 from fastmcp.tools import ToolManager
 from fastmcp.tools.tool import FunctionTool, Tool, ToolResult
 from fastmcp.tools.tool_transform import ToolTransformConfig
-from fastmcp.utilities.cache import TimedCache
 from fastmcp.utilities.cli import log_server_banner
 from fastmcp.utilities.components import FastMCPComponent
 from fastmcp.utilities.logging import get_logger
@@ -134,7 +132,7 @@ class FastMCP(Generic[LifespanResultT]):
         instructions: str | None = None,
         *,
         version: str | None = None,
-        auth: OAuthProvider | TokenVerifier | None = None,
+        auth: AuthProvider | None | NotSetT = NotSet,
         middleware: list[Middleware] | None = None,
         lifespan: (
             Callable[
@@ -177,9 +175,6 @@ class FastMCP(Generic[LifespanResultT]):
             resource_prefix_format or fastmcp.settings.resource_prefix_format
         )
 
-        self._cache = TimedCache(
-            expiration=datetime.timedelta(seconds=cache_expiration_seconds or 0)
-        )
         self._additional_http_routes: list[BaseRoute] = []
         self._tool_manager = ToolManager(
             duplicate_behavior=on_duplicate_tools,
@@ -208,10 +203,14 @@ class FastMCP(Generic[LifespanResultT]):
             lifespan=_lifespan_wrapper(self, lifespan),
         )
 
-        if auth is None and fastmcp.settings.default_auth_provider == "jwt-env":
-            auth = EnvJWTVerifier()
-
-        self.auth = auth
+        # if auth is `NotSet`, try to create a provider from the environment
+        if auth is NotSet:
+            if fastmcp.settings.server_auth is not None:
+                provider_cls = get_registered_provider(fastmcp.settings.server_auth)
+                auth = provider_cls()
+            else:
+                auth = None
+        self.auth = cast(AuthProvider | None, auth)
 
         if tools:
             for tool in tools:
@@ -821,7 +820,6 @@ class FastMCP(Generic[LifespanResultT]):
             The tool instance that was added to the server.
         """
         self._tool_manager.add_tool(tool)
-        self._cache.clear()
 
         # Send notification if we're in a request context
         try:
@@ -844,7 +842,6 @@ class FastMCP(Generic[LifespanResultT]):
             NotFoundError: If the tool is not found
         """
         self._tool_manager.remove_tool(name)
-        self._cache.clear()
 
         # Send notification if we're in a request context
         try:
@@ -1038,7 +1035,6 @@ class FastMCP(Generic[LifespanResultT]):
             The resource instance that was added to the server.
         """
         self._resource_manager.add_resource(resource)
-        self._cache.clear()
 
         # Send notification if we're in a request context
         try:
@@ -1110,7 +1106,6 @@ class FastMCP(Generic[LifespanResultT]):
             mime_type=mime_type,
             tags=tags,
         )
-        self._cache.clear()
 
     def resource(
         self,
@@ -1259,7 +1254,6 @@ class FastMCP(Generic[LifespanResultT]):
             The prompt instance that was added to the server.
         """
         self._prompt_manager.add_prompt(prompt)
-        self._cache.clear()
 
         # Send notification if we're in a request context
         try:
@@ -1808,8 +1802,6 @@ class FastMCP(Generic[LifespanResultT]):
         self._resource_manager.mount(mounted_server)
         self._prompt_manager.mount(mounted_server)
 
-        self._cache.clear()
-
     async def import_server(
         self,
         server: FastMCP[LifespanResultT],
@@ -1931,8 +1923,6 @@ class FastMCP(Generic[LifespanResultT]):
             logger.debug(f"Imported server {server.name} with prefix '{prefix}'")
         else:
             logger.debug(f"Imported server {server.name}")
-
-        self._cache.clear()
 
     @classmethod
     def from_openapi(
