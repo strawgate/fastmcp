@@ -11,12 +11,10 @@ from mcp.server.auth.middleware.bearer_auth import (
     RequireAuthMiddleware,
 )
 from mcp.server.auth.provider import TokenVerifier as TokenVerifierProtocol
-from mcp.server.auth.routes import create_auth_routes
 from mcp.server.lowlevel.server import LifespanResultT
 from mcp.server.sse import SseServerTransport
 from mcp.server.streamable_http import EventStore
 from mcp.server.streamable_http_manager import StreamableHTTPSessionManager
-from pydantic import AnyHttpUrl
 from starlette.applications import Starlette
 from starlette.middleware import Middleware
 from starlette.middleware.authentication import AuthenticationMiddleware
@@ -25,7 +23,7 @@ from starlette.responses import Response
 from starlette.routing import BaseRoute, Mount, Route
 from starlette.types import Lifespan, Receive, Scope, Send
 
-from fastmcp.server.auth.auth import OAuthProvider, TokenVerifier
+from fastmcp.server.auth.auth import AuthProvider
 from fastmcp.utilities.logging import get_logger
 
 if TYPE_CHECKING:
@@ -71,50 +69,6 @@ class RequestContextMiddleware:
             await self.app(scope, receive, send)
 
 
-def setup_auth_middleware_and_routes(
-    auth: OAuthProvider | TokenVerifier,
-) -> tuple[list[Middleware], list[BaseRoute], list[str]]:
-    """Set up authentication middleware and routes if auth is enabled.
-
-    Args:
-        auth: Either an OAuthProvider or TokenVerifier for authentication
-
-    Returns:
-        Tuple of (middleware, auth_routes, required_scopes)
-    """
-    middleware: list[Middleware] = [
-        Middleware(
-            AuthenticationMiddleware,
-            backend=BearerAuthBackend(cast(TokenVerifierProtocol, auth)),
-        ),
-        Middleware(AuthContextMiddleware),
-    ]
-
-    auth_routes: list[BaseRoute] = []
-    required_scopes: list[str] = []
-
-    # Handle TokenVerifier vs OAuthProvider
-    # Check if it's an OAuthProvider by looking for issuer_url attribute
-    if hasattr(auth, "issuer_url"):
-        # OAuthProvider: create auth routes and get required scopes
-        # We know this is an OAuthProvider because it has issuer_url
-        auth_routes = list(
-            create_auth_routes(
-                provider=auth,  # type: ignore[arg-type]
-                issuer_url=auth.issuer_url,  # type: ignore[attr-defined]
-                service_documentation_url=auth.service_documentation_url,  # type: ignore[attr-defined]
-                client_registration_options=auth.client_registration_options,  # type: ignore[attr-defined]
-                revocation_options=auth.revocation_options,  # type: ignore[attr-defined]
-            )
-        )
-        required_scopes = auth.required_scopes or []  # type: ignore[attr-defined]
-    else:
-        # TokenVerifier: no auth routes but may have required scopes
-        required_scopes = getattr(auth, "required_scopes", None) or []
-
-    return middleware, auth_routes, required_scopes
-
-
 def create_base_app(
     routes: list[BaseRoute],
     middleware: list[Middleware],
@@ -147,7 +101,7 @@ def create_sse_app(
     server: FastMCP[LifespanResultT],
     message_path: str,
     sse_path: str,
-    auth: OAuthProvider | TokenVerifier | None = None,
+    auth: AuthProvider | None = None,
     debug: bool = False,
     routes: list[BaseRoute] | None = None,
     middleware: list[Middleware] | None = None,
@@ -158,7 +112,7 @@ def create_sse_app(
         server: The FastMCP server instance
         message_path: Path for SSE messages
         sse_path: Path for SSE connections
-        auth: Optional authentication provider (OAuthProvider or TokenVerifier)
+        auth: Optional authentication provider (AuthProvider)
         debug: Whether to enable debug mode
         routes: Optional list of custom routes
         middleware: Optional list of middleware
@@ -182,23 +136,26 @@ def create_sse_app(
             )
         return Response()
 
-    # Get auth middleware and routes
+    # Set up auth if enabled
     if auth:
-        auth_middleware, auth_routes, required_scopes = (
-            setup_auth_middleware_and_routes(auth)
-        )
+        # Create auth middleware
+        auth_middleware = [
+            Middleware(
+                AuthenticationMiddleware,
+                backend=BearerAuthBackend(auth),
+            ),
+            Middleware(AuthContextMiddleware),
+        ]
+
+        # Get auth routes and scopes
+        auth_routes = auth.get_routes()
+        required_scopes = getattr(auth, "required_scopes", None) or []
+
+        # Get resource metadata URL for WWW-Authenticate header
+        resource_metadata_url = auth.get_resource_metadata_url()
 
         server_routes.extend(auth_routes)
         server_middleware.extend(auth_middleware)
-
-        # Determine resource_metadata_url for TokenVerifier
-        resource_metadata_url = None
-        if isinstance(auth, TokenVerifier) and auth.resource_server_url:
-            # Add .well-known path for RFC 9728 compliance
-            resource_metadata_url = AnyHttpUrl(
-                str(auth.resource_server_url).rstrip("/")
-                + "/.well-known/oauth-protected-resource"
-            )
 
         # Auth is enabled, wrap endpoints with RequireAuthMiddleware
         server_routes.append(
@@ -263,7 +220,7 @@ def create_streamable_http_app(
     server: FastMCP[LifespanResultT],
     streamable_http_path: str,
     event_store: EventStore | None = None,
-    auth: OAuthProvider | TokenVerifier | None = None,
+    auth: AuthProvider | None = None,
     json_response: bool = False,
     stateless_http: bool = False,
     debug: bool = False,
@@ -276,7 +233,7 @@ def create_streamable_http_app(
         server: The FastMCP server instance
         streamable_http_path: Path for StreamableHTTP connections
         event_store: Optional event store for session management
-        auth: Optional authentication provider (OAuthProvider or TokenVerifier)
+        auth: Optional authentication provider (AuthProvider)
         json_response: Whether to use JSON response format
         stateless_http: Whether to use stateless mode (new transport per request)
         debug: Whether to enable debug mode
@@ -327,29 +284,24 @@ def create_streamable_http_app(
 
     # Add StreamableHTTP routes with or without auth
     if auth:
-        resource_metadata_url = None
+        # Create auth middleware
+        auth_middleware = [
+            Middleware(
+                AuthenticationMiddleware,
+                backend=BearerAuthBackend(cast(TokenVerifierProtocol, auth)),
+            ),
+            Middleware(AuthContextMiddleware),
+        ]
 
-        if isinstance(auth, TokenVerifier) and auth.resource_server_url:
-            resource_metadata_url = AnyHttpUrl(
-                str(auth.resource_server_url).rstrip("/")
-                + "/.well-known/oauth-protected-resource"
-            )
+        # Get auth routes and scopes
+        auth_routes = auth.get_routes()
+        required_scopes = getattr(auth, "required_scopes", None) or []
 
-        auth_middleware, auth_routes, required_scopes = (
-            setup_auth_middleware_and_routes(auth)
-        )
+        # Get resource metadata URL for WWW-Authenticate header
+        resource_metadata_url = auth.get_resource_metadata_url()
 
         server_routes.extend(auth_routes)
         server_middleware.extend(auth_middleware)
-
-        # Determine resource_metadata_url for TokenVerifier
-        resource_metadata_url = None
-        if isinstance(auth, TokenVerifier) and auth.resource_server_url:
-            # Add .well-known path for RFC 9728 compliance
-            resource_metadata_url = AnyHttpUrl(
-                str(auth.resource_server_url).rstrip("/")
-                + "/.well-known/oauth-protected-resource"
-            )
 
         # Auth is enabled, wrap endpoint with RequireAuthMiddleware
         server_routes.append(
