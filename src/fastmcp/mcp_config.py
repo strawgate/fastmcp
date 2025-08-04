@@ -52,7 +52,7 @@ if TYPE_CHECKING:
         StdioTransport,
         StreamableHttpTransport,
     )
-    from fastmcp.server.proxy import FastMCPProxy
+    from fastmcp.server.proxy import FastMCPProxy, ProxyClient
 
 
 def infer_transport_type_from_url(
@@ -91,23 +91,27 @@ class _TransformingMCPServerMixin(FastMCPBaseModel):
         description="The tags to exclude in the proxy.",
     )
 
-    def to_server(self) -> FastMCPProxy:
+    def _build(self) -> tuple[FastMCPProxy, ProxyClient, ClientTransport]:
         from fastmcp.server.proxy import FastMCPProxy, ProxyClient
 
-        transport: ClientTransport = super().to_transport()  # pyright: ignore[reportUnknownMemberType, reportAttributeAccessIssue, reportUnknownVariableType]
+        underlying_transport: ClientTransport = super().to_transport()  # pyright: ignore[reportUnknownMemberType, reportAttributeAccessIssue, reportUnknownVariableType]
 
-        client = ProxyClient(transport, keep_alive=True)
+        proxy_client = ProxyClient(underlying_transport)
 
-        return FastMCPProxy(
-            client_factory=lambda: client,
-            tool_transformations=self.tools,
-            include_tags=self.include_tags,
-            exclude_tags=self.exclude_tags,
+        return (
+            FastMCPProxy(
+                client_factory=lambda: proxy_client,
+                tool_transformations=self.tools,
+                include_tags=self.include_tags,
+                exclude_tags=self.exclude_tags,
+            ),
+            proxy_client,
+            underlying_transport,
         )
 
     def to_transport(self) -> FastMCPTransport:
         """Get the transport for the server."""
-        return FastMCPTransport(mcp=self.to_server())
+        return FastMCPTransport(mcp=self._build()[0])
 
 
 class StdioMCPServer(BaseModel):

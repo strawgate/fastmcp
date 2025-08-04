@@ -1,41 +1,35 @@
-from typing import Any
-
-from fastmcp.mcp_config import (
-    MCPConfig,
-    TransformingRemoteMCPServer,
-    TransformingStdioMCPServer,
-)
-from fastmcp.server.server import FastMCP
+from fastmcp.mcp_config import MCPConfig
+from fastmcp.server.proxy import FastMCPProxy, ProxyClient
 
 
-def composite_server_from_mcp_config(
-    config: MCPConfig, name_as_prefix: bool = True
-) -> FastMCP[None]:
-    """A utility function to create a composite server from an MCPConfig."""
-    composite_server = FastMCP[None]()
+def to_servers_and_clients(
+    mcp_config: MCPConfig,
+) -> list[tuple[str, FastMCPProxy, ProxyClient]]:
+    """A utility function to convert an MCPConfig into a list of servers and clients."""
+    from fastmcp.client.transports import (
+        SSETransport,
+        StdioTransport,
+        StreamableHttpTransport,
+    )
+    from fastmcp.mcp_config import (
+        TransformingRemoteMCPServer,
+        TransformingStdioMCPServer,
+    )
 
-    mount_mcp_config_into_server(config, composite_server, name_as_prefix)
+    servers_and_clients: list[tuple[str, FastMCPProxy, ProxyClient]] = []
 
-    return composite_server
-
-
-def mount_mcp_config_into_server(
-    config: MCPConfig,
-    server: FastMCP[Any],
-    name_as_prefix: bool = True,
-) -> None:
-    """A utility function to mount the servers from an MCPConfig into a FastMCP server."""
-    for name, mcp_server in config.mcpServers.items():
+    for server_name, server_config in mcp_config.mcpServers.items():
         if isinstance(
-            mcp_server, TransformingStdioMCPServer | TransformingRemoteMCPServer
+            server_config, TransformingRemoteMCPServer | TransformingStdioMCPServer
         ):
-            server.mount(
-                prefix=name if name_as_prefix else None,
-                server=mcp_server.to_server(),
-                as_proxy=True,
-            )
+            server, proxy_client, _ = server_config._build()
+            servers_and_clients.append((server_name, server, proxy_client))
         else:
-            server.mount(
-                prefix=name if name_as_prefix else None,
-                server=FastMCP.as_proxy(mcp_server.to_transport()),
-            )
+            transport = server_config.to_transport()
+            proxy_client: ProxyClient[
+                SSETransport | StdioTransport | StreamableHttpTransport
+            ] = ProxyClient(transport)
+            proxy_server = FastMCPProxy(client_factory=lambda: proxy_client)
+            servers_and_clients.append((server_name, proxy_server, proxy_client))
+
+    return servers_and_clients

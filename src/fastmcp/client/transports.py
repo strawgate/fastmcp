@@ -29,7 +29,10 @@ from typing_extensions import TypedDict, Unpack
 import fastmcp
 from fastmcp.client.auth.bearer import BearerAuth
 from fastmcp.client.auth.oauth import OAuth
-from fastmcp.mcp_config import MCPConfig, infer_transport_type_from_url
+from fastmcp.mcp_config import (
+    MCPConfig,
+    infer_transport_type_from_url,
+)
 from fastmcp.server.dependencies import get_http_headers
 from fastmcp.server.server import FastMCP
 from fastmcp.utilities.logging import get_logger
@@ -789,34 +792,66 @@ class MCPConfigTransport(ClientTransport):
     """
 
     def __init__(self, config: MCPConfig | dict, name_as_prefix: bool = True):
-        from fastmcp.utilities.mcp_config import composite_server_from_mcp_config
+        from fastmcp.mcp_config import (
+            TransformingRemoteMCPServer,
+            TransformingStdioMCPServer,
+        )
+        from fastmcp.server.proxy import ProxyClient
+        from fastmcp.utilities.mcp_config import (
+            to_servers_and_clients,
+        )
 
         if isinstance(config, dict):
             config = MCPConfig.from_dict(config)
+
         self.config = config
 
-        # if there are no servers, raise an error
         if len(self.config.mcpServers) == 0:
             raise ValueError("No MCP servers defined in the config")
 
-        # if there's exactly one server, create a client for that server
-        elif len(self.config.mcpServers) == 1:
-            self.transport = list(self.config.mcpServers.values())[0].to_transport()
+        self._name_as_prefix = name_as_prefix
 
-        # otherwise create a composite client
-        else:
-            self.transport = FastMCPTransport(
-                mcp=composite_server_from_mcp_config(
-                    self.config, name_as_prefix=name_as_prefix
-                )
+        self._composite_server = FastMCP[Any](name="composite_server")
+        self._underlying_clients: list[ProxyClient] = []
+
+        # if there's exactly one server, and its not a transforming server, return the transport for that server
+        if len(self.config.mcpServers) == 1:
+            only_server = list(self.config.mcpServers.values())[0]
+            if not isinstance(
+                only_server, TransformingRemoteMCPServer | TransformingStdioMCPServer
+            ):
+                self.transport = only_server.to_transport()
+                return
+
+        # Otherwise, create a composite server and clients for each server
+        servers_and_clients = to_servers_and_clients(self.config)
+
+        for server_name, server, client in servers_and_clients:
+            self._composite_server.mount(
+                server=server,
+                prefix=server_name if self._name_as_prefix else None,
+                as_proxy=True,
             )
+            self._underlying_clients.append(client)
+
+        self.transport = FastMCPTransport(mcp=self._composite_server)
 
     @contextlib.asynccontextmanager
     async def connect_session(
         self, **session_kwargs: Unpack[SessionKwargs]
     ) -> AsyncIterator[ClientSession]:
-        async with self.transport.connect_session(**session_kwargs) as session:
-            yield session
+        async with contextlib.AsyncExitStack() as stack:
+            for client in self._underlying_clients:
+                await stack.enter_async_context(client)
+
+            async with self.transport.connect_session(**session_kwargs) as session:
+                yield session
+
+    async def close(self):
+        for client in self._underlying_clients:
+            await client.close()
+
+        await self.transport.close()
 
     def __repr__(self) -> str:
         return f"<MCPConfigTransport(config='{self.config}')>"

@@ -212,7 +212,7 @@ async def test_multi_client(tmp_path: Path):
         }
     }
 
-    client = Client(config)
+    client: Client[MCPConfigTransport] = Client(config)
 
     async with client:
         tools = await client.list_tools()
@@ -222,6 +222,8 @@ async def test_multi_client(tmp_path: Path):
         result_2 = await client.call_tool("test_2_add", {"a": 1, "b": 2})
         assert result_1.data == 3
         assert result_2.data == 3
+
+    assert client.transport.transport
 
 
 async def test_remote_config_default_no_auth():
@@ -320,7 +322,7 @@ async def test_multi_client_with_logging(tmp_path: Path):
     async def log_handler(message: LogMessage):
         MESSAGES.append(message)
 
-    async with Client(config, log_handler=log_handler) as client:
+    async with Client(config, log_handler=log_handler, keep_alive=True) as client:
         result = await client.call_tool("test_server_log_test", {"message": "test 42"})
         assert result.data == 42
         assert len(MESSAGES) == 1
