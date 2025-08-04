@@ -96,7 +96,7 @@ class _TransformingMCPServerMixin(FastMCPBaseModel):
 
         underlying_transport: ClientTransport = super().to_transport()  # pyright: ignore[reportUnknownMemberType, reportAttributeAccessIssue, reportUnknownVariableType]
 
-        proxy_client = ProxyClient(underlying_transport)
+        proxy_client = ProxyClient(underlying_transport, keep_alive=True)
 
         return (
             FastMCPProxy(

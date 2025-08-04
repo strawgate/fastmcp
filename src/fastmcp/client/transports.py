@@ -404,7 +404,8 @@ class StdioTransport(ClientTransport):
         self._stop_event.set()
 
         # wait for the connection task to finish cleanly
-        await self._connect_task
+        if not self._connect_task.done:
+            await self._connect_task
 
         # reset variables and events for potential future reconnects
         self._connect_task = None
@@ -840,17 +841,11 @@ class MCPConfigTransport(ClientTransport):
     async def connect_session(
         self, **session_kwargs: Unpack[SessionKwargs]
     ) -> AsyncIterator[ClientSession]:
-        async with contextlib.AsyncExitStack() as stack:
-            for client in self._underlying_clients:
-                await stack.enter_async_context(client)
-
-            async with self.transport.connect_session(**session_kwargs) as session:
-                yield session
+        async with self.transport.connect_session(**session_kwargs) as session:
+            self.session = session
+            yield session
 
     async def close(self):
-        for client in self._underlying_clients:
-            await client.close()
-
         await self.transport.close()
 
     def __repr__(self) -> str:

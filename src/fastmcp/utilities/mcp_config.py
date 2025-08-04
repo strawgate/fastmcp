@@ -28,7 +28,7 @@ def to_servers_and_clients(
             transport = server_config.to_transport()
             proxy_client: ProxyClient[
                 SSETransport | StdioTransport | StreamableHttpTransport
-            ] = ProxyClient(transport)
+            ] = ProxyClient(transport, keep_alive=True)
             proxy_server = FastMCPProxy(client_factory=lambda: proxy_client)
             servers_and_clients.append((server_name, proxy_server, proxy_client))
 
