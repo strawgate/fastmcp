@@ -387,7 +387,7 @@ class Context:
             )
         )
 
-        if self.fastmcp.sampling_handler_behavior == "default" or should_fallback:
+        if self.fastmcp.sampling_handler_behavior == "always" or should_fallback:
             if self.fastmcp.sampling_handler is None:
                 raise ValueError("Client does not support sampling")
 

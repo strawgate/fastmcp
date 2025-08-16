@@ -21,7 +21,6 @@ async def async_main():
                 base_url=os.getenv("BASE_URL"),
             ),
         ),
-        sampling_handler_behavior="default",
     )
 
     @server.tool

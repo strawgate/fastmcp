@@ -169,7 +169,7 @@ class FastMCP(Generic[LifespanResultT]):
         json_response: bool | None = None,
         stateless_http: bool | None = None,
         sampling_handler: SamplingHandler[LifespanResultT] | None = None,
-        sampling_handler_behavior: Literal["default", "fallback"] = "fallback",
+        sampling_handler_behavior: Literal["always", "fallback"] | None = None,
     ):
         self.resource_prefix_format: Literal["protocol", "path"] = (
             resource_prefix_format or fastmcp.settings.resource_prefix_format
@@ -228,7 +228,8 @@ class FastMCP(Generic[LifespanResultT]):
         self.dependencies = dependencies or fastmcp.settings.server_dependencies
 
         self.sampling_handler = sampling_handler
-        self.sampling_handler_behavior = sampling_handler_behavior
+        self.sampling_handler_behavior = sampling_handler_behavior or "fallback"
+
         self.include_fastmcp_meta = (
             include_fastmcp_meta
             if include_fastmcp_meta is not None
