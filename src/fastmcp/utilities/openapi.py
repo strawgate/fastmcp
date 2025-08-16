@@ -82,13 +82,9 @@ def format_array_parameter(
             return values
         else:
             # For path parameters, fallback to string representation without Python syntax
-            str_value = (
-                str(values)
-                .replace("[", "")
-                .replace("]", "")
-                .replace("'", "")
-                .replace('"', "")
-            )
+            # Use str.translate() for efficient character removal
+            translation_table = str.maketrans("", "", "[]'\"")
+            str_value = str(values).translate(translation_table)
             return str_value
 
 
@@ -216,7 +212,7 @@ def parse_openapi_to_http_routes(openapi_dict: dict[str, Any]) -> list[HTTPRoute
         if openapi_version.startswith("3.0"):
             # Use OpenAPI 3.0 models
             openapi_30 = OpenAPI_30.model_validate(openapi_dict)
-            logger.info(
+            logger.debug(
                 f"Successfully parsed OpenAPI 3.0 schema version: {openapi_30.openapi}"
             )
             parser = OpenAPIParser(
@@ -234,7 +230,7 @@ def parse_openapi_to_http_routes(openapi_dict: dict[str, Any]) -> list[HTTPRoute
         else:
             # Default to OpenAPI 3.1 models
             openapi_31 = OpenAPI.model_validate(openapi_dict)
-            logger.info(
+            logger.debug(
                 f"Successfully parsed OpenAPI 3.1 schema version: {openapi_31.openapi}"
             )
             parser = OpenAPIParser(
@@ -717,7 +713,7 @@ class OpenAPIParser(
                             openapi_version=self.openapi_version,
                         )
                         routes.append(route)
-                        logger.info(
+                        logger.debug(
                             f"Successfully extracted route: {method_upper} {path_str}"
                         )
                     except ValueError as op_error:
@@ -738,7 +734,7 @@ class OpenAPIParser(
                             exc_info=True,
                         )
 
-        logger.info(f"Finished parsing. Extracted {len(routes)} HTTP routes.")
+        logger.debug(f"Finished parsing. Extracted {len(routes)} HTTP routes.")
         return routes
 
 

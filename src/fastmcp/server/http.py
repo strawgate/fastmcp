@@ -11,12 +11,10 @@ from mcp.server.auth.middleware.bearer_auth import (
     RequireAuthMiddleware,
 )
 from mcp.server.auth.provider import TokenVerifier as TokenVerifierProtocol
-from mcp.server.auth.routes import create_auth_routes
 from mcp.server.lowlevel.server import LifespanResultT
 from mcp.server.sse import SseServerTransport
 from mcp.server.streamable_http import EventStore
 from mcp.server.streamable_http_manager import StreamableHTTPSessionManager
-from pydantic import AnyHttpUrl
 from starlette.applications import Starlette
 from starlette.middleware import Middleware
 from starlette.middleware.authentication import AuthenticationMiddleware
@@ -25,13 +23,45 @@ from starlette.responses import Response
 from starlette.routing import BaseRoute, Mount, Route
 from starlette.types import Lifespan, Receive, Scope, Send
 
-from fastmcp.server.auth.auth import AuthProvider, OAuthProvider, TokenVerifier
+from fastmcp.server.auth import AuthProvider
 from fastmcp.utilities.logging import get_logger
 
 if TYPE_CHECKING:
     from fastmcp.server.server import FastMCP
 
 logger = get_logger(__name__)
+
+
+class StreamableHTTPASGIApp:
+    """ASGI application wrapper for Streamable HTTP server transport."""
+
+    def __init__(self, session_manager):
+        self.session_manager = session_manager
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        try:
+            await self.session_manager.handle_request(scope, receive, send)
+        except RuntimeError as e:
+            if str(e) == "Task group is not initialized. Make sure to use run().":
+                logger.error(
+                    f"Original RuntimeError from mcp library: {e}", exc_info=True
+                )
+                new_error_message = (
+                    "FastMCP's StreamableHTTPSessionManager task group was not initialized. "
+                    "This commonly occurs when the FastMCP application's lifespan is not "
+                    "passed to the parent ASGI application (e.g., FastAPI or Starlette). "
+                    "Please ensure you are setting `lifespan=mcp_app.lifespan` in your "
+                    "parent app's constructor, where `mcp_app` is the application instance "
+                    "returned by `fastmcp_instance.http_app()`. \\n"
+                    "For more details, see the FastMCP ASGI integration documentation: "
+                    "https://gofastmcp.com/deployment/asgi"
+                )
+                # Raise a new RuntimeError that includes the original error's message
+                # for full context, but leads with the more helpful guidance.
+                raise RuntimeError(f"{new_error_message}\\nOriginal error: {e}") from e
+            else:
+                # Re-raise other RuntimeErrors if they don't match the specific message
+                raise
 
 
 _current_http_request: ContextVar[Request | None] = ContextVar(
@@ -42,7 +72,7 @@ _current_http_request: ContextVar[Request | None] = ContextVar(
 
 class StarletteWithLifespan(Starlette):
     @property
-    def lifespan(self) -> Lifespan:
+    def lifespan(self) -> Lifespan[Starlette]:
         return self.router.lifespan_context
 
 
@@ -69,51 +99,6 @@ class RequestContextMiddleware:
                 await self.app(scope, receive, send)
         else:
             await self.app(scope, receive, send)
-
-
-def setup_auth_middleware_and_routes(
-    auth: AuthProvider,
-) -> tuple[list[Middleware], list[Route], list[str]]:
-    """Set up authentication middleware and routes if auth is enabled.
-
-    Args:
-        auth: An AuthProvider for authentication (TokenVerifier or OAuthProvider)
-
-    Returns:
-        Tuple of (middleware, auth_routes, required_scopes)
-    """
-    middleware: list[Middleware] = [
-        Middleware(
-            AuthenticationMiddleware,
-            backend=BearerAuthBackend(cast(TokenVerifierProtocol, auth)),
-        ),
-        Middleware(AuthContextMiddleware),
-    ]
-
-    auth_routes: list[Route] = []
-    required_scopes: list[str] = auth.required_scopes or []
-
-    # Check if it's an OAuthProvider (has OAuth server capability)
-    if isinstance(auth, OAuthProvider):
-        # OAuthProvider: create standard OAuth routes first
-        standard_routes = list(
-            create_auth_routes(
-                provider=auth,
-                issuer_url=auth.issuer_url,
-                service_documentation_url=auth.service_documentation_url,
-                client_registration_options=auth.client_registration_options,
-                revocation_options=auth.revocation_options,
-            )
-        )
-
-        # Allow provider to customize routes (e.g., for proxy behavior or metadata endpoints)
-        auth_routes = auth.customize_auth_routes(standard_routes)
-    else:
-        # Simple AuthProvider or TokenVerifier: start with empty routes
-        # Allow provider to add custom routes (e.g., metadata endpoints)
-        auth_routes = auth.customize_auth_routes([])
-
-    return middleware, auth_routes, required_scopes
 
 
 def create_base_app(
@@ -183,23 +168,26 @@ def create_sse_app(
             )
         return Response()
 
-    # Get auth middleware and routes
+    # Set up auth if enabled
     if auth:
-        auth_middleware, auth_routes, required_scopes = (
-            setup_auth_middleware_and_routes(auth)
-        )
+        # Create auth middleware
+        auth_middleware = [
+            Middleware(
+                AuthenticationMiddleware,
+                backend=BearerAuthBackend(auth),
+            ),
+            Middleware(AuthContextMiddleware),
+        ]
+
+        # Get auth routes and scopes
+        auth_routes = auth.get_routes()
+        required_scopes = getattr(auth, "required_scopes", None) or []
+
+        # Get resource metadata URL for WWW-Authenticate header
+        resource_metadata_url = auth.get_resource_metadata_url()
 
         server_routes.extend(auth_routes)
         server_middleware.extend(auth_middleware)
-
-        # Determine resource_metadata_url for TokenVerifier
-        resource_metadata_url = None
-        if isinstance(auth, TokenVerifier) and auth.resource_server_url:
-            # Add .well-known path for RFC 9728 compliance
-            resource_metadata_url = AnyHttpUrl(
-                str(auth.resource_server_url).rstrip("/")
-                + "/.well-known/oauth-protected-resource"
-            )
 
         # Auth is enabled, wrap endpoints with RequireAuthMiddleware
         server_routes.append(
@@ -241,7 +229,7 @@ def create_sse_app(
     # Add custom routes with lowest precedence
     if routes:
         server_routes.extend(routes)
-    server_routes.extend(server._additional_http_routes)
+    server_routes.extend(server._get_additional_http_routes())
 
     # Add middleware
     if middleware:
@@ -298,74 +286,52 @@ def create_streamable_http_app(
         stateless=stateless_http,
     )
 
-    # Create the ASGI handler
-    async def handle_streamable_http(
-        scope: Scope, receive: Receive, send: Send
-    ) -> None:
-        try:
-            await session_manager.handle_request(scope, receive, send)
-        except RuntimeError as e:
-            if str(e) == "Task group is not initialized. Make sure to use run().":
-                logger.error(
-                    f"Original RuntimeError from mcp library: {e}", exc_info=True
-                )
-                new_error_message = (
-                    "FastMCP's StreamableHTTPSessionManager task group was not initialized. "
-                    "This commonly occurs when the FastMCP application's lifespan is not "
-                    "passed to the parent ASGI application (e.g., FastAPI or Starlette). "
-                    "Please ensure you are setting `lifespan=mcp_app.lifespan` in your "
-                    "parent app's constructor, where `mcp_app` is the application instance "
-                    "returned by `fastmcp_instance.http_app()`. \\n"
-                    "For more details, see the FastMCP ASGI integration documentation: "
-                    "https://gofastmcp.com/deployment/asgi"
-                )
-                # Raise a new RuntimeError that includes the original error's message
-                # for full context, but leads with the more helpful guidance.
-                raise RuntimeError(f"{new_error_message}\\nOriginal error: {e}") from e
-            else:
-                # Re-raise other RuntimeErrors if they don't match the specific message
-                raise
+    # Create the ASGI app wrapper
+    streamable_http_app = StreamableHTTPASGIApp(session_manager)
 
     # Add StreamableHTTP routes with or without auth
     if auth:
-        auth_middleware, auth_routes, required_scopes = (
-            setup_auth_middleware_and_routes(auth)
-        )
+        # Create auth middleware
+        auth_middleware = [
+            Middleware(
+                AuthenticationMiddleware,
+                backend=BearerAuthBackend(cast(TokenVerifierProtocol, auth)),
+            ),
+            Middleware(AuthContextMiddleware),
+        ]
+
+        # Get auth routes and scopes
+        auth_routes = auth.get_routes()
+        required_scopes = getattr(auth, "required_scopes", None) or []
+
+        # Get resource metadata URL for WWW-Authenticate header
+        resource_metadata_url = auth.get_resource_metadata_url()
 
         server_routes.extend(auth_routes)
         server_middleware.extend(auth_middleware)
 
-        # Determine resource_metadata_url for TokenVerifier
-        resource_metadata_url = None
-        if isinstance(auth, TokenVerifier) and auth.resource_server_url:
-            # Add .well-known path for RFC 9728 compliance
-            resource_metadata_url = AnyHttpUrl(
-                str(auth.resource_server_url).rstrip("/")
-                + "/.well-known/oauth-protected-resource"
-            )
-
         # Auth is enabled, wrap endpoint with RequireAuthMiddleware
         server_routes.append(
-            Mount(
+            Route(
                 streamable_http_path,
-                app=RequireAuthMiddleware(
-                    handle_streamable_http, required_scopes, resource_metadata_url
+                endpoint=RequireAuthMiddleware(
+                    streamable_http_app, required_scopes, resource_metadata_url
                 ),
             )
         )
     else:
         # No auth required
         server_routes.append(
-            Mount(
+            Route(
                 streamable_http_path,
-                app=handle_streamable_http,
+                endpoint=streamable_http_app,
             )
         )
 
     # Add custom routes with lowest precedence
     if routes:
         server_routes.extend(routes)
-    server_routes.extend(server._additional_http_routes)
+    server_routes.extend(server._get_additional_http_routes())
 
     # Add middleware
     if middleware:
