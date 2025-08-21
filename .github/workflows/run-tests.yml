@@ -45,7 +45,7 @@ jobs:
 
       - name: Install FastMCP
         # run with frozen to use the current lockfile; static checks will determine if it needs updating
-        run: uv sync --all-groups  --frozen
+        run: uv sync --frozen
 
       - name: Run tests (excluding integration and client_process)
         run: uv run pytest tests -m "not integration and not client_process"
