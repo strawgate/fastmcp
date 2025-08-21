@@ -91,8 +91,12 @@ async def test_sampling_with_messages(fastmcp_server: FastMCP):
         messages: list[SamplingMessage], params: SamplingParams, ctx: RequestContext
     ) -> str:
         assert len(messages) == 2
+
+        assert isinstance(messages[0].content, TextContent)
         assert messages[0].content.type == "text"
         assert messages[0].content.text == "Hello!"
+
+        assert isinstance(messages[1].content, TextContent)
         assert messages[1].content.type == "text"
         assert messages[1].content.text == "How can I assist you today?"
         return "I need to think."

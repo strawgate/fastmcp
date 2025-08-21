@@ -19,6 +19,7 @@ from openai.types.chat import (
     ChatCompletionUserMessageParam,
 )
 from openai.types.shared.chat_model import ChatModel
+from typing_extensions import override
 
 from fastmcp.experimental.sampling.handlers.base import BaseLLMSamplingHandler
 
@@ -28,6 +29,7 @@ class OpenAISamplingHandler(BaseLLMSamplingHandler):
         self.client: OpenAI = client or OpenAI()
         self.default_model: ChatModel = default_model
 
+    @override
     async def __call__(
         self,
         messages: list[SamplingMessage],

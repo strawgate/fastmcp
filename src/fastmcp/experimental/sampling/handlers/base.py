@@ -1,4 +1,4 @@
-from abc import ABC
+from abc import ABC, abstractmethod
 from collections.abc import Awaitable
 
 from mcp import ClientSession, CreateMessageResult
@@ -11,6 +11,7 @@ from mcp.types import (
 
 
 class BaseLLMSamplingHandler(ABC):
+    @abstractmethod
     def __call__(
         self,
         messages: list[SamplingMessage],
