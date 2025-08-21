@@ -20,7 +20,7 @@ from openai.types.chat import (
 )
 from openai.types.shared.chat_model import ChatModel
 
-from fastmcp.contrib.llm_sampling_handler.base import BaseLLMSamplingHandler
+from fastmcp.experimental.sampling.handlers.base import BaseLLMSamplingHandler
 
 
 class OpenAISamplingHandler(BaseLLMSamplingHandler):
@@ -54,8 +54,9 @@ class OpenAISamplingHandler(BaseLLMSamplingHandler):
 
         return self._chat_completion_to_create_message_result(response)
 
+    @staticmethod
     def _iter_models_from_preferences(
-        self, model_preferences: ModelPreferences | str | list[str] | None
+        model_preferences: ModelPreferences | str | list[str] | None,
     ) -> Iterator[str]:
         if model_preferences is None:
             return
@@ -78,8 +79,9 @@ class OpenAISamplingHandler(BaseLLMSamplingHandler):
 
                 yield name
 
+    @staticmethod
     def _convert_to_openai_messages(
-        self, system_prompt: str | None, messages: Sequence[SamplingMessage]
+        system_prompt: str | None, messages: Sequence[SamplingMessage]
     ) -> list[ChatCompletionMessageParam]:
         openai_messages: list[ChatCompletionMessageParam] = []
 
@@ -130,8 +132,9 @@ class OpenAISamplingHandler(BaseLLMSamplingHandler):
 
         return openai_messages
 
+    @staticmethod
     def _chat_completion_to_create_message_result(
-        self, chat_completion: ChatCompletion
+        chat_completion: ChatCompletion,
     ) -> CreateMessageResult:
         if len(chat_completion.choices) == 0:
             raise ValueError("No response for completion")

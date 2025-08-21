@@ -15,6 +15,7 @@ dependencies = [
     "pydantic[email]>=2.11.7",
     "pyperclip>=1.9.0",
     "openapi-core>=0.19.5",
+    "openai>=1.95.1",
 ]
 requires-python = ">=3.10"
 readme = "README.md"
@@ -61,9 +62,6 @@ dev = [
     "pytest-timeout>=2.4.0",
     "pytest-xdist>=3.6.1",
     "ruff",
-]
-openai = [
-    "openai>=1.95.1",
 ]
 
 [project.scripts]

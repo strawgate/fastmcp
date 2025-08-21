@@ -5,9 +5,7 @@ from mcp.types import ContentBlock
 from openai import OpenAI
 
 from fastmcp import FastMCP
-from fastmcp.contrib.llm_sampling_handler.openai_sampling_handler import (
-    OpenAISamplingHandler,
-)
+from fastmcp.experimental.sampling.handlers.openai import OpenAISamplingHandler
 from fastmcp.server.context import Context
 
 
