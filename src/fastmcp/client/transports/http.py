@@ -160,12 +160,12 @@ class StreamableHttpTransport(ClientTransport):
             )
             timeout = httpx.Timeout(30.0, read=read_timeout_seconds.total_seconds())
 
-        # Create httpx client from factory or use default with MCP-appropriate timeouts
-        # create_mcp_http_client uses 30s connect/5min read timeout by default,
-        # and always enables follow_redirects
+        # Create httpx client from factory or use default with MCP-appropriate
+        # timeouts. Note: create_mcp_http_client enables follow_redirects, but
+        # httpx automatically strips Authorization headers on cross-origin
+        # redirects to prevent credential leakage.
         verify_factory = self._make_verify_factory()
         if self.httpx_client_factory is not None:
-            # Factory clients get the full kwargs for backwards compatibility
             http_client = self.httpx_client_factory(
                 headers=headers,
                 auth=self.auth,
