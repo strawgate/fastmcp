@@ -110,9 +110,13 @@ class ConsentMixin:
         self: OAuthProxy, request: Request, base_name: str
     ) -> list[str]:
         """Decode and verify a signed base64-encoded JSON list from cookie. Returns [] if missing/invalid."""
-        # Prefer secure name, but also check non-secure variant for dev
         secure_name = self._cookie_name(base_name)
-        raw = request.cookies.get(secure_name) or request.cookies.get(f"__{base_name}")
+        raw = request.cookies.get(secure_name)
+        # Only fall back to the non-__Host- name over plain HTTP. On HTTPS,
+        # __Host- enforces host-only scope; accepting the weaker name would
+        # let a sibling-subdomain attacker inject a domain-scoped cookie.
+        if not raw and not self._is_https:
+            raw = request.cookies.get(f"__{base_name}")
         if not raw:
             return []
         try:
@@ -397,11 +401,13 @@ class ConsentMixin:
             cimd_domain=cimd_domain,
         )
         response = create_secure_html_response(html)
-        # Store CSRF in cookie with short lifetime
+        # Merge new CSRF token with any existing ones (supports concurrent flows)
+        existing_tokens = self._decode_list_cookie(request, "MCP_CONSENT_STATE")
+        existing_tokens.append(csrf_token)
         self._set_list_cookie(
             response,
             "MCP_CONSENT_STATE",
-            self._encode_list_cookie([csrf_token]),
+            self._encode_list_cookie(existing_tokens),
             max_age=15 * 60,
         )
         return response
@@ -433,6 +439,23 @@ class ConsentMixin:
         if not expected_csrf or csrf_token != expected_csrf or time.time() > expires_at:
             return create_secure_html_response(
                 "<h1>Error</h1><p>Invalid or expired consent token</p>", status_code=400
+            )
+
+        # Double-submit CSRF check: verify the form token matches the cookie.
+        # Without this, an attacker who knows their own tx_id/csrf_token can
+        # CSRF the victim's browser into approving consent, bypassing the
+        # consent binding cookie protection.
+        cookie_csrf_tokens = self._decode_list_cookie(request, "MCP_CONSENT_STATE")
+        if csrf_token not in cookie_csrf_tokens:
+            logger.warning(
+                "CSRF double-submit check failed for transaction %s "
+                "(possible cross-site consent forgery)",
+                txn_id,
+            )
+            return create_secure_html_response(
+                "<h1>Error</h1><p>Authorization session mismatch. "
+                "Please try authenticating again.</p>",
+                status_code=403,
             )
 
         client_key = self._make_client_key(txn["client_id"], txn["client_redirect_uri"])
