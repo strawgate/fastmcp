@@ -62,6 +62,28 @@ When modifying MCP functionality, changes typically need to be applied across al
 - **ALWAYS** run prek before PRs
 - **NEVER** create a release, comment on an issue, or open a PR unless specifically instructed to do so.
 
+### Releases
+
+Only cut releases when the maintainer explicitly asks. Tags follow `v<version>` (e.g., `v3.2.0`). Always pass `--generate-notes` so the auto-generated changelog appears at the bottom.
+
+**The title pun is critical.** Titles follow `v<version>: <pun>` where the pun relates to the most important theme of the release. Propose multiple options and let the maintainer choose — never pick one yourself. Look at recent releases for tone (e.g., "Code to Joy" for the code mode release, "Three at Last" for 3.0).
+
+Write the maintainer-approved handwritten notes to a temporary file, then create the release. `--generate-notes` appends the auto-generated changelog after the handwritten content.
+
+```bash
+gh release create v3.2.0 --target main --title "v3.2.0: Theme Here" --generate-notes --notes-file /tmp/release-notes.md
+```
+
+Most releases target `main`, but maintenance or backport releases may target a different branch (e.g., `release/2.x`). Confirm the target with the maintainer if there's any ambiguity.
+
+The handwritten notes are prepended above the auto-generated changelog and are the part that matters. Do not include a title in the notes body — the release title (`v{version}: {pun}`) already serves as the heading. Work with the maintainer to draft the notes — propose a draft, get feedback, iterate. Do not publish without the maintainer's sign-off.
+
+**Before drafting, always read recent existing releases** (`gh release list` then `gh release view <tag>`) to absorb the voice, structure, and level of detail. Each release builds on the tone of previous ones — don't guess at the style from these instructions alone.
+
+**Point releases** (3.0, 3.1, 3.2) get narrative prose: open with the theme of the release, then walk through headline features conceptually — what they enable, why they matter, how they fit together. Write it the way a blog post reads, not a changelog. Multiple paragraphs, code examples where they clarify.
+
+**Patch releases** (3.1.1, 3.0.2) get 1-2 sentences explaining what broke and what the fix does. Keep it minimal — the auto-generated changelog has the details.
+
 ### Commit Messages and Agent Attribution
 
 - **Agents NOT acting on behalf of @jlowin MUST identify themselves** (e.g., "🤖 Generated with Claude Code" in commits/PRs)
