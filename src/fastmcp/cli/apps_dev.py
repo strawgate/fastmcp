@@ -562,6 +562,8 @@ _LOG_PANEL_HTML = """\
       <span id="mcp-log-count-badge">\u00b7 <span id="mcp-log-count">0</span></span>
     </div>
     <div id="mcp-log-actions">
+      <button id="mcp-log-reset" onclick="window.location.href='/'">&#8592; Back</button>
+      <script>if (window.location.pathname === "/") document.getElementById("mcp-log-reset").style.display = "none";</script>
       <button id="mcp-log-clear">Clear</button>
       <button id="mcp-log-close">\u00d7</button>
     </div>
@@ -871,6 +873,32 @@ def _model_from_schema(tool_name: str, input_schema: dict[str, Any]) -> type[Any
     field_definitions: dict[str, Any] = {}
     for prop_name, prop in properties.items():
         json_type = prop.get("type", "string")
+
+        # Handle anyOf / oneOf (union types like str | dict | None)
+        for key in ("anyOf", "oneOf"):
+            if key in prop:
+                non_null = [
+                    t
+                    for t in prop[key]
+                    if isinstance(t, dict) and t.get("type") != "null"
+                ]
+                if non_null:
+                    types = [t.get("type") for t in non_null if "type" in t]
+                    # Prefer object/array (need textarea for JSON editing),
+                    # then string (most versatile text input), then scalars.
+                    for candidate in (
+                        "object",
+                        "array",
+                        "string",
+                        "integer",
+                        "number",
+                        "boolean",
+                    ):
+                        if candidate in types:
+                            json_type = candidate
+                            break
+                break
+
         match json_type:
             case "integer":
                 py_type: type = int
@@ -878,6 +906,9 @@ def _model_from_schema(tool_name: str, input_schema: dict[str, Any]) -> type[Any
                 py_type = float
             case "boolean":
                 py_type = bool
+            case "object" | "array":
+                # Render as a string textarea; api_launch parses JSON later
+                py_type = str
             case _:
                 py_type = str
 
@@ -897,10 +928,20 @@ def _model_from_schema(tool_name: str, input_schema: dict[str, Any]) -> type[Any
             from typing import Literal
 
             py_type = Literal[tuple(prop["enum"])]  # type: ignore[assignment]
-        if prop.get("format") == "textarea" or (
-            isinstance(prop.get("json_schema_extra"), dict)
-            and prop["json_schema_extra"].get("ui", {}).get("type") == "textarea"
-        ):
+
+        # Textarea detection:
+        # 1. Explicit format: "textarea" in JSON schema
+        # 2. UI annotation: {"ui": {"type": "textarea"}} (json_schema_extra merged flat)
+        # 3. Object/array types need multiline JSON editing
+        use_textarea = (
+            prop.get("format") == "textarea"
+            or (
+                isinstance(prop.get("ui"), dict)
+                and prop["ui"].get("type") == "textarea"
+            )
+            or json_type in ("object", "array")
+        )
+        if use_textarea:
             extra["json_schema_extra"] = {"ui": {"type": "textarea"}}
 
         field_definitions[prop_name] = (
@@ -929,6 +970,7 @@ def _build_picker_html(tools: list[dict[str, Any]]) -> str:
             Pages,
             Select,
             SelectOption,
+            Textarea,
         )
         from prefab_ui.components.form import Form
         from prefab_ui.rx import RESULT, Rx
@@ -948,7 +990,7 @@ def _build_picker_html(tools: list[dict[str, Any]]) -> str:
     def _tool_title(tool: dict[str, Any]) -> str:
         return tool.get("title") or tool["name"]
 
-    with Column(gap=6, css_class="p-8 max-w-lg mx-auto") as view:
+    with Column(gap=6, css_class="p-8 max-w-2xl mx-auto") as view:
         Heading("FastMCP Apps")
 
         if len(tools) > 1:
@@ -974,27 +1016,76 @@ def _build_picker_html(tools: list[dict[str, Any]]) -> str:
                 input_schema: dict[str, Any] = tool.get("inputSchema") or {}
                 model = _model_from_schema(name, input_schema)
 
-                body: dict[str, Any] = {"tool": name}
+                form_body: dict[str, Any] = {"tool": name}
                 for field_name in model.model_fields:
-                    body[field_name] = Rx(field_name)
+                    form_body[field_name] = Rx(field_name)
 
+                json_body: dict[str, Any] = {
+                    "tool": name,
+                    "__json_args__": Rx("__json_args__"),
+                }
+
+                on_error = ShowToast(Rx("$error"), variant="error")  # type: ignore[arg-type]
+
+                input_mode = f"_mode_{name}"
                 with Page(name, value=name), Column(gap=4):
                     if desc:
-                        Muted(desc, css_class="pb-2")
-                    with Form(
-                        on_submit=Fetch.post(
-                            "/api/launch",
-                            body=body,
-                            on_success=OpenLink(RESULT),
-                            on_error=ShowToast(Rx("$error"), variant="error"),  # type: ignore[arg-type]
-                        ),
-                    ):
-                        Form.from_model(model, fields_only=True)
-                        Button(
-                            "Launch",
-                            variant="success",
-                            button_type="submit",
-                        )
+                        first_para = desc.split("\n\n", 1)[0]
+                        Muted(first_para)
+
+                    with Pages(name=input_mode, value="form"):
+                        with Page("form", value="form"), Column(gap=4):
+                            with Column(gap=1, css_class="items-start"):
+                                Heading("Arguments", level=3)
+                                Button(
+                                    "Edit as JSON",
+                                    variant="link",
+                                    size="xs",
+                                    on_click=SetState(input_mode, "json"),
+                                    css_class="text-muted-foreground p-0 h-auto",
+                                )
+                            with Form(
+                                on_submit=Fetch.post(
+                                    "/api/launch",
+                                    body=form_body,
+                                    on_success=OpenLink(RESULT),
+                                    on_error=on_error,
+                                ),
+                            ):
+                                Form.from_model(model, fields_only=True)
+                                Button(
+                                    "Launch",
+                                    variant="success",
+                                    button_type="submit",
+                                )
+                        with Page("json", value="json"), Column(gap=4):
+                            with Column(gap=1, css_class="items-start"):
+                                Heading("Arguments", level=3)
+                                Button(
+                                    "Use form",
+                                    variant="link",
+                                    size="xs",
+                                    on_click=SetState(input_mode, "form"),
+                                    css_class="text-muted-foreground p-0 h-auto",
+                                )
+                            with Form(
+                                on_submit=Fetch.post(
+                                    "/api/launch",
+                                    body=json_body,
+                                    on_success=OpenLink(RESULT),
+                                    on_error=on_error,
+                                ),
+                            ):
+                                Textarea(
+                                    name="__json_args__",
+                                    placeholder='{"key": "value"}',
+                                    rows=8,
+                                )
+                                Button(
+                                    "Launch",
+                                    variant="success",
+                                    button_type="submit",
+                                )
 
         Markdown(
             "Generated by [Prefab](https://prefab.prefect.io) 🎨",
@@ -1219,8 +1310,48 @@ def _make_dev_app(
         """Picker form submits here; returns a /launch URL string for OpenLink."""
         data = await request.json()
         tool = data.pop("tool", "")
-        # Remaining keys are tool arguments; pass all including empty optionals
-        tool_args = dict(data)
+
+        # JSON mode: the entire argument dict arrives as a raw JSON string.
+        # Key uses a dunder prefix to avoid collisions with real tool params.
+        raw_json_args = data.pop("__json_args__", None)
+        if raw_json_args is not None:
+            if not raw_json_args.strip():
+                tool_args = {}
+            else:
+                try:
+                    tool_args = json.loads(raw_json_args)
+                except json.JSONDecodeError as exc:
+                    return Response(
+                        content=json.dumps({"error": f"Invalid JSON: {exc}"}),
+                        status_code=400,
+                        media_type="application/json",
+                    )
+                if not isinstance(tool_args, dict):
+                    return Response(
+                        content=json.dumps(
+                            {
+                                "error": "JSON must be an object, not "
+                                + type(tool_args).__name__
+                            }
+                        ),
+                        status_code=400,
+                        media_type="application/json",
+                    )
+        else:
+            # Form mode: inputs are always strings — try to parse values
+            # that look like JSON objects or arrays.
+            tool_args = {}
+            for k, v in data.items():
+                if isinstance(v, str):
+                    stripped = v.strip()
+                    if stripped and stripped[0] in ("{", "["):
+                        try:
+                            parsed = json.loads(stripped)
+                            if isinstance(parsed, (dict, list)):
+                                v = parsed
+                        except (json.JSONDecodeError, TypeError):
+                            pass
+                tool_args[k] = v
         args_json = quote(json.dumps(tool_args))
         url = f"/launch?tool={tool}&args={args_json}"
         return Response(
