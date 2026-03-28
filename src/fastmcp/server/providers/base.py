@@ -178,14 +178,8 @@ class Provider:
     async def get_app_tool(self, app_name: str, tool_name: str) -> Tool | None:
         """Look up an app-visible tool by original name, bypassing transforms.
 
-        This is the routing path for tool calls from app UIs (identified by
-        ``_meta.fastmcp.app`` on the request).  It skips the transform chain
-        entirely — the tool is found by its registered name and matched
-        against the app identity in its metadata.
-
-        The default implementation checks this provider's own storage via
-        ``_get_tool``.  Aggregate and wrapped providers override to
-        delegate to children.
+        Searches for a tool named ``tool_name`` tagged with the given app
+        name.  Skips the transform chain entirely.
 
         Returns:
             The tool if found and tagged with the given app name, else None.

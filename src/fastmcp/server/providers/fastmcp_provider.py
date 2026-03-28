@@ -138,14 +138,6 @@ class FastMCPProviderTool(Tool):
         # Pass exact version so child executes the correct version
         version = VersionSpec(eq=self.version) if self.version else None
 
-        # If this tool belongs to a FastMCPApp, pass app_name so the
-        # child server routes via get_app_tool (bypassing transforms).
-        app_name: str | None = None
-        meta = self.meta or {}
-        fastmcp_meta = meta.get("fastmcp")
-        if isinstance(fastmcp_meta, dict):
-            app_name = fastmcp_meta.get("app")
-
         with delegate_span(
             self._original_name or "", "FastMCPProvider", self._original_name or ""
         ):
@@ -154,7 +146,6 @@ class FastMCPProviderTool(Tool):
                 arguments,
                 version=version,
                 task_meta=task_meta,
-                app_name=app_name,
             )
 
     async def run(self, arguments: dict[str, Any]) -> ToolResult:
@@ -166,14 +157,8 @@ class FastMCPProviderTool(Tool):
         # Pass exact version so child executes the correct version
         version = VersionSpec(eq=self.version) if self.version else None
 
-        app_name: str | None = None
-        meta = self.meta or {}
-        fastmcp_meta = meta.get("fastmcp")
-        if isinstance(fastmcp_meta, dict):
-            app_name = fastmcp_meta.get("app")
-
         result = await self._server.call_tool(
-            self._original_name, arguments, version=version, app_name=app_name
+            self._original_name, arguments, version=version
         )
         # Result from call_tool should always be ToolResult when no task_meta
         if isinstance(result, mcp.types.CreateTaskResult):
@@ -586,7 +571,12 @@ class FastMCPProvider(Provider):
         raw_tool = await self.server.get_app_tool(app_name, tool_name)
         if raw_tool is None:
             return None
-        return FastMCPProviderTool.wrap(self.server, raw_tool)
+        wrapped = FastMCPProviderTool.wrap(self.server, raw_tool)
+        # Use the ___-prefixed name so the inner server's call_tool also
+        # takes the app-tool bypass path (app-only tools are hidden from
+        # normal get_tool visibility filtering).
+        wrapped._original_name = f"{app_name}___{tool_name}"
+        return wrapped
 
     # -------------------------------------------------------------------------
     # Resource methods
