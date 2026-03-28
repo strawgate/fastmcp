@@ -50,38 +50,47 @@ F = TypeVar("F", bound=Callable[..., Any])
 # ---------------------------------------------------------------------------
 
 
-def _resolve_tool_ref(fn: Any) -> Any:
-    """Resolve a callable or string to a ``ResolvedTool`` for CallTool serialization.
+def _make_resolver(app_name: str | None = None) -> Any:
+    """Create a CallTool resolver that prefixes tool names with the app name.
 
-    For strings, passes them through as-is — the server resolves them at
-    call time using ``_meta.fastmcp.app``.
-
-    For callables, extracts the tool name from ``__fastmcp__`` metadata
-    or ``__name__``.
+    When ``app_name`` is set, tool references like ``CallTool("store_files")``
+    or ``CallTool(store_files)`` are resolved to
+    ``ResolvedTool(name="Files___store_files")``.  This produces stable
+    identifiers that bypass transforms and work without host ``_meta``
+    forwarding.
     """
-    from prefab_ui.app import ResolvedTool
 
-    if isinstance(fn, str):
-        return ResolvedTool(name=fn)
+    def _prefix(name: str) -> str:
+        if app_name and "___" not in name:
+            return f"{app_name}___{name}"
+        return name
 
-    fmeta: Any = None
-    try:
-        from fastmcp.decorators import get_fastmcp_meta
+    def _resolve_tool_ref(fn: Any) -> Any:
+        from prefab_ui.app import ResolvedTool
 
-        fmeta = get_fastmcp_meta(fn)
-    except Exception:
-        pass
+        if isinstance(fn, str):
+            return ResolvedTool(name=_prefix(fn))
 
-    if fmeta is not None:
-        name: str | None = getattr(fmeta, "name", None)
-        if name is not None:
-            return ResolvedTool(name=name)
+        fmeta: Any = None
+        try:
+            from fastmcp.decorators import get_fastmcp_meta
 
-    fn_name = getattr(fn, "__name__", None)
-    if fn_name is not None:
-        return ResolvedTool(name=fn_name)
+            fmeta = get_fastmcp_meta(fn)
+        except Exception:
+            pass
 
-    raise ValueError(f"Cannot resolve tool reference: {fn!r}")
+        if fmeta is not None:
+            name: str | None = getattr(fmeta, "name", None)
+            if name is not None:
+                return ResolvedTool(name=_prefix(name))
+
+        fn_name = getattr(fn, "__name__", None)
+        if fn_name is not None:
+            return ResolvedTool(name=_prefix(fn_name))
+
+        raise ValueError(f"Cannot resolve tool reference: {fn!r}")
+
+    return _resolve_tool_ref
 
 
 def _dispatch_decorator(
@@ -129,6 +138,11 @@ class FastMCPApp(Provider):
     """
 
     def __init__(self, name: str) -> None:
+        if "___" in name:
+            raise ValueError(
+                f"App name {name!r} must not contain '___' "
+                "(reserved as the app tool routing separator)"
+            )
         super().__init__()
         self.name = name
         self._local = LocalProvider(on_duplicate="error")
@@ -354,7 +368,6 @@ class FastMCPApp(Provider):
         if not isinstance(tool, Tool):
             tool = Tool._ensure_tool(tool)
 
-        # Tag with app name and visibility for routing
         meta = dict(tool.meta) if tool.meta else {}
         meta.setdefault("fastmcp", {})["app"] = self.name
         ui = meta.setdefault("ui", {})

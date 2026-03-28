@@ -498,12 +498,12 @@ def _convert_to_single_content_block(
 _PREFAB_TEXT_FALLBACK = "[Rendered Prefab UI]"
 
 
-def _get_tool_resolver() -> Callable[..., str] | None:
+def _get_tool_resolver(app_name: str | None = None) -> Callable[..., str] | None:
     """Get the FastMCPApp callable resolver, if available."""
     try:
-        from fastmcp.apps.app import _resolve_tool_ref
+        from fastmcp.apps.app import _make_resolver
 
-        return _resolve_tool_ref
+        return _make_resolver(app_name)
     except ImportError:
         return None
 
@@ -511,14 +511,11 @@ def _get_tool_resolver() -> Callable[..., str] | None:
 def _prefab_to_json(app: Any, fastmcp_app_name: str | None = None) -> dict[str, Any]:
     """Call PrefabApp.to_json() with the FastMCPApp callable resolver.
 
-    If ``fastmcp_app_name`` is set, injects ``_meta.fastmcp.app`` into the
-    serialized output so the renderer can tag subsequent tool calls with the
-    app identity for direct routing.
+    The resolver prefixes tool names with the app name (e.g.
+    ``"store_files"`` → ``"Files___store_files"``) so the server can
+    find them via the bypass lookup regardless of transforms.
     """
-    data = app.to_json(tool_resolver=_get_tool_resolver())
-    if fastmcp_app_name is not None:
-        meta = data.setdefault("_meta", {})
-        meta.setdefault("fastmcp", {})["app"] = fastmcp_app_name
+    data = app.to_json(tool_resolver=_get_tool_resolver(fastmcp_app_name))
     return data
 
 

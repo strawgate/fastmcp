@@ -1046,7 +1046,6 @@ class FastMCP(
         version: VersionSpec | None = None,
         run_middleware: bool = True,
         task_meta: None = None,
-        app_name: str | None = None,
     ) -> ToolResult: ...
 
     @overload
@@ -1058,7 +1057,6 @@ class FastMCP(
         version: VersionSpec | None = None,
         run_middleware: bool = True,
         task_meta: TaskMeta,
-        app_name: str | None = None,
     ) -> mcp.types.CreateTaskResult: ...
 
     async def call_tool(
@@ -1069,7 +1067,6 @@ class FastMCP(
         version: VersionSpec | None = None,
         run_middleware: bool = True,
         task_meta: TaskMeta | None = None,
-        app_name: str | None = None,
     ) -> ToolResult | mcp.types.CreateTaskResult:
         """Call a tool by name.
 
@@ -1084,9 +1081,6 @@ class FastMCP(
             task_meta: If provided, execute as a background task and return
                 CreateTaskResult. If None (default), execute synchronously and
                 return ToolResult.
-            app_name: If set (from ``_meta.fastmcp.app``), the call originated
-                from an app UI and should be routed directly to the named app's
-                tool registry, bypassing transforms.
 
         Returns:
             ToolResult when task_meta is None.
@@ -1120,7 +1114,6 @@ class FastMCP(
                         version=version,
                         run_middleware=False,
                         task_meta=task_meta,
-                        app_name=app_name,
                     ),
                 )
 
@@ -1129,13 +1122,13 @@ class FastMCP(
             with server_span(
                 f"tools/call {name}", "tools/call", self.name, "tool", name
             ) as span:
-                # If the call came from an app UI (_meta.fastmcp.app),
-                # look up the tool via get_app_tool which walks the
-                # provider tree bypassing transforms.  Otherwise use
-                # normal provider resolution.
-                tool: Tool | None = None
-                if app_name is not None:
-                    tool = await self.get_app_tool(app_name, name)
+                # Try normal resolution first. If that fails and the name
+                # contains "___" (app tool prefix), parse out the app name
+                # and route via get_app_tool which bypasses transforms.
+                tool: Tool | None = await self.get_tool(name, version=version)
+                if tool is None and "___" in name:
+                    app_prefix, _, tool_suffix = name.partition("___")
+                    tool = await self.get_app_tool(app_prefix, tool_suffix)
                     if tool is not None:
                         # Auth still applies to app tools
                         skip_auth, token = _get_auth_context()
@@ -1146,8 +1139,6 @@ class FastMCP(
                                     raise NotFoundError(f"Unknown tool: {name!r}")
                             except AuthorizationError:
                                 raise NotFoundError(f"Unknown tool: {name!r}") from None
-                if tool is None:
-                    tool = await self.get_tool(name, version=version)
                 if tool is None:
                     raise NotFoundError(f"Unknown tool: {name!r}")
                 span.set_attributes(tool.get_span_attributes())
