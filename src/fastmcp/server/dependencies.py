@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import contextlib
 import inspect
+import json
 import logging
 import weakref
 from collections import OrderedDict
@@ -206,6 +207,9 @@ _current_docket: ContextVar[Docket | None] = ContextVar("docket", default=None)
 _current_worker: ContextVar[Worker | None] = ContextVar("worker", default=None)
 _task_access_token: ContextVar[AccessToken | None] = ContextVar(
     "task_access_token", default=None
+)
+_task_http_headers: ContextVar[dict[str, str] | None] = ContextVar(
+    "task_http_headers", default=None
 )
 
 
@@ -441,6 +445,8 @@ def get_http_request() -> Request:
     """Get the current HTTP request.
 
     Tries MCP SDK's request_ctx first, then falls back to FastMCP's HTTP context.
+    In background tasks, returns a synthetic request populated with the
+    snapshotted headers from the originating HTTP request.
     """
     # Try MCP SDK's request_ctx first (set during normal MCP request handling)
     request = None
@@ -451,6 +457,29 @@ def get_http_request() -> Request:
     # This is needed during `on_initialize` middleware where request_ctx isn't set yet
     if request is None:
         request = _current_http_request.get()
+
+    # In Docket workers, restore a minimal request from the snapshotted headers.
+    if request is None:
+        task_headers = _task_http_headers.get()
+        if task_headers:
+            request = Request(
+                {
+                    "type": "http",
+                    "http_version": "1.1",
+                    "method": "POST",
+                    "scheme": "http",
+                    "path": "/",
+                    "raw_path": b"/",
+                    "query_string": b"",
+                    "headers": [
+                        (name.encode("latin-1"), value.encode("latin-1"))
+                        for name, value in task_headers.items()
+                    ],
+                    "client": None,
+                    "server": None,
+                    "root_path": "",
+                }
+            )
 
     if request is None:
         raise RuntimeError("No active HTTP request found.")
@@ -815,6 +844,38 @@ async def _restore_task_access_token(
     return None
 
 
+async def _restore_task_http_headers(
+    session_id: str, task_id: str
+) -> Token[dict[str, str] | None] | None:
+    """Restore the HTTP header snapshot from Redis into a ContextVar."""
+    docket = _current_docket.get()
+    if docket is None:
+        return None
+
+    headers_key = docket.key(f"fastmcp:task:{session_id}:{task_id}:http_headers")
+    try:
+        async with docket.redis() as redis:
+            headers_data = await redis.get(headers_key)
+        if headers_data is None:
+            return None
+        if isinstance(headers_data, bytes):
+            headers_data = headers_data.decode()
+        restored = json.loads(str(headers_data))
+        if not isinstance(restored, dict):
+            return None
+        return _task_http_headers.set(
+            {str(name).lower(): str(value) for name, value in restored.items()}
+        )
+    except Exception:
+        _logger.warning(
+            "Failed to restore HTTP headers for task %s:%s",
+            session_id,
+            task_id,
+            exc_info=True,
+        )
+    return None
+
+
 async def _restore_task_origin_request_id(session_id: str, task_id: str) -> str | None:
     """Restore the origin request ID snapshot for a background task.
 
@@ -1120,8 +1181,20 @@ def CurrentFastMCP() -> FastMCP:
 class _CurrentRequest(Dependency[Request]):
     """Async context manager for HTTP Request dependency."""
 
+    _task_http_headers_cv_token: Token[dict[str, str] | None] | None = None
+
     async def __aenter__(self) -> Request:
-        return get_http_request()
+        try:
+            return get_http_request()
+        except RuntimeError:
+            task_info = get_task_context()
+            if task_info is None:
+                raise
+            if _task_http_headers.get() is None:
+                self._task_http_headers_cv_token = await _restore_task_http_headers(
+                    task_info.session_id, task_info.task_id
+                )
+            return get_http_request()
 
     async def __aexit__(
         self,
@@ -1129,7 +1202,9 @@ class _CurrentRequest(Dependency[Request]):
         exc_value: BaseException | None,
         traceback: TracebackType | None,
     ) -> None:
-        pass
+        if self._task_http_headers_cv_token is not None:
+            _task_http_headers.reset(self._task_http_headers_cv_token)
+            self._task_http_headers_cv_token = None
 
 
 def CurrentRequest() -> Request:
@@ -1161,7 +1236,15 @@ def CurrentRequest() -> Request:
 class _CurrentHeaders(Dependency[dict[str, str]]):
     """Async context manager for HTTP Headers dependency."""
 
+    _task_http_headers_cv_token: Token[dict[str, str] | None] | None = None
+
     async def __aenter__(self) -> dict[str, str]:
+        if _task_http_headers.get() is None:
+            task_info = get_task_context()
+            if task_info is not None:
+                self._task_http_headers_cv_token = await _restore_task_http_headers(
+                    task_info.session_id, task_info.task_id
+                )
         return get_http_headers(include={"authorization"})
 
     async def __aexit__(
@@ -1170,7 +1253,9 @@ class _CurrentHeaders(Dependency[dict[str, str]]):
         exc_value: BaseException | None,
         traceback: TracebackType | None,
     ) -> None:
-        pass
+        if self._task_http_headers_cv_token is not None:
+            _task_http_headers.reset(self._task_http_headers_cv_token)
+            self._task_http_headers_cv_token = None
 
 
 def CurrentHeaders() -> dict[str, str]:

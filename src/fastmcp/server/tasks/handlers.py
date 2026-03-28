@@ -5,6 +5,7 @@ Handles queuing tool/prompt/resource executions to Docket as background tasks.
 
 from __future__ import annotations
 
+import json
 import uuid
 from contextlib import suppress
 from datetime import datetime, timezone
@@ -18,6 +19,7 @@ from fastmcp.server.dependencies import (
     _current_docket,
     get_access_token,
     get_context,
+    get_http_headers,
     register_task_server,
 )
 from fastmcp.server.tasks.config import TaskMeta
@@ -122,6 +124,10 @@ async def submit_to_docket(
     access_token_key = docket.key(
         f"fastmcp:task:{session_id}:{server_task_id}:access_token"
     )
+    http_headers = get_http_headers(include_all=True)
+    http_headers_key = docket.key(
+        f"fastmcp:task:{session_id}:{server_task_id}:http_headers"
+    )
 
     async with docket.redis() as redis:
         await redis.set(task_meta_key, task_key, ex=ttl_seconds)
@@ -133,6 +139,8 @@ async def submit_to_docket(
             await redis.set(
                 access_token_key, access_token.model_dump_json(), ex=ttl_seconds
             )
+        if http_headers:
+            await redis.set(http_headers_key, json.dumps(http_headers), ex=ttl_seconds)
 
     # Register session for Context access in background workers (SEP-1686)
     # This enables elicitation/sampling from background tasks via weakref
