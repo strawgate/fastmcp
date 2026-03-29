@@ -213,6 +213,8 @@
                     "group": "Providers",
                     "icon": "layer-group",
                     "pages": [
+                      "apps/providers/approval",
+                      "apps/providers/choice",
                       "apps/providers/file-upload",
                       "apps/providers/generative"
                     ],
