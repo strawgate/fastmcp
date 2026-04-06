@@ -1,0 +1,29 @@
+{
+  "runs": [
+    {
+      "id": "24051666210-1--benchmark",
+      "timestamp": "2026-04-06T21:17:28.556Z",
+      "commit": "3106f3c1933508fd2aadae3a67b830dcfbb6633c",
+      "ref": "refs/heads/main",
+      "benchmarks": 15,
+      "metrics": [
+        "max",
+        "mean",
+        "median",
+        "min",
+        "ops",
+        "rounds",
+        "stddev"
+      ]
+    }
+  ],
+  "metrics": [
+    "max",
+    "mean",
+    "median",
+    "min",
+    "ops",
+    "rounds",
+    "stddev"
+  ]
+}

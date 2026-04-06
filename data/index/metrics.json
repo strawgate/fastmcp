@@ -1,0 +1,44 @@
+[
+  {
+    "metric": "max",
+    "latestSeriesCount": 15,
+    "latestRunId": "24051666210-1--benchmark",
+    "latestTimestamp": "2026-04-06T21:17:28.556Z"
+  },
+  {
+    "metric": "mean",
+    "latestSeriesCount": 15,
+    "latestRunId": "24051666210-1--benchmark",
+    "latestTimestamp": "2026-04-06T21:17:28.556Z"
+  },
+  {
+    "metric": "median",
+    "latestSeriesCount": 15,
+    "latestRunId": "24051666210-1--benchmark",
+    "latestTimestamp": "2026-04-06T21:17:28.556Z"
+  },
+  {
+    "metric": "min",
+    "latestSeriesCount": 15,
+    "latestRunId": "24051666210-1--benchmark",
+    "latestTimestamp": "2026-04-06T21:17:28.556Z"
+  },
+  {
+    "metric": "ops",
+    "latestSeriesCount": 15,
+    "latestRunId": "24051666210-1--benchmark",
+    "latestTimestamp": "2026-04-06T21:17:28.556Z"
+  },
+  {
+    "metric": "rounds",
+    "latestSeriesCount": 15,
+    "latestRunId": "24051666210-1--benchmark",
+    "latestTimestamp": "2026-04-06T21:17:28.556Z"
+  },
+  {
+    "metric": "stddev",
+    "latestSeriesCount": 15,
+    "latestRunId": "24051666210-1--benchmark",
+    "latestTimestamp": "2026-04-06T21:17:28.556Z"
+  }
+]

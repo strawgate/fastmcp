@@ -1,0 +1,157 @@
+{
+  "metric": "stddev",
+  "unit": "s",
+  "direction": "smaller_is_better",
+  "series": {
+    "test_cold_import": {
+      "points": [
+        {
+          "timestamp": "2026-04-06T21:17:28.556Z",
+          "value": 0.02,
+          "commit": "3106f3c1933508fd2aadae3a67b830dcfbb6633c",
+          "run_id": "24051666210-1--benchmark"
+        }
+      ]
+    },
+    "test_warm_import": {
+      "points": [
+        {
+          "timestamp": "2026-04-06T21:17:28.556Z",
+          "value": 0,
+          "commit": "3106f3c1933508fd2aadae3a67b830dcfbb6633c",
+          "run_id": "24051666210-1--benchmark"
+        }
+      ]
+    },
+    "test_mount_1_child": {
+      "points": [
+        {
+          "timestamp": "2026-04-06T21:17:28.556Z",
+          "value": 0.01,
+          "commit": "3106f3c1933508fd2aadae3a67b830dcfbb6633c",
+          "run_id": "24051666210-1--benchmark"
+        }
+      ]
+    },
+    "test_mount_5_children": {
+      "points": [
+        {
+          "timestamp": "2026-04-06T21:17:28.556Z",
+          "value": 0.02,
+          "commit": "3106f3c1933508fd2aadae3a67b830dcfbb6633c",
+          "run_id": "24051666210-1--benchmark"
+        }
+      ]
+    },
+    "test_mount_10_children": {
+      "points": [
+        {
+          "timestamp": "2026-04-06T21:17:28.556Z",
+          "value": 0.03,
+          "commit": "3106f3c1933508fd2aadae3a67b830dcfbb6633c",
+          "run_id": "24051666210-1--benchmark"
+        }
+      ]
+    },
+    "test_server_create_empty": {
+      "points": [
+        {
+          "timestamp": "2026-04-06T21:17:28.556Z",
+          "value": 0,
+          "commit": "3106f3c1933508fd2aadae3a67b830dcfbb6633c",
+          "run_id": "24051666210-1--benchmark"
+        }
+      ]
+    },
+    "test_server_create_1_tool": {
+      "points": [
+        {
+          "timestamp": "2026-04-06T21:17:28.556Z",
+          "value": 0,
+          "commit": "3106f3c1933508fd2aadae3a67b830dcfbb6633c",
+          "run_id": "24051666210-1--benchmark"
+        }
+      ]
+    },
+    "test_server_create_10_tools": {
+      "points": [
+        {
+          "timestamp": "2026-04-06T21:17:28.556Z",
+          "value": 0.01,
+          "commit": "3106f3c1933508fd2aadae3a67b830dcfbb6633c",
+          "run_id": "24051666210-1--benchmark"
+        }
+      ]
+    },
+    "test_server_create_100_tools": {
+      "points": [
+        {
+          "timestamp": "2026-04-06T21:17:28.556Z",
+          "value": 0.04,
+          "commit": "3106f3c1933508fd2aadae3a67b830dcfbb6633c",
+          "run_id": "24051666210-1--benchmark"
+        }
+      ]
+    },
+    "test_stdio_startup_time": {
+      "points": [
+        {
+          "timestamp": "2026-04-06T21:17:28.556Z",
+          "value": 0.01,
+          "commit": "3106f3c1933508fd2aadae3a67b830dcfbb6633c",
+          "run_id": "24051666210-1--benchmark"
+        }
+      ]
+    },
+    "test_stdio_tool_call_latency": {
+      "points": [
+        {
+          "timestamp": "2026-04-06T21:17:28.556Z",
+          "value": 0.01,
+          "commit": "3106f3c1933508fd2aadae3a67b830dcfbb6633c",
+          "run_id": "24051666210-1--benchmark"
+        }
+      ]
+    },
+    "test_list_tools_10": {
+      "points": [
+        {
+          "timestamp": "2026-04-06T21:17:28.556Z",
+          "value": 0,
+          "commit": "3106f3c1933508fd2aadae3a67b830dcfbb6633c",
+          "run_id": "24051666210-1--benchmark"
+        }
+      ]
+    },
+    "test_list_tools_100": {
+      "points": [
+        {
+          "timestamp": "2026-04-06T21:17:28.556Z",
+          "value": 0,
+          "commit": "3106f3c1933508fd2aadae3a67b830dcfbb6633c",
+          "run_id": "24051666210-1--benchmark"
+        }
+      ]
+    },
+    "test_call_tool_10": {
+      "points": [
+        {
+          "timestamp": "2026-04-06T21:17:28.556Z",
+          "value": 0,
+          "commit": "3106f3c1933508fd2aadae3a67b830dcfbb6633c",
+          "run_id": "24051666210-1--benchmark"
+        }
+      ]
+    },
+    "test_call_tool_burst_10": {
+      "points": [
+        {
+          "timestamp": "2026-04-06T21:17:28.556Z",
+          "value": 0,
+          "commit": "3106f3c1933508fd2aadae3a67b830dcfbb6633c",
+          "run_id": "24051666210-1--benchmark"
+        }
+      ]
+    }
+  }
+}
