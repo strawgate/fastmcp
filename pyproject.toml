@@ -76,6 +76,7 @@ dev = [
     "pyperclip>=1.9.0",
     "pytest>=8.3.3",
     "pytest-asyncio>=1.2.0",
+    "pytest-benchmark>=5.0.0",
     "pytest-cov>=6.1.1",
     "pytest-env>=1.1.5",
     "pytest-flakefinder>=1.1.0",

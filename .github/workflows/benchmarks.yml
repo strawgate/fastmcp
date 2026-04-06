@@ -1,0 +1,81 @@
+name: Benchmarks
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "benchmarks/**"
+      - "uv.lock"
+      - "pyproject.toml"
+  pull_request:
+    paths:
+      - "src/**"
+      - "benchmarks/**"
+      - "uv.lock"
+      - "pyproject.toml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  benchmark:
+    name: Benchmarks
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # ── Python + dependencies ──────────────────────────────────
+      - uses: ./.github/actions/setup-uv
+        with:
+          python-version: "3.10"
+          resolution: locked
+
+      # ── Run pytest-benchmark suite ─────────────────────────────
+      - name: Run benchmarks
+        run: |
+          uv run --no-sync pytest benchmarks/ \
+            --benchmark-json bench.json \
+            --benchmark-only \
+            --timeout=120 \
+            -x
+
+      # ── Run import-time benchmarks (subprocess) ────────────────
+      - name: Run import benchmarks
+        run: |
+          uv run --no-sync python scripts/benchmark_imports.py --runs 5 --json > import-bench.json
+
+      # ── Start monitor for custom metrics + runner telemetry ────
+      - uses: strawgate/octo11y/actions/monitor@main-dist
+        id: monitor
+
+      # ── Emit import-time metrics via emit-metric ───────────────
+      - name: Emit import time metrics
+        run: |
+          uv run --no-sync python benchmarks/emit_import_metrics.py import-bench.json
+        env:
+          OTLP_ENDPOINT: ${{ steps.monitor.outputs.otlp-http-endpoint }}
+
+      # ── Stash pytest-benchmark results ─────────────────────────
+      - name: Stash benchmark results
+        uses: strawgate/octo11y/actions/stash@main-dist
+        with:
+          results: bench.json
+          format: pytest-benchmark
+          monitor-results: ${{ steps.monitor.outputs.monitor-results }}
+
+      # ── Aggregate (main only) ──────────────────────────────────
+      - name: Aggregate indexes
+        if: github.ref == 'refs/heads/main'
+        uses: strawgate/octo11y/actions/aggregate@main-dist
+
+      # ── Compare (PRs only) ────────────────────────────────────
+      - name: Compare to baseline
+        if: github.event_name == 'pull_request'
+        uses: strawgate/octo11y/actions/compare@main-dist
+        with:
+          results: bench.json
+          format: pytest-benchmark
