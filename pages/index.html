@@ -3,240 +3,162 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>FastMCP &middot; Performance</title>
+  <title>FastMCP Benchmarks</title>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    html { scroll-snap-type: y mandatory; scroll-behavior: smooth; }
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: #e6edf3; line-height: 1.6; overflow-x: hidden; }
-    a { color: #58a6ff; text-decoration: none; }
-    a:hover { text-decoration: underline; }
-    code { background: rgba(255,255,255,0.08); padding: 2px 8px; border-radius: 6px; font-size: 0.9em; }
+    *{box-sizing:border-box;margin:0;padding:0}
+    html{scroll-snap-type:y mandatory;scroll-behavior:smooth}
+    body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:#e6edf3;line-height:1.6;overflow-x:hidden}
+    a{color:#58a6ff;text-decoration:none} a:hover{text-decoration:underline}
+    code{background:rgba(255,255,255,0.08);padding:2px 8px;border-radius:6px;font-size:0.9em}
 
-    /* ── Chapter layout ───────────────────────────────── */
-    .ch {
-      min-height: 100vh; scroll-snap-align: start; scroll-snap-stop: always;
-      display: flex; flex-direction: column; align-items: center; justify-content: center;
-      padding: 80px 24px; position: relative; overflow: hidden;
-    }
-    .ch-inner { max-width: 880px; width: 100%; z-index: 2; }
+    /* ── Chapter layout ──────────────────────────── */
+    .ch{min-height:100vh;scroll-snap-align:start;scroll-snap-stop:always;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:80px 24px;position:relative;overflow:hidden}
+    .ch-inner{max-width:880px;width:100%;z-index:2}
 
-    /* ── Chapter backgrounds ──────────────────────────── */
-    .ch-hero    { background: linear-gradient(180deg, #070b1e 0%, #0a1628 40%, #0d1f3c 100%); }
-    .ch-import  { background: linear-gradient(180deg, #fffbf0 0%, #fff7e0 100%); color: #1a1a2e; }
-    .ch-server  { background: linear-gradient(180deg, #0d1117 0%, #0f2027 35%, #203a43 70%, #2c5364 100%); }
-    .ch-calls   { background: linear-gradient(180deg, #f0f7ff 0%, #e4effc 100%); color: #1a1a2e; }
-    .ch-mount   { background: linear-gradient(180deg, #0a0e27 0%, #12062e 50%, #1a0a3a 100%); }
-    .ch-stdio   { background: linear-gradient(180deg, #fffbf0 0%, #fff3d6 100%); color: #1a1a2e; }
-    .ch-history { background: linear-gradient(180deg, #0d1117 0%, #161b22 100%); }
-    .ch-cta     { background: linear-gradient(180deg, #0d1117 0%, #161b22 100%); }
+    /* ── Backgrounds ─────────────────────────────── */
+    .ch-hero   {background:linear-gradient(180deg,#070b1e 0%,#0a1628 40%,#0d1f3c 100%)}
+    .ch-import {background:linear-gradient(180deg,#fffbf0 0%,#fff7e0 100%);color:#1a1a2e}
+    .ch-server {background:linear-gradient(180deg,#0d1117 0%,#0f2027 35%,#203a43 70%,#2c5364 100%)}
+    .ch-calls  {background:linear-gradient(180deg,#f0f7ff 0%,#e4effc 100%);color:#1a1a2e}
+    .ch-mount  {background:linear-gradient(180deg,#0a0e27 0%,#12062e 50%,#1a0a3a 100%)}
+    .ch-stdio  {background:linear-gradient(180deg,#fffbf0 0%,#fff3d6 100%);color:#1a1a2e}
+    .ch-history{background:linear-gradient(180deg,#0d1117 0%,#161b22 100%)}
+    .ch-cta    {background:linear-gradient(180deg,#0d1117 0%,#161b22 100%)}
 
-    /* ── Typography ───────────────────────────────────── */
-    .ch-tag { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.18em; margin-bottom: 16px; }
-    .ch-heading { font-size: clamp(2rem, 5vw, 3.2rem); font-weight: 800; line-height: 1.15; margin-bottom: 24px; }
-    .ch-body { font-size: clamp(1rem, 2.5vw, 1.2rem); line-height: 1.8; max-width: 680px; }
-    .ch-body .num { font-weight: 700; font-family: "SF Mono", "Fira Code", monospace; }
+    /* ── Typography ──────────────────────────────── */
+    .ch-tag{font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.18em;margin-bottom:16px}
+    .ch-heading{font-size:clamp(2rem,5vw,3.2rem);font-weight:800;line-height:1.15;margin-bottom:24px}
+    .ch-body{font-size:clamp(1rem,2.5vw,1.2rem);line-height:1.8;max-width:680px}
+    .ch-body .num{font-weight:700;font-family:"SF Mono","Fira Code",monospace}
+    .ch-hero .num,.ch-server .num,.ch-mount .num,.ch-history .num,.ch-cta .num{color:#bc8cff}
+    .ch-import .num,.ch-calls .num,.ch-stdio .num{color:#7c3aed}
+    .ch-import .fast,.ch-calls .fast,.ch-stdio .fast{color:#16a34a;font-weight:700}
+    .ch-hero .fast,.ch-server .fast,.ch-mount .fast{color:#3fb950;font-weight:700}
 
-    /* dark chapter nums */
-    .ch-hero .num, .ch-server .num, .ch-mount .num, .ch-history .num, .ch-cta .num { color: #bc8cff; }
-    /* light chapter nums */
-    .ch-import .num, .ch-calls .num, .ch-stdio .num { color: #7c3aed; }
-    .ch-import .fast, .ch-calls .fast, .ch-stdio .fast { color: #16a34a; font-weight: 700; }
-    .ch-hero .fast, .ch-server .fast, .ch-mount .fast { color: #3fb950; font-weight: 700; }
+    /* ── Viz containers ──────────────────────────── */
+    .viz{margin-top:32px;width:100%}
+    .viz svg{width:100%;height:auto;display:block}
 
-    /* ── Metric cards ─────────────────────────────────── */
-    .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; margin-top: 28px; }
+    /* ── Speed streaks ───────────────────────────── */
+    .streak{position:absolute;font-size:1.2rem;opacity:0;animation:streak linear infinite}
+    @keyframes streak{0%{transform:translateX(-60px);opacity:0}10%{opacity:.7}90%{opacity:.7}100%{transform:translateX(calc(100vw + 60px));opacity:0}}
 
-    /* Dark chapter cards */
-    .card-dark {
-      background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
-      border-radius: 20px; padding: 24px 20px; text-align: center;
-    }
-    .card-dark .card-emoji { font-size: 2.4rem; margin-bottom: 8px; }
-    .card-dark .card-label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: rgba(255,255,255,0.5); margin-bottom: 4px; }
-    .card-dark .card-val { font-size: 2rem; font-weight: 800; font-family: "SF Mono", "Fira Code", monospace; }
-    .card-dark .card-val .unit { font-size: 0.85rem; font-weight: 400; opacity: 0.5; margin-left: 2px; }
-    .card-dark .card-spark { margin: 12px auto 8px; width: 100px; height: 28px; }
-    .card-dark .card-spark polyline { fill: none; stroke: #58a6ff; stroke-width: 1.5; }
-    .card-dark .card-spark .area { fill: #58a6ff; opacity: 0.06; stroke: none; }
-    .card-dark .card-quip { font-size: 0.82rem; font-style: italic; color: rgba(255,255,255,0.35); margin-top: 4px; }
+    /* ── Twinkle ─────────────────────────────────── */
+    .twinkle{position:absolute;animation:twinkle ease-in-out infinite alternate}
+    @keyframes twinkle{0%{opacity:.1;transform:scale(1)}100%{opacity:.7;transform:scale(1.4)}}
 
-    /* Light chapter cards */
-    .card-light {
-      background: #fff; border: 1px solid rgba(0,0,0,0.06);
-      border-radius: 20px; padding: 24px 20px; text-align: center;
-      box-shadow: 0 2px 16px rgba(0,0,0,0.05);
-    }
-    .card-light .card-emoji { font-size: 2.4rem; margin-bottom: 8px; }
-    .card-light .card-label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: rgba(0,0,0,0.4); margin-bottom: 4px; }
-    .card-light .card-val { font-size: 2rem; font-weight: 800; font-family: "SF Mono", "Fira Code", monospace; color: #1a1a2e; }
-    .card-light .card-val .unit { font-size: 0.85rem; font-weight: 400; opacity: 0.4; margin-left: 2px; }
-    .card-light .card-spark { margin: 12px auto 8px; width: 100px; height: 28px; }
-    .card-light .card-spark polyline { fill: none; stroke: #7c3aed; stroke-width: 1.5; }
-    .card-light .card-spark .area { fill: #7c3aed; opacity: 0.06; stroke: none; }
-    .card-light .card-quip { font-size: 0.82rem; font-style: italic; color: rgba(0,0,0,0.35); margin-top: 4px; }
+    /* ── Float (balloons) ────────────────────────── */
+    @keyframes float-balloon{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
 
-    /* ── Speed streaks (hero) ─────────────────────────── */
-    .streak {
-      position: absolute; font-size: 1.2rem; opacity: 0;
-      animation: streak linear infinite;
-    }
-    @keyframes streak {
-      0%   { transform: translateX(-60px); opacity: 0; }
-      10%  { opacity: 0.7; }
-      90%  { opacity: 0.7; }
-      100% { transform: translateX(calc(100vw + 60px)); opacity: 0; }
-    }
+    /* ── FadeIn ──────────────────────────────────── */
+    .fade-in{opacity:0;transform:translateY(30px);transition:opacity .7s ease,transform .7s ease}
+    .fade-in.visible{opacity:1;transform:translateY(0)}
 
-    /* ── Twinkle (mount chapter) ──────────────────────── */
-    .twinkle {
-      position: absolute; animation: twinkle ease-in-out infinite alternate;
-    }
-    @keyframes twinkle {
-      0%   { opacity: 0.1; transform: scale(1); }
-      100% { opacity: 0.7; transform: scale(1.4); }
-    }
+    /* ── Scroll prompt ───────────────────────────── */
+    .scroll-prompt{position:absolute;bottom:32px;left:50%;transform:translateX(-50%);font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.2);animation:bob 2s ease-in-out infinite}
+    @keyframes bob{0%,100%{transform:translateX(-50%) translateY(0)}50%{transform:translateX(-50%) translateY(8px)}}
 
-    /* ── FadeIn on scroll ─────────────────────────────── */
-    .fade-in {
-      opacity: 0; transform: translateY(30px);
-      transition: opacity 0.7s ease, transform 0.7s ease;
-    }
-    .fade-in.visible { opacity: 1; transform: translateY(0); }
+    /* ── Gradient text ───────────────────────────── */
+    .grad-text{background:linear-gradient(135deg,#fbbf24 0%,#e6edf3 60%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
 
-    /* ── Scroll prompt ────────────────────────────────── */
-    .scroll-prompt {
-      position: absolute; bottom: 32px; left: 50%; transform: translateX(-50%);
-      font-size: 0.7rem; letter-spacing: 0.12em; text-transform: uppercase;
-      color: rgba(255,255,255,0.2); animation: bob 2s ease-in-out infinite;
-    }
-    @keyframes bob { 0%, 100% { transform: translateX(-50%) translateY(0); } 50% { transform: translateX(-50%) translateY(8px); } }
+    /* ── Run log ─────────────────────────────────── */
+    .run-table-wrap{overflow-x:auto;margin-top:24px}
+    .run-table{width:100%;border-collapse:collapse;font-size:.85rem}
+    .run-table th{text-align:left;color:rgba(255,255,255,.4);font-weight:500;padding:10px 14px;border-bottom:1px solid rgba(255,255,255,.08)}
+    .run-table td{padding:10px 14px;border-bottom:1px solid rgba(255,255,255,.06);white-space:nowrap}
+    .run-table tr.run-row:hover td{background:rgba(255,255,255,.03);cursor:pointer}
+    .mono{font-family:"SF Mono","Fira Code",monospace;font-size:.8rem}
+    .commit-link{color:#58a6ff;font-family:"SF Mono","Fira Code",monospace;font-size:.8rem}
+    .run-detail{display:none}.run-detail.open{display:table-row}
+    .run-detail td{padding:0}
+    .run-detail-inner{padding:16px 20px;background:rgba(255,255,255,.02)}
+    .run-detail-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px}
+    .run-detail-item{display:flex;justify-content:space-between;padding:4px 0;font-size:.8rem}
+    .run-detail-item .name{color:rgba(255,255,255,.4)}
+    .run-detail-item .val{font-family:"SF Mono","Fira Code",monospace;font-weight:600}
 
-    /* ── Gradient text ────────────────────────────────── */
-    .grad-text {
-      background: linear-gradient(135deg, #fbbf24 0%, #e6edf3 60%);
-      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
+    /* ── CTA / footer ────────────────────────────── */
+    .cta-tagline{font-size:.85rem;color:rgba(255,255,255,.3);margin-top:24px}
+    .powered-pill{display:inline-block;font-size:.75rem;color:rgba(255,255,255,.4);background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);padding:4px 14px;border-radius:20px;margin-top:16px}
+    .powered-pill a{color:#58a6ff}
+    .loading{text-align:center;padding:80px;color:rgba(255,255,255,.4);font-size:1.1rem}
 
-    /* ── Run log ──────────────────────────────────────── */
-    .run-table-wrap { overflow-x: auto; margin-top: 24px; }
-    .run-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
-    .run-table th { text-align: left; color: rgba(255,255,255,0.4); font-weight: 500; padding: 10px 14px; border-bottom: 1px solid rgba(255,255,255,0.08); }
-    .run-table td { padding: 10px 14px; border-bottom: 1px solid rgba(255,255,255,0.06); white-space: nowrap; }
-    .run-table tr.run-row:hover td { background: rgba(255,255,255,0.03); cursor: pointer; }
-    .mono { font-family: "SF Mono", "Fira Code", monospace; font-size: 0.8rem; }
-    .commit-link { color: #58a6ff; font-family: "SF Mono", "Fira Code", monospace; font-size: 0.8rem; }
-    .run-detail { display: none; }
-    .run-detail.open { display: table-row; }
-    .run-detail td { padding: 0; }
-    .run-detail-inner { padding: 16px 20px; background: rgba(255,255,255,0.02); }
-    .run-detail-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; }
-    .run-detail-item { display: flex; justify-content: space-between; padding: 4px 0; font-size: 0.8rem; }
-    .run-detail-item .name { color: rgba(255,255,255,0.4); }
-    .run-detail-item .val { font-family: "SF Mono", "Fira Code", monospace; font-weight: 600; }
-
-    /* ── Footer ───────────────────────────────────────── */
-    .ch-cta .cta-tagline { font-size: 0.85rem; color: rgba(255,255,255,0.3); margin-top: 24px; }
-    .powered-pill { display: inline-block; font-size: 0.75rem; color: rgba(255,255,255,0.4); background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); padding: 4px 14px; border-radius: 20px; margin-top: 16px; }
-    .powered-pill a { color: #58a6ff; }
-
-    .loading { text-align: center; padding: 80px; color: rgba(255,255,255,0.4); font-size: 1.1rem; }
-
-    @media (max-width: 640px) {
-      .cards { grid-template-columns: 1fr; }
-      .ch { padding: 60px 16px; }
-    }
+    @media(max-width:640px){.ch{padding:60px 16px}}
   </style>
 </head>
 <body>
 
-<!-- ═══════════════════════════════════════════════════════
-     Chapter 1: Hero — "How fast is fast?"
-     ═══════════════════════════════════════════════════════ -->
+<!-- ═══ Hero ═══ -->
 <section class="ch ch-hero" id="hero">
   <div class="ch-inner" style="text-align:center">
     <div class="fade-in" style="font-size:4rem;margin-bottom:12px">&#9889;</div>
     <h1 class="ch-heading fade-in grad-text">How fast is fast?</h1>
-    <p class="ch-body fade-in" style="margin:0 auto;text-align:center;color:rgba(255,255,255,0.6)">
+    <p class="ch-body fade-in" style="margin:0 auto;text-align:center;color:rgba(255,255,255,.6)">
       Your MCP server boots, registers tools, handles calls, and responds &mdash;
       all before your LLM finishes its next token.<br>
       <strong style="color:#e6edf3">These are real benchmarks. Every number is live.</strong>
     </p>
-    <div class="powered-pill fade-in" style="margin-top:24px">
-      measured by <a href="https://github.com/strawgate/octo11y">octo11y</a>
-    </div>
+    <div class="powered-pill fade-in" style="margin-top:24px">measured by <a href="https://github.com/strawgate/octo11y">octo11y</a></div>
   </div>
   <div class="scroll-prompt">&darr; scroll to begin</div>
 </section>
 
-<!-- ═══════════════════════════════════════════════════════
-     Chapter 2: The Import — warm cream
-     ═══════════════════════════════════════════════════════ -->
+<!-- ═══ Ch 1: Import — Race Track ═══ -->
 <section class="ch ch-import" id="import">
   <div class="ch-inner">
     <div class="ch-tag fade-in" style="color:#b45309">CHAPTER ONE</div>
     <h2 class="ch-heading fade-in" style="color:#1a1a2e">It all starts with an import.</h2>
     <p class="ch-body fade-in" id="narr-import"></p>
-    <div class="cards fade-in" id="cards-import"></div>
+    <div class="viz fade-in" id="viz-import"></div>
   </div>
 </section>
 
-<!-- ═══════════════════════════════════════════════════════
-     Chapter 3: Server creation — dark teal
-     ═══════════════════════════════════════════════════════ -->
+<!-- ═══ Ch 2: Server — Podium ═══ -->
 <section class="ch ch-server" id="server">
   <div class="ch-inner">
     <div class="ch-tag fade-in" style="color:#3fb950">CHAPTER TWO</div>
     <h2 class="ch-heading fade-in">From zero to server.</h2>
     <p class="ch-body fade-in" id="narr-server"></p>
-    <div class="cards fade-in" id="cards-server"></div>
+    <div class="viz fade-in" id="viz-server"></div>
   </div>
 </section>
 
-<!-- ═══════════════════════════════════════════════════════
-     Chapter 4: Tool calls — light blue
-     ═══════════════════════════════════════════════════════ -->
+<!-- ═══ Ch 3: Tool Calls — Balloon Kids ═══ -->
 <section class="ch ch-calls" id="calls">
   <div class="ch-inner">
     <div class="ch-tag fade-in" style="color:#7c3aed">CHAPTER THREE</div>
     <h2 class="ch-heading fade-in" style="color:#1a1a2e">The moment of truth.</h2>
     <p class="ch-body fade-in" id="narr-calls"></p>
-    <div class="cards fade-in" id="cards-calls"></div>
+    <div class="viz fade-in" id="viz-calls"></div>
   </div>
 </section>
 
-<!-- ═══════════════════════════════════════════════════════
-     Chapter 5: Mount / composition — deep indigo
-     ═══════════════════════════════════════════════════════ -->
+<!-- ═══ Ch 4: Mount — City Skyline ═══ -->
 <section class="ch ch-mount" id="mount">
   <div class="ch-inner">
     <div class="ch-tag fade-in" style="color:#a78bfa">CHAPTER FOUR</div>
     <h2 class="ch-heading fade-in">Building bigger.</h2>
     <p class="ch-body fade-in" id="narr-mount"></p>
-    <div class="cards fade-in" id="cards-mount"></div>
+    <div class="viz fade-in" id="viz-mount"></div>
   </div>
 </section>
 
-<!-- ═══════════════════════════════════════════════════════
-     Chapter 6: Stdio — warm cream
-     ═══════════════════════════════════════════════════════ -->
+<!-- ═══ Ch 5: Stdio — The Pipe ═══ -->
 <section class="ch ch-stdio" id="stdio">
   <div class="ch-inner">
     <div class="ch-tag fade-in" style="color:#b45309">CHAPTER FIVE</div>
     <h2 class="ch-heading fade-in" style="color:#1a1a2e">Where rubber meets road.</h2>
     <p class="ch-body fade-in" id="narr-stdio"></p>
-    <div class="cards fade-in" id="cards-stdio"></div>
+    <div class="viz fade-in" id="viz-stdio"></div>
   </div>
 </section>
 
-<!-- ═══════════════════════════════════════════════════════
-     Chapter 7: Run history — dark
-     ═══════════════════════════════════════════════════════ -->
+<!-- ═══ History ═══ -->
 <section class="ch ch-history" id="history">
   <div class="ch-inner">
     <div class="ch-tag fade-in" style="color:#58a6ff">THE FULL PICTURE</div>
     <h2 class="ch-heading fade-in">Every run, remembered.</h2>
-    <p class="ch-body fade-in" style="color:rgba(255,255,255,0.5)">
+    <p class="ch-body fade-in" style="color:rgba(255,255,255,.5)">
       No more &ldquo;it used to be faster.&rdquo; Every benchmark, every commit, tracked forever.
       Click a row to see the full breakdown.
     </p>
@@ -244,14 +166,12 @@
   </div>
 </section>
 
-<!-- ═══════════════════════════════════════════════════════
-     Chapter 8: CTA
-     ═══════════════════════════════════════════════════════ -->
+<!-- ═══ CTA ═══ -->
 <section class="ch ch-cta" id="cta">
   <div class="ch-inner" style="text-align:center">
     <div class="fade-in" style="font-size:3.5rem;margin-bottom:12px">&#127942;</div>
     <h2 class="ch-heading fade-in">Your code deserves a scoreboard.</h2>
-    <p class="ch-body fade-in" style="margin:0 auto;text-align:center;color:rgba(255,255,255,0.5)">
+    <p class="ch-body fade-in" style="margin:0 auto;text-align:center;color:rgba(255,255,255,.5)">
       FastMCP is fast. Now you can <em>prove</em> it &mdash; on every commit.
     </p>
     <p class="cta-tagline fade-in">Zero servers &middot; Zero databases &middot; Just pytest-benchmark and a YAML file</p>
@@ -259,9 +179,7 @@
       <a href="https://github.com/strawgate/fastmcp/tree/bench-data" style="margin-right:12px">bench-data &rarr;</a>
       <a href="https://github.com/strawgate/fastmcp/actions/workflows/benchmarks.yml">CI runs &rarr;</a>
     </div>
-    <div class="powered-pill fade-in">
-      powered by <a href="https://github.com/strawgate/octo11y">octo11y</a>
-    </div>
+    <div class="powered-pill fade-in">powered by <a href="https://github.com/strawgate/octo11y">octo11y</a></div>
   </div>
 </section>
 
@@ -269,186 +187,555 @@
 
 <script>
 /* ══════════════════════════════════════════════════════════
-   Data + rendering
+   Constants + helpers
    ══════════════════════════════════════════════════════════ */
-var OWNER = "strawgate", REPO = "fastmcp", BRANCH = "bench-data";
-var BASE = "https://raw.githubusercontent.com/" + OWNER + "/" + REPO + "/" + BRANCH;
+var OWNER = 'strawgate', REPO = 'fastmcp', BRANCH = 'bench-data';
+var BASE = 'https://raw.githubusercontent.com/' + OWNER + '/' + REPO + '/' + BRANCH;
 
-/* ── Formatting ──────────────────────────────────────────── */
 function fmtTime(s) {
-  if (s == null || isNaN(s)) return { v: "\u2014", u: "" };
+  if (s == null || isNaN(s)) return {v:'\u2014',u:''};
   var ms = s * 1000;
-  if (ms >= 1000) return { v: (ms / 1000).toFixed(1), u: "s" };
-  if (ms >= 1) return { v: ms < 10 ? ms.toFixed(1) : ms.toFixed(0), u: "ms" };
+  if (ms >= 1000) return {v:(ms/1000).toFixed(1),u:'s'};
+  if (ms >= 1) return {v: ms<10?ms.toFixed(1):ms.toFixed(0),u:'ms'};
   var us = ms * 1000;
-  return { v: us < 10 ? us.toFixed(1) : us.toFixed(0), u: "\u00b5s" };
+  return {v: us<10?us.toFixed(1):us.toFixed(0),u:'\u00b5s'};
 }
-function fS(s) { var r = fmtTime(s); return r.v + "\u2009" + r.u; }
-function fH(s) { var r = fmtTime(s); return r.v + '<span class="unit">' + r.u + "</span>"; }
-function clean(n) { return n.replace(/^test_/, "").replace(/_/g, " ").replace(/\b\w/g, function(c) { return c.toUpperCase(); }); }
-function ago(iso) { var d = Date.now() - new Date(iso).getTime(), m = Math.floor(d / 60000); if (m < 60) return m + "m ago"; var h = Math.floor(m / 60); if (h < 24) return h + "h ago"; return Math.floor(h / 24) + "d ago"; }
-function cLink(sha) { return '<a class="commit-link" href="https://github.com/' + OWNER + "/" + REPO + "/commit/" + sha + '">' + sha.slice(0, 7) + "</a>"; }
+function fS(s){var r=fmtTime(s);return r.v+'\u2009'+r.u}
+function fH(s){var r=fmtTime(s);return r.v+'<tspan font-size="11" opacity="0.5"> '+r.u+'</tspan>'}
+function fHtml(s){var r=fmtTime(s);return r.v+'<span style="font-size:0.6em;opacity:0.5"> '+r.u+'</span>'}
+function clean(n){return n.replace(/^test_/,'').replace(/_/g,' ').replace(/\b\w/g,function(c){return c.toUpperCase()})}
+function ago(iso){var d=Date.now()-new Date(iso).getTime(),m=Math.floor(d/60000);if(m<60)return m+'m ago';var h=Math.floor(m/60);if(h<24)return h+'h ago';return Math.floor(h/24)+'d ago'}
+function cLink(sha){return '<a class="commit-link" href="https://github.com/'+OWNER+'/'+REPO+'/commit/'+sha+'">'+sha.slice(0,7)+'</a>'}
+function fj(url){return fetch(url).then(function(r){if(!r.ok)throw new Error(''+r.status);return r.json()})}
 
-function spark(pts, w, h) {
-  w = w || 100; h = h || 28;
-  if (!pts || pts.length < 2) return '<svg class="card-spark" viewBox="0 0 ' + w + " " + h + '"></svg>';
-  var vs = pts.map(function(p) { return p.value; });
-  var mn = Math.min.apply(null, vs), mx = Math.max.apply(null, vs), rng = mx - mn || 1, pad = 2;
-  var cs = vs.map(function(v, i) {
-    var x = pad + (i / (vs.length - 1)) * (w - 2 * pad);
-    var y = pad + (1 - (v - mn) / rng) * (h - 2 * pad);
-    return x.toFixed(1) + "," + y.toFixed(1);
-  });
-  var ln = cs.join(" ");
-  return '<svg class="card-spark" viewBox="0 0 ' + w + " " + h + '" preserveAspectRatio="none">' +
-    '<polygon class="area" points="' + pad + "," + (h - pad) + " " + ln + " " + (w - pad) + "," + (h - pad) + '"/>' +
-    '<polyline points="' + ln + '"/></svg>';
+/* sparkline points → SVG polyline coords */
+function sparkCoords(points, x0, y0, w, h) {
+  if (!points||points.length<2) return '';
+  var vs = points.map(function(p){return p.value});
+  var mn=Math.min.apply(null,vs),mx=Math.max.apply(null,vs),rng=mx-mn||1;
+  return vs.map(function(v,i){
+    var x = x0 + (i/(vs.length-1))*w;
+    var y = y0 + (1-(v-mn)/rng)*h;
+    return x.toFixed(1)+','+y.toFixed(1);
+  }).join(' ');
 }
 
-function card(cls, emoji, label, secs, pts, quip) {
-  return '<div class="' + cls + '">' +
-    '<div class="card-emoji">' + emoji + '</div>' +
-    '<div class="card-label">' + label + '</div>' +
-    '<div class="card-val">' + fH(secs) + '</div>' +
-    spark(pts) +
-    '<div class="card-quip">"' + quip + '"</div>' +
-    '</div>';
+/* sparkline points → vertical "string" path (for balloons) */
+function stringPath(cx, handY, attachY, points, wiggle) {
+  wiggle = wiggle || 22;
+  if (!points||points.length<2) return 'M '+cx+' '+handY+' L '+cx+' '+attachY;
+  var vs = points.map(function(p){return p.value});
+  var mn=Math.min.apply(null,vs),mx=Math.max.apply(null,vs),mid=(mn+mx)/2,rng=(mx-mn)||1;
+  var d = '';
+  for (var i=0;i<vs.length;i++) {
+    var t = i/(vs.length-1);
+    var y = handY - t*(handY-attachY);
+    var x = cx + ((vs[i]-mid)/rng)*wiggle;
+    d += (i===0?'M ':' L ')+x.toFixed(1)+' '+y.toFixed(1);
+  }
+  return d;
 }
 
-function fj(url) { return fetch(url).then(function(r) { if (!r.ok) throw new Error("" + r.status); return r.json(); }); }
-
-/* ── Speed streaks for hero ──────────────────────────────── */
+/* ══════════════════════════════════════════════════════════
+   Decorations
+   ══════════════════════════════════════════════════════════ */
 function addStreaks() {
-  var hero = document.getElementById("hero");
-  var chars = ["\u26a1", "\u26a1", "\u26a1", "\u2728", "\u26a1"];
-  var colors = ["#fbbf24", "#a78bfa", "#58a6ff", "#fbbf24", "#3fb950"];
-  for (var i = 0; i < 18; i++) {
-    var el = document.createElement("span");
-    el.className = "streak";
-    el.textContent = chars[i % chars.length];
-    el.style.color = colors[i % colors.length];
-    el.style.top = (8 + Math.random() * 84) + "%";
-    el.style.animationDuration = (2.2 + Math.random() * 2.8) + "s";
-    el.style.animationDelay = (Math.random() * 4) + "s";
-    el.style.fontSize = (0.8 + Math.random() * 1) + "rem";
+  var hero = document.getElementById('hero');
+  var chars = ['\u26a1','\u26a1','\u26a1','\u2728','\u26a1'];
+  var colors = ['#fbbf24','#a78bfa','#58a6ff','#fbbf24','#3fb950'];
+  for (var i=0;i<18;i++) {
+    var el = document.createElement('span');
+    el.className='streak';el.textContent=chars[i%chars.length];
+    el.style.color=colors[i%colors.length];
+    el.style.top=(8+Math.random()*84)+'%';
+    el.style.animationDuration=(2.2+Math.random()*2.8)+'s';
+    el.style.animationDelay=(Math.random()*4)+'s';
+    el.style.fontSize=(0.8+Math.random()*1)+'rem';
     hero.appendChild(el);
   }
 }
 
-/* ── Twinkle stars for mount chapter ─────────────────────── */
 function addTwinkles() {
-  var ch = document.getElementById("mount");
-  var chars = ["\u2726", "\u2728", "\u2726", "\u2734"];
-  var colors = ["rgba(167,139,250,0.6)", "rgba(255,255,255,0.3)", "rgba(251,191,36,0.5)", "rgba(255,255,255,0.2)"];
-  for (var i = 0; i < 20; i++) {
-    var el = document.createElement("span");
-    el.className = "twinkle";
-    el.textContent = chars[i % chars.length];
-    el.style.color = colors[i % colors.length];
-    el.style.left = (3 + Math.random() * 94) + "%";
-    el.style.top = (3 + Math.random() * 94) + "%";
-    el.style.fontSize = (0.5 + Math.random() * 0.8) + "rem";
-    el.style.animationDuration = (1.5 + Math.random() * 2) + "s";
-    el.style.animationDelay = (Math.random() * 3) + "s";
+  var ch = document.getElementById('mount');
+  var chars = ['\u2726','\u2728','\u2726','\u2734'];
+  var colors = ['rgba(167,139,250,0.6)','rgba(255,255,255,0.3)','rgba(251,191,36,0.5)','rgba(255,255,255,0.2)'];
+  for (var i=0;i<20;i++) {
+    var el = document.createElement('span');
+    el.className='twinkle';el.textContent=chars[i%chars.length];
+    el.style.color=colors[i%colors.length];
+    el.style.left=(3+Math.random()*94)+'%';el.style.top=(3+Math.random()*94)+'%';
+    el.style.fontSize=(0.5+Math.random()*0.8)+'rem';
+    el.style.animationDuration=(1.5+Math.random()*2)+'s';
+    el.style.animationDelay=(Math.random()*3)+'s';
     ch.appendChild(el);
   }
 }
 
-/* ── Intersection observer for fade-in ───────────────────── */
 function setupFadeIn() {
-  var obs = new IntersectionObserver(function(entries) {
-    entries.forEach(function(e) { if (e.isIntersecting) e.target.classList.add("visible"); });
-  }, { threshold: 0.15 });
-  document.querySelectorAll(".fade-in").forEach(function(el) { obs.observe(el); });
+  var obs = new IntersectionObserver(function(entries){
+    entries.forEach(function(e){if(e.isIntersecting) e.target.classList.add('visible')});
+  },{threshold:0.15});
+  document.querySelectorAll('.fade-in').forEach(function(el){obs.observe(el)});
 }
 
-/* ── Quips per benchmark ─────────────────────────────────── */
-var QUIPS = {
-  test_cold_import: "All your dependencies in one go.",
-  test_warm_import: "Bytecode cache for the win.",
-  test_server_create_empty: "Just an object. Nothing more.",
-  test_server_create_1_tool: "One tool? No sweat.",
-  test_server_create_10_tools: "Still barely warming up.",
-  test_server_create_100_tools: "Enterprise-grade, actually fast.",
-  test_list_tools_10: "Instant catalog.",
-  test_list_tools_100: "100 tools, who cares?",
-  test_call_tool_10: "In and out. No drama.",
-  test_call_tool_burst_10: "10 at once? Easy.",
-  test_mount_1_child: "Microservice number one.",
-  test_mount_5_children: "A small constellation.",
-  test_mount_10_children: "A whole galaxy, still linear.",
-  test_stdio_startup_time: "Cold steel, warm heart.",
-  test_stdio_tool_call_latency: "Through the pipe and back.",
-};
+/* ══════════════════════════════════════════════════════════
+   VIZ 1: Race Track (Import chapter)
+   Two lanes — turtle vs lightning
+   ══════════════════════════════════════════════════════════ */
+function renderRace(cid, vals, pts) {
+  var cold = vals.test_cold_import||0, warm = vals.test_warm_import||0;
+  var coldPts = pts.test_cold_import, warmPts = pts.test_warm_import;
+  var W=800, H=250;
+  /* Positions: faster = further along the track */
+  var startX=70, finishX=740;
+  var trackW = finishX-startX;
+  /* Use artistic positions since the ratio is ~300:1 */
+  var warmX = finishX - 20;  /* nearly at finish */
+  var coldX = startX + trackW*0.14; /* barely past start */
 
-/* ── Story chapters ──────────────────────────────────────── */
-var STORY = [
+  var s = '<svg viewBox="0 0 '+W+' '+H+'" xmlns="http://www.w3.org/2000/svg" style="max-height:320px">';
+
+  /* Track surface */
+  s += '<rect x="30" y="45" width="740" height="170" rx="12" fill="#e8e0d0" stroke="#d4c9b8" stroke-width="2"/>';
+
+  /* Lane backgrounds */
+  s += '<rect x="40" y="55" width="720" height="70" rx="8" fill="#f5efe5"/>';
+  s += '<rect x="40" y="135" width="720" height="70" rx="8" fill="#f5efe5"/>';
+
+  /* Lane dashes */
+  for (var i=0;i<14;i++) {
+    var dx = 55+i*52;
+    s += '<rect x="'+dx+'" y="127" width="28" height="6" rx="3" fill="#d4c9b8"/>';
+  }
+
+  /* Start line */
+  s += '<rect x="'+startX+'" y="50" width="4" height="165" fill="#1a1a2e" rx="2"/>';
+  s += '<text x="'+(startX)+'" y="40" text-anchor="middle" font-size="11" font-weight="700" fill="#1a1a2e" opacity="0.4">START</text>';
+
+  /* Finish line (checkered) */
+  for (var r=0;r<11;r++) {
+    for (var c=0;c<2;c++) {
+      var fx = finishX + c*8;
+      var fy = 50 + r*15;
+      var ffill = (r+c)%2===0 ? '#1a1a2e' : '#fff';
+      s += '<rect x="'+fx+'" y="'+fy+'" width="8" height="15" fill="'+ffill+'"/>';
+    }
+  }
+
+  /* Sparkline trails behind racers */
+  var coldTrail = sparkCoords(coldPts, startX, 68, coldX-startX-30, 30);
+  if (coldTrail) {
+    s += '<polyline points="'+coldTrail+'" fill="none" stroke="#dc2626" stroke-width="2.5" opacity="0.4" stroke-linecap="round" stroke-linejoin="round"/>';
+  }
+  var warmTrail = sparkCoords(warmPts, startX, 148, warmX-startX-30, 30);
+  if (warmTrail) {
+    s += '<polyline points="'+warmTrail+'" fill="none" stroke="#16a34a" stroke-width="2.5" opacity="0.4" stroke-linecap="round" stroke-linejoin="round"/>';
+  }
+
+  /* Cold racer: turtle */
+  s += '<text x="'+coldX+'" y="98" text-anchor="middle" font-size="32">\ud83d\udc22</text>';
+  /* Time label */
+  var cf = fmtTime(cold);
+  s += '<rect x="'+(coldX+22)+'" y="72" width="80" height="28" rx="14" fill="#dc2626" opacity="0.9"/>';
+  s += '<text x="'+(coldX+62)+'" y="91" text-anchor="middle" font-size="13" font-weight="800" fill="white" font-family="SF Mono,Fira Code,monospace">'+cf.v+' '+cf.u+'</text>';
+
+  /* Warm racer: lightning */
+  s += '<text x="'+warmX+'" y="178" text-anchor="middle" font-size="32">\u26a1</text>';
+  /* Speed lines behind warm racer */
+  for (var sl=1;sl<=3;sl++) {
+    s += '<line x1="'+(warmX-24-sl*18)+'" y1="'+(160+sl*2)+'" x2="'+(warmX-14-sl*14)+'" y2="'+(160+sl*2)+'" stroke="#16a34a" stroke-width="2" opacity="'+(0.6-sl*0.15)+'" stroke-linecap="round"/>';
+  }
+  var wf = fmtTime(warm);
+  s += '<rect x="'+(warmX-100)+'" y="152" width="80" height="28" rx="14" fill="#16a34a" opacity="0.9"/>';
+  s += '<text x="'+(warmX-60)+'" y="171" text-anchor="middle" font-size="13" font-weight="800" fill="white" font-family="SF Mono,Fira Code,monospace">'+wf.v+' '+wf.u+'</text>';
+
+  /* Lane labels */
+  s += '<text x="50" y="95" font-size="10" font-weight="700" fill="#92400e" opacity="0.6">COLD</text>';
+  s += '<text x="50" y="175" font-size="10" font-weight="700" fill="#166534" opacity="0.6">WARM</text>';
+
+  /* Quip */
+  s += '<text x="400" y="240" text-anchor="middle" font-size="13" font-style="italic" fill="#1a1a2e" opacity="0.3">"Not even close."</text>';
+
+  s += '</svg>';
+  document.getElementById(cid).innerHTML = s;
+}
+
+/* ══════════════════════════════════════════════════════════
+   VIZ 2: Olympic Podium (Server chapter)
+   Sort benchmarks by speed, award medals
+   ══════════════════════════════════════════════════════════ */
+function renderPodium(cid, items, vals, pts) {
+  var W=800,H=380;
+  var sorted = items.slice().sort(function(a,b){return (vals[a.key]||0)-(vals[b.key]||0)});
+  /* Podium positions: 2nd, 1st, 3rd from left */
+  var medal = ['\ud83e\udd47','\ud83e\udd48','\ud83e\udd49'];
+  var podiumH = [200, 150, 110]; /* 1st, 2nd, 3rd heights */
+  var podiumW = 170;
+  var ground = 360;
+  var podiumX = [310,120,500]; /* 1st center, 2nd left, 3rd right */
+  var podiumColors = ['#fbbf24','#9ca3af','#cd7f32'];
+  var podiumDark = ['#d4982a','#7a7f85','#a66829'];
+
+  var s = '<svg viewBox="0 0 '+W+' '+H+'" xmlns="http://www.w3.org/2000/svg" style="max-height:420px">';
+
+  /* Ground line */
+  s += '<rect x="30" y="'+ground+'" width="740" height="4" rx="2" fill="rgba(255,255,255,0.1)"/>';
+
+  /* Podium — order: 2nd(left), 1st(center), 3rd(right) */
+  var order = [1,0,2]; /* indices into sorted array: silver, gold, bronze */
+  for (var pi=0;pi<3;pi++) {
+    var idx = order[pi];
+    var bm = sorted[idx];
+    var px = podiumX[idx];
+    var ph = podiumH[idx];
+    var py = ground - ph;
+
+    /* Block */
+    s += '<rect x="'+(px-podiumW/2)+'" y="'+py+'" width="'+podiumW+'" height="'+ph+'" rx="6" fill="'+podiumColors[idx]+'" opacity="0.9"/>';
+    s += '<rect x="'+(px-podiumW/2)+'" y="'+py+'" width="'+podiumW+'" height="'+ph+'" rx="6" fill="url(#podGrad'+idx+')" opacity="0.3"/>';
+
+    /* Rank number on podium face */
+    s += '<text x="'+px+'" y="'+(ground-20)+'" text-anchor="middle" font-size="48" font-weight="900" fill="'+podiumDark[idx]+'" opacity="0.3">'+(idx+1)+'</text>';
+
+    /* Medal emoji above podium */
+    s += '<text x="'+px+'" y="'+(py-8)+'" text-anchor="middle" font-size="36">'+medal[idx]+'</text>';
+
+    /* Label + value above medal */
+    s += '<text x="'+px+'" y="'+(py-55)+'" text-anchor="middle" font-size="11" font-weight="700" fill="rgba(255,255,255,0.5)">'+bm.label.toUpperCase()+'</text>';
+    var f = fmtTime(vals[bm.key]);
+    s += '<text x="'+px+'" y="'+(py-36)+'" text-anchor="middle" font-size="20" font-weight="800" fill="white" font-family="SF Mono,Fira Code,monospace">'+f.v+'<tspan font-size="11" opacity="0.5"> '+f.u+'</tspan></text>';
+
+    /* Mini sparkline on podium face */
+    var sc = sparkCoords(pts[bm.key], px-40, py+15, 80, 25);
+    if (sc) s += '<polyline points="'+sc+'" fill="none" stroke="'+podiumDark[idx]+'" stroke-width="1.5" opacity="0.3"/>';
+  }
+
+  /* 4th place — standing at the side */
+  if (sorted.length > 3) {
+    var bm4 = sorted[3];
+    var f4 = fmtTime(vals[bm4.key]);
+    s += '<text x="700" y="'+(ground-10)+'" text-anchor="middle" font-size="28">\ud83d\ude05</text>';
+    s += '<text x="700" y="'+(ground-42)+'" text-anchor="middle" font-size="10" font-weight="700" fill="rgba(255,255,255,0.4)">'+bm4.label.toUpperCase()+'</text>';
+    s += '<text x="700" y="'+(ground-26)+'" text-anchor="middle" font-size="14" font-weight="700" fill="rgba(255,255,255,0.6)" font-family="SF Mono,Fira Code,monospace">'+f4.v+' '+f4.u+'</text>';
+  }
+
+  /* Gradients */
+  s += '<defs>';
+  s += '<linearGradient id="podGrad0" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="white"/><stop offset="100%" stop-color="transparent"/></linearGradient>';
+  s += '<linearGradient id="podGrad1" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="white"/><stop offset="100%" stop-color="transparent"/></linearGradient>';
+  s += '<linearGradient id="podGrad2" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="white"/><stop offset="100%" stop-color="transparent"/></linearGradient>';
+  s += '</defs>';
+
+  /* Quip */
+  s += '<text x="400" y="'+H+'" text-anchor="middle" font-size="13" font-style="italic" fill="rgba(255,255,255,0.2)">"Some servers are born faster than others."</text>';
+
+  s += '</svg>';
+  document.getElementById(cid).innerHTML = s;
+}
+
+/* ══════════════════════════════════════════════════════════
+   VIZ 3: Balloon Festival (Tool Calls chapter)
+   Kids holding sparkline-string balloons
+   ══════════════════════════════════════════════════════════ */
+function renderBalloons(cid, items, vals, pts) {
+  var W=800, H=430;
+  var positions = [100, 300, 500, 700];
+  var balloonColors = [
+    {fill:'#ef4444',grad1:'#fca5a5',grad2:'#ef4444',dark:'#dc2626'},
+    {fill:'#3b82f6',grad1:'#93c5fd',grad2:'#3b82f6',dark:'#2563eb'},
+    {fill:'#22c55e',grad1:'#86efac',grad2:'#22c55e',dark:'#16a34a'},
+    {fill:'#f59e0b',grad1:'#fcd34d',grad2:'#f59e0b',dark:'#d97706'}
+  ];
+
+  var s = '<svg viewBox="0 0 '+W+' '+H+'" xmlns="http://www.w3.org/2000/svg" style="max-height:480px">';
+
+  /* Gradient defs */
+  s += '<defs>';
+  for (var i=0;i<4;i++) {
+    var c = balloonColors[i];
+    s += '<radialGradient id="bgrad'+i+'" cx="35%" cy="30%"><stop offset="0%" stop-color="'+c.grad1+'"/><stop offset="100%" stop-color="'+c.grad2+'"/></radialGradient>';
+  }
+  s += '</defs>';
+
+  /* Ground line */
+  s += '<line x1="30" y1="398" x2="770" y2="398" stroke="#c4b5a0" stroke-width="2" opacity="0.3" stroke-dasharray="8 6"/>';
+
+  for (var i=0;i<items.length && i<4;i++) {
+    var b = items[i];
+    var cx = positions[i];
+    var c = balloonColors[i];
+    var v = vals[b.key];
+    var p = pts[b.key];
+
+    /* Balloon */
+    s += '<ellipse cx="'+cx+'" cy="55" rx="50" ry="34" fill="url(#bgrad'+i+')"/>';
+    /* Balloon shine highlight */
+    s += '<ellipse cx="'+(cx-14)+'" cy="42" rx="16" ry="10" fill="white" opacity="0.2"/>';
+    /* Balloon knot */
+    s += '<polygon points="'+(cx-5)+',87 '+cx+',97 '+(cx+5)+',87" fill="'+c.fill+'"/>';
+
+    /* Value text in balloon */
+    var f = fmtTime(v);
+    s += '<text x="'+cx+'" y="53" text-anchor="middle" font-family="SF Mono,Fira Code,monospace" font-size="17" font-weight="800" fill="white">'+f.v+'</text>';
+    s += '<text x="'+cx+'" y="70" text-anchor="middle" font-family="SF Mono,Fira Code,monospace" font-size="10" fill="rgba(255,255,255,0.7)">'+f.u+'</text>';
+
+    /* String — sparkline as vertical string from hand to balloon */
+    var handX = cx+8, handY = 312, attachY = 97;
+    s += '<path d="'+stringPath(cx, handY, attachY, p, 24)+'" fill="none" stroke="'+c.dark+'" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" opacity="0.7"/>';
+
+    /* Stick figure */
+    var headY=332, bodyTop=344, bodyBot=370, legBot=392;
+    /* Head circle */
+    s += '<circle cx="'+cx+'" cy="'+headY+'" r="12" fill="'+c.fill+'" opacity="0.15" stroke="'+c.dark+'" stroke-width="2"/>';
+    /* Eyes */
+    s += '<circle cx="'+(cx-4)+'" cy="'+(headY-2)+'" r="1.5" fill="'+c.dark+'"/>';
+    s += '<circle cx="'+(cx+4)+'" cy="'+(headY-2)+'" r="1.5" fill="'+c.dark+'"/>';
+    /* Smile */
+    s += '<path d="M '+(cx-5)+' '+(headY+3)+' Q '+cx+' '+(headY+8)+' '+(cx+5)+' '+(headY+3)+'" fill="none" stroke="'+c.dark+'" stroke-width="1.5" stroke-linecap="round"/>';
+    /* Body */
+    s += '<line x1="'+cx+'" y1="'+bodyTop+'" x2="'+cx+'" y2="'+bodyBot+'" stroke="'+c.dark+'" stroke-width="2.5" stroke-linecap="round"/>';
+    /* Left arm (down) */
+    s += '<line x1="'+cx+'" y1="'+(bodyTop+8)+'" x2="'+(cx-14)+'" y2="'+(bodyTop+22)+'" stroke="'+c.dark+'" stroke-width="2.5" stroke-linecap="round"/>';
+    /* Right arm (up, holding string) */
+    s += '<line x1="'+cx+'" y1="'+(bodyTop+8)+'" x2="'+handX+'" y2="'+handY+'" stroke="'+c.dark+'" stroke-width="2.5" stroke-linecap="round"/>';
+    /* Legs */
+    s += '<line x1="'+cx+'" y1="'+bodyBot+'" x2="'+(cx-10)+'" y2="'+legBot+'" stroke="'+c.dark+'" stroke-width="2.5" stroke-linecap="round"/>';
+    s += '<line x1="'+cx+'" y1="'+bodyBot+'" x2="'+(cx+10)+'" y2="'+legBot+'" stroke="'+c.dark+'" stroke-width="2.5" stroke-linecap="round"/>';
+
+    /* Label below figure */
+    s += '<text x="'+cx+'" y="'+(legBot+20)+'" text-anchor="middle" font-size="11" font-weight="700" fill="#1a1a2e" opacity="0.45">'+b.label.toUpperCase()+'</text>';
+  }
+
+  /* Quip */
+  s += '<text x="400" y="'+H+'" text-anchor="middle" font-size="13" font-style="italic" fill="#1a1a2e" opacity="0.2">"Each string tells a story of commits past."</text>';
+
+  s += '</svg>';
+  document.getElementById(cid).innerHTML = s;
+}
+
+/* ══════════════════════════════════════════════════════════
+   VIZ 4: City Skyline (Mount chapter)
+   Buildings getting taller — nighttime cityscape
+   ══════════════════════════════════════════════════════════ */
+function renderSkyline(cid, items, vals, pts) {
+  var W=800, H=340;
+  var ground = 300;
+  /* Get values and compute heights */
+  var maxVal = 0;
+  items.forEach(function(b){if((vals[b.key]||0)>maxVal) maxVal=vals[b.key]});
+  if (!maxVal) maxVal = 0.1;
+
+  var bldgW = 160;
+  var positions = [120, 400, 680]; /* centers */
+  var buildingColors = ['#6d28d9','#7c3aed','#8b5cf6'];
+  var windowColor = '#fbbf24';
+
+  var s = '<svg viewBox="0 0 '+W+' '+H+'" xmlns="http://www.w3.org/2000/svg" style="max-height:380px">';
+
+  /* Stars in the sky (small dots) */
+  for (var si=0;si<15;si++) {
+    s += '<circle cx="'+(40+Math.random()*720)+'" cy="'+(10+Math.random()*100)+'" r="1.2" fill="white" opacity="'+(0.2+Math.random()*0.4)+'"/>';
+  }
+
+  /* Ground */
+  s += '<rect x="0" y="'+ground+'" width="'+W+'" height="40" fill="#1a0a3a" opacity="0.5"/>';
+  s += '<line x1="30" y1="'+ground+'" x2="770" y2="'+ground+'" stroke="rgba(167,139,250,0.3)" stroke-width="2"/>';
+
+  for (var i=0;i<items.length && i<3;i++) {
+    var b = items[i];
+    var cx = positions[i];
+    var v = vals[b.key] || 0;
+    var bH = Math.max(60, (v/maxVal)*230);
+    var bTop = ground - bH;
+
+    /* Building body */
+    s += '<rect x="'+(cx-bldgW/2)+'" y="'+bTop+'" width="'+bldgW+'" height="'+bH+'" rx="4" fill="'+buildingColors[i]+'" opacity="0.85"/>';
+    /* Building edge highlight */
+    s += '<rect x="'+(cx-bldgW/2)+'" y="'+bTop+'" width="4" height="'+bH+'" fill="white" opacity="0.08"/>';
+
+    /* Windows (rows & cols) */
+    var winCols = 4, winW = 18, winH = 14, winGap = 10;
+    var totalWinW = winCols * winW + (winCols-1)*winGap;
+    var winStartX = cx - totalWinW/2;
+    var numRows = Math.max(1, Math.floor((bH-30)/28));
+    for (var row=0;row<numRows;row++) {
+      for (var col=0;col<winCols;col++) {
+        var wx = winStartX + col*(winW+winGap);
+        var wy = bTop + 16 + row*28;
+        /* Some windows lit, some dark */
+        var lit = Math.random() > 0.3;
+        s += '<rect x="'+wx+'" y="'+wy+'" width="'+winW+'" height="'+winH+'" rx="2" fill="'+(lit?windowColor:'#2d1b69')+'" opacity="'+(lit?0.8:0.5)+'"/>';
+      }
+    }
+
+    /* Rooftop emoji */
+    var roofEmoji = ['\ud83c\udfe0','\ud83c\udfd7\ufe0f','\ud83c\udfd9\ufe0f'];
+    s += '<text x="'+cx+'" y="'+(bTop-10)+'" text-anchor="middle" font-size="28">'+roofEmoji[i]+'</text>';
+
+    /* Value on building face */
+    var f = fmtTime(v);
+    s += '<text x="'+cx+'" y="'+(ground-bH/2+8)+'" text-anchor="middle" font-family="SF Mono,Fira Code,monospace" font-size="22" font-weight="800" fill="white" opacity="0.9">'+f.v+'</text>';
+    s += '<text x="'+cx+'" y="'+(ground-bH/2+24)+'" text-anchor="middle" font-family="SF Mono,Fira Code,monospace" font-size="11" fill="white" opacity="0.4">'+f.u+'</text>';
+
+    /* Label below */
+    s += '<text x="'+cx+'" y="'+(ground+22)+'" text-anchor="middle" font-size="11" font-weight="700" fill="rgba(167,139,250,0.6)">'+b.label.toUpperCase()+'</text>';
+
+    /* Sparkline along the ground, small */
+    var sc = sparkCoords(pts[b.key], cx-35, ground+28, 70, 10);
+    if (sc) s += '<polyline points="'+sc+'" fill="none" stroke="rgba(167,139,250,0.3)" stroke-width="1.5"/>';
+  }
+
+  /* Arrow showing growth */
+  s += '<line x1="210" y1="'+(ground+35)+'" x2="590" y2="'+(ground+35)+'" stroke="rgba(167,139,250,0.2)" stroke-width="1.5" marker-end="url(#arrowPurple)"/>';
+  s += '<defs><marker id="arrowPurple" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="rgba(167,139,250,0.3)"/></marker></defs>';
+
+  /* Quip */
+  s += '<text x="400" y="'+H+'" text-anchor="middle" font-size="13" font-style="italic" fill="rgba(255,255,255,0.15)">"A skyline that scales."</text>';
+
+  s += '</svg>';
+  document.getElementById(cid).innerHTML = s;
+}
+
+/* ══════════════════════════════════════════════════════════
+   VIZ 5: The Pipe (Stdio chapter)
+   Data flows through a horizontal pipe
+   ══════════════════════════════════════════════════════════ */
+function renderPipe(cid, vals, pts) {
+  var startup = vals.test_stdio_startup_time || 0;
+  var roundTrip = vals.test_stdio_tool_call_latency || 0;
+  var total = startup + roundTrip || 1;
+  var W=800, H=240;
+  var pipeL=60, pipeR=740, pipeY=100, pipeH=70;
+  var divX = pipeL + (startup/total)*(pipeR-pipeL);
+
+  var s = '<svg viewBox="0 0 '+W+' '+H+'" xmlns="http://www.w3.org/2000/svg" style="max-height:280px">';
+
+  /* Pipe outer */
+  s += '<rect x="'+pipeL+'" y="'+pipeY+'" width="'+(pipeR-pipeL)+'" height="'+pipeH+'" rx="35" fill="#92400e" opacity="0.15" stroke="#b45309" stroke-width="2" opacity="0.3"/>';
+
+  /* Pipe sections with different fills */
+  /* Startup section (left) */
+  s += '<clipPath id="pipeClip"><rect x="'+pipeL+'" y="'+pipeY+'" width="'+(pipeR-pipeL)+'" height="'+pipeH+'" rx="35"/></clipPath>';
+  s += '<rect x="'+pipeL+'" y="'+pipeY+'" width="'+(divX-pipeL)+'" height="'+pipeH+'" fill="#b45309" opacity="0.08" clip-path="url(#pipeClip)"/>';
+  /* Round-trip section (right) */
+  s += '<rect x="'+divX+'" y="'+pipeY+'" width="'+(pipeR-divX)+'" height="'+pipeH+'" fill="#16a34a" opacity="0.08" clip-path="url(#pipeClip)"/>';
+
+  /* Section divider */
+  s += '<line x1="'+divX+'" y1="'+(pipeY+8)+'" x2="'+divX+'" y2="'+(pipeY+pipeH-8)+'" stroke="#92400e" stroke-width="2" stroke-dasharray="6 4" opacity="0.4"/>';
+
+  /* Flowing data dots inside pipe */
+  for (var di=0;di<6;di++) {
+    var dotDelay = (di * 0.45).toFixed(1);
+    var cy = pipeY + pipeH/2 + (di%3-1)*12;
+    s += '<circle r="5" fill="#b45309" opacity="0">';
+    s += '<animate attributeName="cx" from="'+(pipeL+20)+'" to="'+(pipeR-20)+'" dur="2.8s" begin="'+dotDelay+'s" repeatCount="indefinite"/>';
+    s += '<animate attributeName="opacity" values="0;0.5;0.5;0" keyTimes="0;0.08;0.92;1" dur="2.8s" begin="'+dotDelay+'s" repeatCount="indefinite"/>';
+    s += '<animate attributeName="cy" from="'+cy+'" to="'+cy+'" dur="2.8s" begin="'+dotDelay+'s" repeatCount="indefinite"/>';
+    s += '</circle>';
+  }
+
+  /* Input emoji */
+  s += '<text x="'+(pipeL-5)+'" y="'+(pipeY+pipeH/2+8)+'" text-anchor="end" font-size="32">\ud83d\udc0d</text>';
+  /* Output emoji */
+  s += '<text x="'+(pipeR+8)+'" y="'+(pipeY+pipeH/2+8)+'" font-size="28">\u2728</text>';
+
+  /* Section labels above pipe */
+  var startCX = pipeL + (divX-pipeL)/2;
+  var rtCX = divX + (pipeR-divX)/2;
+  s += '<text x="'+startCX+'" y="'+(pipeY-28)+'" text-anchor="middle" font-size="10" font-weight="700" fill="#92400e" opacity="0.6">COLD START</text>';
+  var fs = fmtTime(startup);
+  s += '<text x="'+startCX+'" y="'+(pipeY-10)+'" text-anchor="middle" font-size="22" font-weight="800" fill="#92400e" font-family="SF Mono,Fira Code,monospace">'+fs.v+'<tspan font-size="12" opacity="0.5"> '+fs.u+'</tspan></text>';
+
+  s += '<text x="'+rtCX+'" y="'+(pipeY-28)+'" text-anchor="middle" font-size="10" font-weight="700" fill="#166534" opacity="0.6">ROUND-TRIP</text>';
+  var fr = fmtTime(roundTrip);
+  s += '<text x="'+rtCX+'" y="'+(pipeY-10)+'" text-anchor="middle" font-size="22" font-weight="800" fill="#166534" font-family="SF Mono,Fira Code,monospace">'+fr.v+'<tspan font-size="12" opacity="0.5"> '+fr.u+'</tspan></text>';
+
+  /* Sparklines below pipe */
+  var sc1 = sparkCoords(pts.test_stdio_startup_time, startCX-45, pipeY+pipeH+10, 90, 20);
+  if (sc1) s += '<polyline points="'+sc1+'" fill="none" stroke="#92400e" stroke-width="1.5" opacity="0.3"/>';
+  var sc2 = sparkCoords(pts.test_stdio_tool_call_latency, rtCX-45, pipeY+pipeH+10, 90, 20);
+  if (sc2) s += '<polyline points="'+sc2+'" fill="none" stroke="#166534" stroke-width="1.5" opacity="0.3"/>';
+
+  /* Stage labels below */
+  s += '<text x="'+startCX+'" y="'+(pipeY+pipeH+45)+'" text-anchor="middle" font-size="10" fill="#92400e" opacity="0.4">Python startup + MCP handshake</text>';
+  s += '<text x="'+rtCX+'" y="'+(pipeY+pipeH+45)+'" text-anchor="middle" font-size="10" fill="#166534" opacity="0.4">Tool call through stdin/stdout</text>';
+
+  /* Quip */
+  s += '<text x="400" y="'+(H-4)+'" text-anchor="middle" font-size="13" font-style="italic" fill="#1a1a2e" opacity="0.2">"Most of this is Python. The framework adds almost nothing."</text>';
+
+  s += '</svg>';
+  document.getElementById(cid).innerHTML = s;
+}
+
+/* ══════════════════════════════════════════════════════════
+   Narrations + Chapter config
+   ══════════════════════════════════════════════════════════ */
+var CHAPTERS = [
   {
-    el: "import", cls: "card-light",
-    narr: function(d) {
-      return 'You type <code>from fastmcp import FastMCP</code> and the clock starts ticking. A cold import &mdash; fresh process, full dependency tree &mdash; takes <span class="num">' + fS(d.test_cold_import) + '</span>. That\u2019s pydantic, httpx, starlette, the whole crew showing up for work. But once they\u2019re warmed up? <span class="num">' + fS(d.test_warm_import) + '</span>. <span class="fast">Five hundred times faster.</span>';
+    el: 'import',
+    narr: function(v) {
+      return 'You type <code>from fastmcp import FastMCP</code> and the clock starts ticking. A cold import \u2014 fresh process, full dependency tree \u2014 takes <span class="num">'+fS(v.test_cold_import)+'</span>. That\u2019s pydantic, httpx, starlette, the whole crew showing up for work. But once they\u2019re warmed up? <span class="num">'+fS(v.test_warm_import)+'</span>. <span class="fast">Five hundred times faster.</span>';
     },
-    benchmarks: [
-      { key: "test_cold_import", emoji: "\ud83e\udde8", label: "Cold Import" },
-      { key: "test_warm_import", emoji: "\u26a1", label: "Warm Import" },
-    ]
+    render: function(vals,pts){ renderRace('viz-import',vals,pts) }
   },
   {
-    el: "server", cls: "card-dark",
-    narr: function(d) {
-      return '<code>FastMCP("demo")</code> &mdash; and in <span class="num">' + fS(d.test_server_create_empty) + '</span> you have a server. Add a tool: <span class="num">' + fS(d.test_server_create_1_tool) + '</span>. Add ten: <span class="num">' + fS(d.test_server_create_10_tools) + '</span>. Add a hundred &mdash; think a full OpenAPI integration &mdash; and it\u2019s <span class="num">' + fS(d.test_server_create_100_tools) + '</span>. <span class="fast">Perfectly linear.</span> No surprises.';
+    el: 'server',
+    items: [
+      {key:'test_server_create_empty',label:'Empty Server'},
+      {key:'test_server_create_1_tool',label:'1 Tool'},
+      {key:'test_server_create_10_tools',label:'10 Tools'},
+      {key:'test_server_create_100_tools',label:'100 Tools'}
+    ],
+    narr: function(v) {
+      return '<code>FastMCP("demo")</code> \u2014 and in <span class="num">'+fS(v.test_server_create_empty)+'</span> you have a server. Add a tool: <span class="num">'+fS(v.test_server_create_1_tool)+'</span>. Add ten: <span class="num">'+fS(v.test_server_create_10_tools)+'</span>. Add a hundred \u2014 think a full OpenAPI integration \u2014 and it\u2019s <span class="num">'+fS(v.test_server_create_100_tools)+'</span>. <span class="fast">Perfectly linear.</span> No surprises.';
     },
-    benchmarks: [
-      { key: "test_server_create_empty", emoji: "\ud83d\udce6", label: "Empty Server" },
-      { key: "test_server_create_1_tool", emoji: "\ud83d\udd27", label: "1 Tool" },
-      { key: "test_server_create_10_tools", emoji: "\ud83d\udee0\ufe0f", label: "10 Tools" },
-      { key: "test_server_create_100_tools", emoji: "\ud83c\udfed", label: "100 Tools" },
-    ]
+    render: function(vals,pts){ renderPodium('viz-server',this.items,vals,pts) }
   },
   {
-    el: "calls", cls: "card-light",
-    narr: function(d) {
-      var perCall = d.test_call_tool_burst_10 ? d.test_call_tool_burst_10 / 10 : 0;
-      return 'An LLM asks for your tools. Listing ten: <span class="num">' + fS(d.test_list_tools_10) + '</span>. A hundred: <span class="num">' + fS(d.test_list_tools_100) + '</span>. Calling a tool and getting a result: <span class="num">' + fS(d.test_call_tool_10) + '</span>. Fire off ten calls in a burst? <span class="num">' + fS(d.test_call_tool_burst_10) + '</span> total &mdash; <span class="num">' + fS(perCall) + '</span> per call. <span class="fast">Faster than the model can think.</span>';
+    el: 'calls',
+    items: [
+      {key:'test_list_tools_10',label:'List 10 Tools'},
+      {key:'test_list_tools_100',label:'List 100 Tools'},
+      {key:'test_call_tool_10',label:'Call Tool'},
+      {key:'test_call_tool_burst_10',label:'10-Call Burst'}
+    ],
+    narr: function(v) {
+      var perCall = v.test_call_tool_burst_10 ? v.test_call_tool_burst_10/10 : 0;
+      return 'An LLM asks for your tools. Listing ten: <span class="num">'+fS(v.test_list_tools_10)+'</span>. A hundred: <span class="num">'+fS(v.test_list_tools_100)+'</span>. Calling a tool and getting a result: <span class="num">'+fS(v.test_call_tool_10)+'</span>. Fire off ten calls in a burst? <span class="num">'+fS(v.test_call_tool_burst_10)+'</span> total \u2014 <span class="num">'+fS(perCall)+'</span> per call. <span class="fast">Faster than the model can think.</span>';
     },
-    benchmarks: [
-      { key: "test_list_tools_10", emoji: "\ud83d\udccb", label: "List 10 Tools" },
-      { key: "test_list_tools_100", emoji: "\ud83d\udcda", label: "List 100 Tools" },
-      { key: "test_call_tool_10", emoji: "\ud83c\udfaf", label: "Call Tool" },
-      { key: "test_call_tool_burst_10", emoji: "\ud83d\ude80", label: "10-Call Burst" },
-    ]
+    render: function(vals,pts){ renderBalloons('viz-calls',this.items,vals,pts) }
   },
   {
-    el: "mount", cls: "card-dark",
-    narr: function(d) {
-      return 'You compose servers with <code>mount()</code> &mdash; the pattern for building multi-service MCP gateways. One child: <span class="num">' + fS(d.test_mount_1_child) + '</span>. Five: <span class="num">' + fS(d.test_mount_5_children) + '</span>. Ten: <span class="num">' + fS(d.test_mount_10_children) + '</span>. Each server brings 10 tools. <span class="fast">Composition scales linearly.</span> Build as big as you want.';
+    el: 'mount',
+    items: [
+      {key:'test_mount_1_child',label:'1 Server'},
+      {key:'test_mount_5_children',label:'5 Servers'},
+      {key:'test_mount_10_children',label:'10 Servers'}
+    ],
+    narr: function(v) {
+      return 'You compose servers with <code>mount()</code> \u2014 the pattern for building multi-service MCP gateways. One child: <span class="num">'+fS(v.test_mount_1_child)+'</span>. Five: <span class="num">'+fS(v.test_mount_5_children)+'</span>. Ten: <span class="num">'+fS(v.test_mount_10_children)+'</span>. Each server brings 10 tools. <span class="fast">Composition scales linearly.</span> Build as big as you want.';
     },
-    benchmarks: [
-      { key: "test_mount_1_child", emoji: "\ud83e\uddf1", label: "Mount 1" },
-      { key: "test_mount_5_children", emoji: "\ud83c\udfd7\ufe0f", label: "Mount 5" },
-      { key: "test_mount_10_children", emoji: "\ud83c\udf0c", label: "Mount 10" },
-    ]
+    render: function(vals,pts){ renderSkyline('viz-mount',this.items,vals,pts) }
   },
   {
-    el: "stdio", cls: "card-light",
-    narr: function(d) {
-      return 'The real-world transport: <code>stdio</code>. A fresh Python process spins up, the server initializes, MCP handshakes complete. That cold start: <span class="num">' + fS(d.test_stdio_startup_time) + '</span>. Once connected, a full tool call round-trip through the pipe: <span class="num">' + fS(d.test_stdio_tool_call_latency) + '</span>. Most of that is Python startup &mdash; <span class="fast">the framework adds almost nothing.</span>';
+    el: 'stdio',
+    narr: function(v) {
+      return 'The real-world transport: <code>stdio</code>. A fresh Python process spins up, the server initializes, MCP handshakes complete. That cold start: <span class="num">'+fS(v.test_stdio_startup_time)+'</span>. Once connected, a full tool call round-trip through the pipe: <span class="num">'+fS(v.test_stdio_tool_call_latency)+'</span>. Most of that is Python startup \u2014 <span class="fast">the framework adds almost nothing.</span>';
     },
-    benchmarks: [
-      { key: "test_stdio_startup_time", emoji: "\ud83d\udd0c", label: "Stdio Cold Start" },
-      { key: "test_stdio_tool_call_latency", emoji: "\ud83d\udd04", label: "Stdio Round-Trip" },
-    ]
-  },
+    render: function(vals,pts){ renderPipe('viz-stdio',vals,pts) }
+  }
 ];
 
-/* ── Main ────────────────────────────────────────────────── */
+/* ══════════════════════════════════════════════════════════
+   Main
+   ══════════════════════════════════════════════════════════ */
 function main() {
   addStreaks();
   addTwinkles();
 
-  fj(BASE + "/data/index.json").then(function(idx) {
+  fj(BASE + '/data/index.json').then(function(idx) {
     if (!idx.metrics || !idx.metrics.length) {
-      document.getElementById("loading-overlay").textContent = "No benchmark data yet.";
+      document.getElementById('loading-overlay').textContent = 'No benchmark data yet.';
       return;
     }
 
@@ -456,71 +743,67 @@ function main() {
     var latest = runs[runs.length - 1];
 
     return Promise.all([
-      fj(BASE + "/data/series/median.json").catch(function() { return null; }),
-      latest ? fj(BASE + "/data/views/runs/" + latest.id + "/detail.json").catch(function() { return null; }) : Promise.resolve(null)
+      fj(BASE + '/data/series/median.json').catch(function(){return null}),
+      latest ? fj(BASE + '/data/views/runs/' + latest.id + '/detail.json').catch(function(){return null}) : Promise.resolve(null)
     ]).then(function(results) {
       var med = results[0], rd = results[1];
-      document.getElementById("loading-overlay").style.display = "none";
+      document.getElementById('loading-overlay').style.display = 'none';
 
       /* Build value map */
       var vals = {};
       if (rd) {
-        var snap = (rd.metricSnapshots || []).find(function(s) { return s.metric === "median"; });
-        if (snap) snap.values.forEach(function(v) { vals[v.name] = v.value; });
+        var snap = (rd.metricSnapshots||[]).find(function(s){return s.metric==='median'});
+        if (snap) snap.values.forEach(function(v){vals[v.name]=v.value});
       }
       if (med) {
-        Object.keys(med.series || {}).forEach(function(n) {
+        Object.keys(med.series||{}).forEach(function(n){
           var e = med.series[n];
-          if (!(n in vals) && e.points && e.points.length) vals[n] = e.points[e.points.length - 1].value;
+          if (!(n in vals) && e.points && e.points.length) vals[n]=e.points[e.points.length-1].value;
         });
       }
       var pts = {};
-      if (med) Object.keys(med.series || {}).forEach(function(n) { pts[n] = med.series[n].points || []; });
+      if (med) Object.keys(med.series||{}).forEach(function(n){pts[n]=med.series[n].points||[]});
 
-      /* Render story chapters */
-      STORY.forEach(function(ch) {
-        document.getElementById("narr-" + ch.el).innerHTML = ch.narr(vals);
-        var html = "";
-        ch.benchmarks.forEach(function(b) {
-          html += card(ch.cls, b.emoji, b.label, vals[b.key], pts[b.key], QUIPS[b.key] || "");
-        });
-        document.getElementById("cards-" + ch.el).innerHTML = html;
+      /* Render chapters */
+      CHAPTERS.forEach(function(ch) {
+        document.getElementById('narr-'+ch.el).innerHTML = ch.narr(vals);
+        ch.render(vals, pts);
       });
 
       /* Render run log */
-      var logEl = document.getElementById("run-log");
+      var logEl = document.getElementById('run-log');
       if (!runs.length) {
         logEl.innerHTML = '<p style="color:rgba(255,255,255,0.3)">No runs yet.</p>';
       } else {
         var h = '<div class="run-table-wrap"><table class="run-table"><thead><tr><th style="width:24px"></th><th>Run</th><th>Commit</th><th>Benchmarks</th><th>When</th></tr></thead><tbody>';
         var sorted = runs.slice().reverse();
         sorted.forEach(function(r, i) {
-          h += '<tr class="run-row" data-run="' + r.id + '" data-idx="' + i + '">';
+          h += '<tr class="run-row" data-run="'+r.id+'" data-idx="'+i+'">';
           h += '<td style="color:rgba(255,255,255,0.3)">\u25b6</td>';
-          h += '<td class="mono">' + r.id.split("--")[0] + '</td>';
-          h += '<td>' + (r.commit ? cLink(r.commit) : '\u2014') + '</td>';
-          h += '<td>' + (r.benchmarks || 0) + ' tests</td>';
-          h += '<td style="color:rgba(255,255,255,0.3)">' + ago(r.timestamp) + '</td></tr>';
-          h += '<tr class="run-detail" id="det-' + i + '"><td colspan="5"><div class="run-detail-inner" id="det-in-' + i + '">Loading\u2026</div></td></tr>';
+          h += '<td class="mono">'+r.id.split('--')[0]+'</td>';
+          h += '<td>'+(r.commit?cLink(r.commit):'\u2014')+'</td>';
+          h += '<td>'+(r.benchmarks||0)+' tests</td>';
+          h += '<td style="color:rgba(255,255,255,0.3)">'+ago(r.timestamp)+'</td></tr>';
+          h += '<tr class="run-detail" id="det-'+i+'"><td colspan="5"><div class="run-detail-inner" id="det-in-'+i+'">Loading\u2026</div></td></tr>';
         });
         h += '</tbody></table></div>';
         logEl.innerHTML = h;
 
-        document.querySelectorAll(".run-row").forEach(function(row) {
-          row.addEventListener("click", function() {
-            var ri = row.getAttribute("data-idx"), rid = row.getAttribute("data-run");
-            var det = document.getElementById("det-" + ri), inner = document.getElementById("det-in-" + ri), arrow = row.querySelector("td");
-            if (det.classList.contains("open")) { det.classList.remove("open"); arrow.textContent = "\u25b6"; return; }
-            det.classList.add("open"); arrow.textContent = "\u25bc";
-            fj(BASE + "/data/views/runs/" + rid + "/detail.json").then(function(d) {
-              var sn = (d.metricSnapshots || []).find(function(s) { return s.metric === "median"; });
-              if (!sn || !sn.values || !sn.values.length) { inner.textContent = "No data."; return; }
-              var g = '<div class="run-detail-grid">';
-              sn.values.slice().sort(function(a, b) { return a.name.localeCompare(b.name); }).forEach(function(v) {
-                g += '<div class="run-detail-item"><span class="name">' + clean(v.name) + '</span><span class="val">' + fS(v.value) + '</span></div>';
+        document.querySelectorAll('.run-row').forEach(function(row) {
+          row.addEventListener('click', function() {
+            var ri=row.getAttribute('data-idx'), rid=row.getAttribute('data-run');
+            var det=document.getElementById('det-'+ri), inner=document.getElementById('det-in-'+ri), arrow=row.querySelector('td');
+            if (det.classList.contains('open')){det.classList.remove('open');arrow.textContent='\u25b6';return}
+            det.classList.add('open');arrow.textContent='\u25bc';
+            fj(BASE+'/data/views/runs/'+rid+'/detail.json').then(function(d){
+              var sn=(d.metricSnapshots||[]).find(function(s){return s.metric==='median'});
+              if(!sn||!sn.values||!sn.values.length){inner.textContent='No data.';return}
+              var g='<div class="run-detail-grid">';
+              sn.values.slice().sort(function(a,b){return a.name.localeCompare(b.name)}).forEach(function(v){
+                g+='<div class="run-detail-item"><span class="name">'+clean(v.name)+'</span><span class="val">'+fS(v.value)+'</span></div>';
               });
-              inner.innerHTML = g + '</div>';
-            }).catch(function(e) { inner.textContent = "Error: " + e.message; });
+              inner.innerHTML=g+'</div>';
+            }).catch(function(e){inner.textContent='Error: '+e.message});
           });
         });
       }
@@ -528,10 +811,9 @@ function main() {
       setupFadeIn();
     });
   }).catch(function(e) {
-    document.getElementById("loading-overlay").textContent = e.message.indexOf("404") !== -1 ? "No benchmark data yet." : "Error: " + e.message;
+    document.getElementById('loading-overlay').textContent = e.message.indexOf('404')!==-1 ? 'No benchmark data yet.' : 'Error: '+e.message;
   });
 
-  /* fade-in for static elements even before data loads */
   setupFadeIn();
 }
 
