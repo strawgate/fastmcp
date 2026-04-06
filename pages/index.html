@@ -3,244 +3,326 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>FastMCP Benchmarks</title>
+  <title>FastMCP &middot; Performance</title>
   <style>
-    :root { --bg: #0d1117; --surface: #161b22; --border: #30363d; --text: #e6edf3; --muted: #8b949e; --accent: #58a6ff; --green: #3fb950; --red: #f85149; --yellow: #d29922; }
+    :root { --bg: #0d1117; --surface: #161b22; --surface2: #1c2128; --border: #30363d; --text: #e6edf3; --muted: #8b949e; --accent: #58a6ff; --green: #3fb950; --red: #f85149; --purple: #bc8cff; }
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); line-height: 1.5; }
-    .container { max-width: 1200px; margin: 0 auto; padding: 24px 16px; }
-    header { display: flex; align-items: center; gap: 16px; margin-bottom: 32px; flex-wrap: wrap; }
-    header h1 { font-size: 1.5rem; font-weight: 600; }
-    header h1 a { color: var(--accent); text-decoration: none; }
-    header .badge { font-size: 0.75rem; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 2px 10px; color: var(--muted); }
-    .status { font-size: 0.875rem; color: var(--muted); margin-bottom: 24px; }
-    .status .ts { color: var(--accent); }
-    .group { margin-bottom: 32px; }
-    .group h2 { font-size: 1.125rem; font-weight: 600; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
-    .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 12px; }
-    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
-    .card .name { font-size: 0.875rem; font-weight: 600; margin-bottom: 4px; }
-    .card .value { font-size: 1.5rem; font-weight: 700; margin-bottom: 8px; }
-    .card .value .unit { font-size: 0.875rem; font-weight: 400; color: var(--muted); }
-    .card .meta { display: flex; gap: 12px; font-size: 0.75rem; color: var(--muted); flex-wrap: wrap; }
-    .card .meta span { white-space: nowrap; }
-    .sparkline { width: 100%; height: 40px; margin: 8px 0; }
-    .sparkline polyline { fill: none; stroke: var(--accent); stroke-width: 1.5; }
-    .sparkline .area { fill: var(--accent); opacity: 0.1; stroke: none; }
-    .loading { text-align: center; padding: 64px; color: var(--muted); font-size: 1.125rem; }
-    .error { text-align: center; padding: 64px; color: var(--red); }
-    footer { margin-top: 48px; padding-top: 24px; border-top: 1px solid var(--border); text-align: center; font-size: 0.75rem; color: var(--muted); }
-    footer a { color: var(--accent); text-decoration: none; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    code { background: var(--surface2); padding: 2px 6px; border-radius: 4px; font-size: 0.875em; }
+    .container { max-width: 960px; margin: 0 auto; padding: 32px 20px; }
+
+    /* Hero */
+    .hero { text-align: center; margin-bottom: 48px; padding: 40px 0; }
+    .hero h1 { font-size: 2rem; font-weight: 700; margin-bottom: 8px; }
+    .hero .tagline { color: var(--muted); font-size: 1.125rem; margin-bottom: 16px; }
+    .hero .powered { font-size: 0.75rem; color: var(--muted); background: var(--surface); border: 1px solid var(--border); padding: 4px 12px; border-radius: 16px; display: inline-block; }
+    .hero .powered a { color: var(--accent); }
+
+    /* Story */
+    .story { margin-bottom: 48px; }
+    .chapter { margin-bottom: 40px; }
+    .chapter .narration { font-size: 1.05rem; color: var(--muted); margin-bottom: 16px; line-height: 1.7; }
+    .chapter .narration .num { color: var(--purple); font-weight: 600; font-family: "SF Mono", "Fira Code", monospace; }
+    .chapter .narration .fast { color: var(--green); font-weight: 600; }
+
+    /* Tiles */
+    .tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; margin-top: 12px; }
+    .tile { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 16px; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+    .tile .info { flex: 1; min-width: 0; }
+    .tile .label { font-size: 0.8rem; color: var(--muted); margin-bottom: 2px; }
+    .tile .val { font-size: 1.75rem; font-weight: 700; font-family: "SF Mono", "Fira Code", monospace; white-space: nowrap; }
+    .tile .val .unit { font-size: 0.875rem; font-weight: 400; color: var(--muted); margin-left: 2px; }
+    .tile .val .delta { font-size: 0.75rem; margin-left: 6px; }
+    .tile .spark { flex-shrink: 0; width: 80px; height: 32px; }
+    .tile .spark polyline { fill: none; stroke: var(--accent); stroke-width: 1.5; }
+    .tile .spark .area { fill: var(--accent); opacity: 0.08; stroke: none; }
     .improve { color: var(--green); }
     .regress { color: var(--red); }
-    .delta { font-size: 0.75rem; margin-left: 8px; }
+
+    /* Run log */
+    .run-log { margin-bottom: 48px; }
+    .run-log h2 { font-size: 1.25rem; font-weight: 600; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+    .run-table-wrap { overflow-x: auto; }
+    .run-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+    .run-table th { text-align: left; color: var(--muted); font-weight: 500; padding: 8px 12px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+    .run-table td { padding: 8px 12px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+    .run-table tr.run-expand:hover td { background: var(--surface); cursor: pointer; }
+    .mono { font-family: "SF Mono", "Fira Code", monospace; font-size: 0.8rem; }
+    .commit-link { color: var(--accent); font-family: "SF Mono", "Fira Code", monospace; font-size: 0.8rem; }
+    .run-detail { display: none; }
+    .run-detail.open { display: table-row; }
+    .run-detail td { padding: 0; }
+    .run-detail-inner { padding: 12px 20px; background: var(--surface2); }
+    .run-detail-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; }
+    .run-detail-item { display: flex; justify-content: space-between; padding: 4px 0; font-size: 0.8rem; }
+    .run-detail-item .name { color: var(--muted); }
+    .run-detail-item .val { font-family: "SF Mono", "Fira Code", monospace; font-weight: 600; }
+
+    footer { margin-top: 48px; padding-top: 24px; border-top: 1px solid var(--border); text-align: center; font-size: 0.75rem; color: var(--muted); }
+    footer a { color: var(--accent); }
+    .loading { text-align: center; padding: 64px; color: var(--muted); }
+    .error { text-align: center; padding: 64px; color: var(--red); }
+    @media (max-width: 640px) { .tiles { grid-template-columns: 1fr; } .tile .val { font-size: 1.35rem; } .hero h1 { font-size: 1.5rem; } }
   </style>
 </head>
 <body>
   <div class="container">
-    <header>
-      <h1>⚡ <a href="https://github.com/strawgate/fastmcp">FastMCP</a> Benchmarks</h1>
-      <span class="badge">powered by octo11y</span>
-    </header>
-    <div id="status" class="status">Loading…</div>
-    <div id="content"><div class="loading">Fetching benchmark data…</div></div>
+    <div class="hero">
+      <h1>&#9889; FastMCP Performance</h1>
+      <p class="tagline">Real benchmarks, every commit, tracked automatically</p>
+      <span class="powered">measured by <a href="https://github.com/strawgate/octo11y">octo11y</a></span>
+    </div>
+    <div id="content"><div class="loading">Fetching benchmark data&hellip;</div></div>
     <footer>
-      Data from <a href="https://github.com/strawgate/fastmcp/tree/bench-data">bench-data</a> branch
-      · Tracked by <a href="https://github.com/strawgate/octo11y">octo11y</a>
-      · <a href="https://github.com/strawgate/fastmcp/actions/workflows/benchmarks.yml">Workflow runs</a>
+      Data from <a href="https://github.com/strawgate/fastmcp/tree/bench-data">bench-data</a> branch &middot;
+      <a href="https://github.com/strawgate/fastmcp/actions/workflows/benchmarks.yml">CI runs</a> &middot;
+      Powered by <a href="https://github.com/strawgate/octo11y">octo11y</a>
     </footer>
   </div>
-  <script>
-    const OWNER = "strawgate";
-    const REPO = "fastmcp";
-    const BRANCH = "bench-data";
-    const BASE = `https://raw.githubusercontent.com/${OWNER}/${REPO}/${BRANCH}`;
+<script>
+/* globals */
+var OWNER = "strawgate", REPO = "fastmcp", BRANCH = "bench-data";
+var BASE = "https://raw.githubusercontent.com/" + OWNER + "/" + REPO + "/" + BRANCH;
 
-    const GROUP_ORDER = ["import", "server-construction", "tool-call", "mount", "stdio"];
-    const GROUP_LABELS = {
-      "import": "Import Time",
-      "server-construction": "Server Construction",
-      "tool-call": "Tool Calls (in-memory client)",
-      "mount": "Server Mounting",
-      "stdio": "Stdio Transport",
-    };
+/* ── Unit formatting ─────────────────────────────────── */
+function fmtTime(seconds) {
+  if (seconds == null || isNaN(seconds)) return { v: "\u2014", u: "" };
+  var ms = seconds * 1000;
+  if (ms >= 1000) return { v: (ms / 1000).toFixed(1), u: "s" };
+  if (ms >= 1) return { v: ms < 10 ? ms.toFixed(1) : ms.toFixed(0), u: "ms" };
+  var us = ms * 1000;
+  return { v: us < 10 ? us.toFixed(1) : us.toFixed(0), u: "\u00b5s" };
+}
+function fmtS(s) { var r = fmtTime(s); return r.v + "\u2009" + r.u; }
+function fmtH(s) { var r = fmtTime(s); return r.v + '<span class="unit">' + r.u + "</span>"; }
+function clean(n) { return n.replace(/^test_/, "").replace(/_/g, " ").replace(/\b\w/g, function(c) { return c.toUpperCase(); }); }
 
-    async function fetchJson(url) {
-      const r = await fetch(url);
-      if (!r.ok) throw new Error(`${r.status} ${r.statusText}: ${url}`);
-      return r.json();
+function ago(iso) {
+  var d = Date.now() - new Date(iso).getTime();
+  var m = Math.floor(d / 60000);
+  if (m < 60) return m + "m ago";
+  var h = Math.floor(m / 60);
+  if (h < 24) return h + "h ago";
+  return Math.floor(h / 24) + "d ago";
+}
+
+function cLink(sha) {
+  return '<a class="commit-link" href="https://github.com/' + OWNER + "/" + REPO + "/commit/" + sha + '">' + sha.slice(0, 7) + "</a>";
+}
+
+function spark(pts, w, h) {
+  w = w || 80; h = h || 32;
+  if (!pts || pts.length < 2) return '<svg class="spark" viewBox="0 0 ' + w + " " + h + '"></svg>';
+  var vs = pts.map(function(p) { return p.value; });
+  var mn = Math.min.apply(null, vs), mx = Math.max.apply(null, vs), rng = mx - mn || 1, pad = 2;
+  var cs = vs.map(function(v, i) {
+    var x = pad + (i / (vs.length - 1)) * (w - 2 * pad);
+    var y = pad + (1 - (v - mn) / rng) * (h - 2 * pad);
+    return x.toFixed(1) + "," + y.toFixed(1);
+  });
+  var ln = cs.join(" ");
+  return '<svg class="spark" viewBox="0 0 ' + w + " " + h + '" preserveAspectRatio="none">' +
+    '<polygon class="area" points="' + pad + "," + (h - pad) + " " + ln + " " + (w - pad) + "," + (h - pad) + '"/>' +
+    '<polyline points="' + ln + '"/></svg>';
+}
+
+function delta(pts) {
+  if (!pts || pts.length < 2) return "";
+  var prev = pts[pts.length - 2].value, curr = pts[pts.length - 1].value;
+  if (prev === 0) return "";
+  var pct = ((curr - prev) / prev * 100).toFixed(1);
+  var cls = curr < prev ? "improve" : curr > prev ? "regress" : "";
+  var sign = curr < prev ? "" : "+";
+  return '<span class="delta ' + cls + '">' + sign + pct + "%</span>";
+}
+
+function tile(label, secs, pts) {
+  return '<div class="tile"><div class="info"><div class="label">' + label +
+    '</div><div class="val">' + fmtH(secs) + delta(pts) +
+    '</div></div>' + spark(pts) + "</div>";
+}
+
+function fj(url) { return fetch(url).then(function(r) { if (!r.ok) throw new Error("" + r.status); return r.json(); }); }
+
+/* ── Story chapters ──────────────────────────────────── */
+var STORY = [
+  {
+    id: "import",
+    narr: function(d) {
+      return 'You add <code>fastmcp</code> to your project and type <code>from fastmcp import FastMCP</code>. '
+        + 'A cold import \u2014 loading the module fresh in a new process \u2014 takes <span class="num">' + fmtS(d.test_cold_import) + '</span>. '
+        + 'That\u2019s the full dependency chain: pydantic, mcp, httpx, starlette, and the rest. '
+        + 'On subsequent imports it drops to <span class="num">' + fmtS(d.test_warm_import) + '</span>.';
+    },
+    benchmarks: ["test_cold_import", "test_warm_import"],
+    labels: { test_cold_import: "Cold import", test_warm_import: "Warm import (cached)" }
+  },
+  {
+    id: "server",
+    narr: function(d) {
+      return 'Now you create a server. <code>FastMCP("demo")</code> takes <span class="num">' + fmtS(d.test_server_create_empty) + '</span> \u2014 '
+        + 'just allocating the server object. Register one tool and it\u2019s <span class="num">' + fmtS(d.test_server_create_1_tool) + '</span>. '
+        + 'Ten tools: <span class="num">' + fmtS(d.test_server_create_10_tools) + '</span>. '
+        + 'A hundred? <span class="num">' + fmtS(d.test_server_create_100_tools) + '</span>. '
+        + 'Tool registration scales <span class="fast">linearly</span>.';
+    },
+    benchmarks: ["test_server_create_empty", "test_server_create_1_tool", "test_server_create_10_tools", "test_server_create_100_tools"],
+    labels: { test_server_create_empty: "Empty server", test_server_create_1_tool: "1 tool", test_server_create_10_tools: "10 tools", test_server_create_100_tools: "100 tools" }
+  },
+  {
+    id: "tool-call",
+    narr: function(d) {
+      var perCall = d.test_call_tool_burst_10 ? d.test_call_tool_burst_10 / 10 : 0;
+      return 'An LLM calls your tool. Over the in-memory transport, listing 10 tools takes <span class="num">' + fmtS(d.test_list_tools_10) + '</span>. '
+        + 'A hundred tools: <span class="num">' + fmtS(d.test_list_tools_100) + '</span>. '
+        + 'A single tool call round-trip: <span class="num">' + fmtS(d.test_call_tool_10) + '</span>. '
+        + 'Fire 10 calls in a burst and the total is <span class="num">' + fmtS(d.test_call_tool_burst_10) + '</span> \u2014 '
+        + 'about <span class="num">' + fmtS(perCall) + '</span> per call.';
+    },
+    benchmarks: ["test_list_tools_10", "test_list_tools_100", "test_call_tool_10", "test_call_tool_burst_10"],
+    labels: { test_list_tools_10: "List 10 tools", test_list_tools_100: "List 100 tools", test_call_tool_10: "Call tool", test_call_tool_burst_10: "10-call burst" }
+  },
+  {
+    id: "mount",
+    narr: function(d) {
+      return 'You compose servers with <code>mount()</code> to build multi-service applications. '
+        + 'One child server (10 tools each): <span class="num">' + fmtS(d.test_mount_1_child) + '</span>. '
+        + 'Five: <span class="num">' + fmtS(d.test_mount_5_children) + '</span>. '
+        + 'Ten: <span class="num">' + fmtS(d.test_mount_10_children) + '</span>. '
+        + 'Composition cost grows <span class="fast">linearly</span>.';
+    },
+    benchmarks: ["test_mount_1_child", "test_mount_5_children", "test_mount_10_children"],
+    labels: { test_mount_1_child: "Mount 1 server", test_mount_5_children: "Mount 5 servers", test_mount_10_children: "Mount 10 servers" }
+  },
+  {
+    id: "stdio",
+    narr: function(d) {
+      return 'The real-world transport: <code>stdio</code>. This starts a fresh Python process, initializes the server, and negotiates the MCP protocol. '
+        + 'That cold start takes <span class="num">' + fmtS(d.test_stdio_startup_time) + '</span>. '
+        + 'Once connected, a full tool call round-trip over the pipe: <span class="num">' + fmtS(d.test_stdio_tool_call_latency) + '</span>. '
+        + 'Most of the time is Python startup and module loading.';
+    },
+    benchmarks: ["test_stdio_startup_time", "test_stdio_tool_call_latency"],
+    labels: { test_stdio_startup_time: "Stdio cold start", test_stdio_tool_call_latency: "Stdio tool call" }
+  }
+];
+
+/* ── Main ────────────────────────────────────────────── */
+function main() {
+  var el = document.getElementById("content");
+
+  fj(BASE + "/data/index.json").then(function(idx) {
+    if (!idx.metrics || idx.metrics.length === 0) {
+      el.innerHTML = '<div class="loading"><p>No benchmark data yet.</p></div>';
+      return;
     }
 
-    function fmtValue(v) {
-      if (v >= 1_000_000) return (v / 1_000_000).toFixed(1) + "M";
-      if (v >= 1000) return (v / 1000).toFixed(1) + "K";
-      return v % 1 === 0 ? String(v) : v.toFixed(2);
-    }
+    var runs = idx.runs || [];
+    var latest = runs[runs.length - 1];
 
-    function fmtName(name) {
-      return name
-        .replace(/^test_/, "")
-        .replace(/_/g, " ")
-        .replace(/\b\w/g, c => c.toUpperCase());
-    }
+    return Promise.all([
+      fj(BASE + "/data/series/median.json").catch(function() { return null; }),
+      latest ? fj(BASE + "/data/views/runs/" + latest.id + "/detail.json").catch(function() { return null; }) : Promise.resolve(null)
+    ]).then(function(results) {
+      var med = results[0], rd = results[1];
 
-    function timeAgo(iso) {
-      const diff = Date.now() - new Date(iso).getTime();
-      const mins = Math.floor(diff / 60000);
-      if (mins < 60) return `${mins}m ago`;
-      const hrs = Math.floor(mins / 60);
-      if (hrs < 24) return `${hrs}h ago`;
-      const days = Math.floor(hrs / 24);
-      return `${days}d ago`;
-    }
-
-    function sparklineSVG(points) {
-      if (!points || points.length < 2) return "";
-      const vals = points.map(p => p.value);
-      const min = Math.min(...vals);
-      const max = Math.max(...vals);
-      const range = max - min || 1;
-      const w = 300, h = 40, pad = 2;
-      const coords = vals.map((v, i) => {
-        const x = pad + (i / (vals.length - 1)) * (w - 2 * pad);
-        const y = pad + (1 - (v - min) / range) * (h - 2 * pad);
-        return `${x.toFixed(1)},${y.toFixed(1)}`;
-      });
-      const line = coords.join(" ");
-      const area = `${pad},${h - pad} ${line} ${w - pad},${h - pad}`;
-      return `<svg class="sparkline" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
-        <polygon class="area" points="${area}" />
-        <polyline points="${line}" />
-      </svg>`;
-    }
-
-    function deltaHTML(points) {
-      if (!points || points.length < 2) return "";
-      const prev = points[points.length - 2].value;
-      const curr = points[points.length - 1].value;
-      if (prev === 0) return "";
-      const pct = ((curr - prev) / prev * 100).toFixed(1);
-      const cls = curr < prev ? "improve" : curr > prev ? "regress" : "";
-      const sign = curr < prev ? "" : "+";
-      return `<span class="delta ${cls}">${sign}${pct}%</span>`;
-    }
-
-    async function main() {
-      const content = document.getElementById("content");
-      const status = document.getElementById("status");
-
-      try {
-        const idx = await fetchJson(`${BASE}/data/index.json`);
-        const metrics = idx.metrics || [];
-
-        if (metrics.length === 0) {
-          content.innerHTML = `<div class="loading">No benchmark data yet. Run the Benchmarks workflow first.</div>`;
-          status.textContent = "No data available";
-          return;
-        }
-
-        // Fetch all series files
-        const seriesMap = new Map();
-        const results = await Promise.allSettled(
-          metrics.map(async m => {
-            const sf = await fetchJson(`${BASE}/data/series/${m}.json`);
-            return [m, sf];
-          })
-        );
-        for (const r of results) {
-          if (r.status === "fulfilled") seriesMap.set(r.value[0], r.value[1]);
-        }
-
-        // Group benchmarks by group tag
-        const benchmarks = new Map(); // name -> { metrics, group, latest }
-        for (const [metricName, sf] of seriesMap) {
-          for (const [seriesName, entry] of Object.entries(sf.series || {})) {
-            let bench = benchmarks.get(seriesName);
-            if (!bench) {
-              const group = entry.tags?.["benchkit.scenario"] || entry.tags?.group || "ungrouped";
-              bench = { name: seriesName, group, metrics: new Map(), latestTs: "", latestCommit: "" };
-              benchmarks.set(seriesName, bench);
-            }
-            const pts = entry.points || [];
-            const latest = pts[pts.length - 1];
-            if (latest) {
-              bench.metrics.set(metricName, {
-                value: latest.value,
-                points: pts,
-                unit: sf.unit,
-                direction: sf.direction,
-              });
-              if (latest.timestamp > bench.latestTs) {
-                bench.latestTs = latest.timestamp;
-                bench.latestCommit = latest.commit || "";
-              }
-            }
-          }
-        }
-
-        // Group by scenario
-        const groups = new Map();
-        for (const bench of benchmarks.values()) {
-          if (!groups.has(bench.group)) groups.set(bench.group, []);
-          groups.get(bench.group).push(bench);
-        }
-
-        // Find latest timestamp
-        let latestTs = "";
-        for (const bench of benchmarks.values()) {
-          if (bench.latestTs > latestTs) latestTs = bench.latestTs;
-        }
-        status.innerHTML = latestTs
-          ? `Last updated: <span class="ts">${timeAgo(latestTs)}</span> · ${benchmarks.size} benchmarks · ${seriesMap.size} metrics`
-          : "No data";
-
-        // Render
-        let html = "";
-        const sortedGroups = [...groups.keys()].sort((a, b) => {
-          const ai = GROUP_ORDER.indexOf(a);
-          const bi = GROUP_ORDER.indexOf(b);
-          return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
-        });
-
-        for (const group of sortedGroups) {
-          const benches = groups.get(group);
-          benches.sort((a, b) => a.name.localeCompare(b.name));
-          html += `<div class="group"><h2>${GROUP_LABELS[group] || group}</h2><div class="cards">`;
-          for (const bench of benches) {
-            // Pick a primary metric (prefer median, then first)
-            const primary = bench.metrics.get("median") || bench.metrics.values().next().value;
-            if (!primary) continue;
-            const unit = primary.unit || "";
-            html += `<div class="card">
-              <div class="name">${fmtName(bench.name)}</div>
-              <div class="value">${fmtValue(primary.value)} <span class="unit">${unit}</span>${deltaHTML(primary.points)}</div>
-              ${sparklineSVG(primary.points)}
-              <div class="meta">
-                <span>📊 ${primary.points.length} runs</span>
-                ${bench.latestTs ? `<span>🕐 ${timeAgo(bench.latestTs)}</span>` : ""}
-                ${bench.latestCommit ? `<span>🔗 <a href="https://github.com/${OWNER}/${REPO}/commit/${bench.latestCommit}" style="color:var(--accent)">${bench.latestCommit.slice(0, 7)}</a></span>` : ""}
-              </div>
-            </div>`;
-          }
-          html += "</div></div>";
-        }
-        content.innerHTML = html;
-      } catch (e) {
-        if (e.message.includes("404")) {
-          content.innerHTML = `<div class="loading">
-            <p>No benchmark data yet.</p>
-            <p style="margin-top:12px;font-size:0.875rem">The <code>bench-data</code> branch will be created after the first successful
-            <a href="https://github.com/${OWNER}/${REPO}/actions/workflows/benchmarks.yml" style="color:var(--accent)">Benchmarks workflow</a> run on main.</p>
-          </div>`;
-          status.textContent = "Waiting for first benchmark run";
-        } else {
-          content.innerHTML = `<div class="error">Error: ${e.message}</div>`;
-          status.textContent = "Error loading data";
-        }
+      /* Build value map: run detail (full precision) > series */
+      var vals = {};
+      if (rd) {
+        var snap = (rd.metricSnapshots || []).find(function(s) { return s.metric === "median"; });
+        if (snap) snap.values.forEach(function(v) { vals[v.name] = v.value; });
       }
-    }
+      if (med) {
+        Object.keys(med.series || {}).forEach(function(n) {
+          var e = med.series[n];
+          if (!(n in vals) && e.points && e.points.length) vals[n] = e.points[e.points.length - 1].value;
+        });
+      }
 
-    main();
-  </script>
+      /* Points for sparklines */
+      var pts = {};
+      if (med) {
+        Object.keys(med.series || {}).forEach(function(n) { pts[n] = med.series[n].points || []; });
+      }
+
+      /* Render story */
+      var html = '<div class="story">';
+      STORY.forEach(function(ch) {
+        html += '<div class="chapter" id="' + ch.id + '">';
+        html += '<p class="narration">' + ch.narr(vals) + '</p>';
+        html += '<div class="tiles">';
+        ch.benchmarks.forEach(function(b) { html += tile(ch.labels[b] || clean(b), vals[b], pts[b]); });
+        html += '</div></div>';
+      });
+      html += '</div>';
+
+      /* Render run log */
+      html += '<div class="run-log"><h2>Run History</h2>';
+      if (runs.length === 0) {
+        html += '<p style="color:var(--muted)">No runs yet.</p>';
+      } else {
+        html += '<div class="run-table-wrap"><table class="run-table"><thead><tr>';
+        html += '<th style="width:24px"></th><th>Run</th><th>Commit</th><th>Benchmarks</th><th>Time</th>';
+        html += '</tr></thead><tbody>';
+        var sorted = runs.slice().reverse();
+        sorted.forEach(function(r, i) {
+          html += '<tr class="run-expand" data-run="' + r.id + '" data-idx="' + i + '">';
+          html += '<td style="color:var(--muted)">\u25b6</td>';
+          html += '<td class="mono">' + r.id.split("--")[0] + '</td>';
+          html += '<td>' + (r.commit ? cLink(r.commit) : '\u2014') + '</td>';
+          html += '<td>' + (r.benchmarks || 0) + ' tests</td>';
+          html += '<td style="color:var(--muted)">' + ago(r.timestamp) + '</td></tr>';
+          html += '<tr class="run-detail" id="detail-' + i + '"><td colspan="5">';
+          html += '<div class="run-detail-inner" id="detail-inner-' + i + '">Loading\u2026</div>';
+          html += '</td></tr>';
+        });
+        html += '</tbody></table></div>';
+      }
+      html += '</div>';
+
+      el.innerHTML = html;
+
+      /* Wire expandable rows */
+      document.querySelectorAll(".run-expand").forEach(function(row) {
+        row.addEventListener("click", function() {
+          var ri = row.getAttribute("data-idx");
+          var rid = row.getAttribute("data-run");
+          var det = document.getElementById("detail-" + ri);
+          var inner = document.getElementById("detail-inner-" + ri);
+          var arrow = row.querySelector("td");
+
+          if (det.classList.contains("open")) {
+            det.classList.remove("open");
+            arrow.textContent = "\u25b6";
+            return;
+          }
+          det.classList.add("open");
+          arrow.textContent = "\u25bc";
+
+          fj(BASE + "/data/views/runs/" + rid + "/detail.json").then(function(d) {
+            var snap2 = (d.metricSnapshots || []).find(function(s) { return s.metric === "median"; });
+            if (!snap2 || !snap2.values || !snap2.values.length) { inner.textContent = "No data."; return; }
+            var g = '<div class="run-detail-grid">';
+            snap2.values.slice().sort(function(a, b) { return a.name.localeCompare(b.name); }).forEach(function(v) {
+              g += '<div class="run-detail-item"><span class="name">' + clean(v.name) + '</span><span class="val">' + fmtS(v.value) + '</span></div>';
+            });
+            inner.innerHTML = g + '</div>';
+          }).catch(function(e) { inner.textContent = "Error: " + e.message; });
+        });
+      });
+    });
+  }).catch(function(e) {
+    if (e.message.indexOf("404") !== -1) {
+      el.innerHTML = '<div class="loading"><p>No benchmark data yet.</p></div>';
+    } else {
+      el.innerHTML = '<div class="error">Error: ' + e.message + '</div>';
+    }
+  });
+}
+
+main();
+</script>
 </body>
 </html>
