@@ -43,21 +43,9 @@ jobs:
             --timeout=120 \
             -x
 
-      # ── Run import-time benchmarks (subprocess) ────────────────
-      - name: Run import benchmarks
-        run: |
-          uv run --no-sync python scripts/benchmark_imports.py --runs 5 --json > import-bench.json
-
-      # ── Start monitor for custom metrics + runner telemetry ────
+      # ── Start monitor for runner telemetry ─────────────────────
       - uses: strawgate/octo11y/actions/monitor@main-dist
         id: monitor
-
-      # ── Emit import-time metrics via emit-metric ───────────────
-      - name: Emit import time metrics
-        run: |
-          uv run --no-sync python benchmarks/emit_import_metrics.py import-bench.json
-        env:
-          OTLP_ENDPOINT: ${{ steps.monitor.outputs.otlp-http-endpoint }}
 
       # ── Stash pytest-benchmark results ─────────────────────────
       - name: Stash benchmark results
