@@ -1,0 +1,35 @@
+name: Deploy Pages
+
+on:
+  # Rebuild after benchmarks run on main (creates/updates bench-data)
+  workflow_run:
+    workflows: [Benchmarks]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: pages
+
+      - id: deployment
+        uses: actions/deploy-pages@v4
