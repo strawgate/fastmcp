@@ -1,155 +1,587 @@
 {
   "metric": "ops",
   "unit": "ops/s",
-  "direction": "bigger_is_better",
+  "direction": "larger_is_better",
   "series": {
     "test_cold_import": {
       "points": [
+        {
+          "timestamp": "2025-12-10T15:52:07.000Z",
+          "value": 0.82,
+          "commit": "3d6fd465",
+          "run_id": "backfill-v2.14.0--benchmark"
+        },
+        {
+          "timestamp": "2026-01-19T23:24:47.000Z",
+          "value": 1.31,
+          "commit": "c14ef132",
+          "run_id": "backfill-v3.0.0b1--benchmark"
+        },
+        {
+          "timestamp": "2026-02-18T16:21:45.000Z",
+          "value": 0.92,
+          "commit": "92f4c503",
+          "run_id": "backfill-v3.0.0--benchmark"
+        },
+        {
+          "timestamp": "2026-03-02T21:09:48.000Z",
+          "value": 0.95,
+          "commit": "8bc31360",
+          "run_id": "backfill-v3.1.0--benchmark"
+        },
         {
           "timestamp": "2026-04-06T21:17:28.556Z",
           "value": 0.7,
           "commit": "3106f3c1933508fd2aadae3a67b830dcfbb6633c",
           "run_id": "24051666210-1--benchmark"
+        },
+        {
+          "timestamp": "2026-04-06T22:16:13.474Z",
+          "value": 0.68,
+          "commit": "f1ffc2856c9b9d89183c263c50761b0c4a160a7d",
+          "run_id": "24053886292-1--benchmark"
         }
       ]
     },
     "test_warm_import": {
       "points": [
         {
+          "timestamp": "2025-12-10T15:52:07.000Z",
+          "value": 218.96,
+          "commit": "3d6fd465",
+          "run_id": "backfill-v2.14.0--benchmark"
+        },
+        {
+          "timestamp": "2026-01-19T23:24:47.000Z",
+          "value": 1196.94,
+          "commit": "c14ef132",
+          "run_id": "backfill-v3.0.0b1--benchmark"
+        },
+        {
+          "timestamp": "2026-02-18T16:21:45.000Z",
+          "value": 851.39,
+          "commit": "92f4c503",
+          "run_id": "backfill-v3.0.0--benchmark"
+        },
+        {
+          "timestamp": "2026-03-02T21:09:48.000Z",
+          "value": 1303.36,
+          "commit": "8bc31360",
+          "run_id": "backfill-v3.1.0--benchmark"
+        },
+        {
           "timestamp": "2026-04-06T21:17:28.556Z",
           "value": 417.2,
           "commit": "3106f3c1933508fd2aadae3a67b830dcfbb6633c",
           "run_id": "24051666210-1--benchmark"
-        }
-      ]
-    },
-    "test_mount_1_child": {
-      "points": [
+        },
         {
-          "timestamp": "2026-04-06T21:17:28.556Z",
-          "value": 84.48,
-          "commit": "3106f3c1933508fd2aadae3a67b830dcfbb6633c",
-          "run_id": "24051666210-1--benchmark"
-        }
-      ]
-    },
-    "test_mount_5_children": {
-      "points": [
-        {
-          "timestamp": "2026-04-06T21:17:28.556Z",
-          "value": 18.24,
-          "commit": "3106f3c1933508fd2aadae3a67b830dcfbb6633c",
-          "run_id": "24051666210-1--benchmark"
-        }
-      ]
-    },
-    "test_mount_10_children": {
-      "points": [
-        {
-          "timestamp": "2026-04-06T21:17:28.556Z",
-          "value": 9.02,
-          "commit": "3106f3c1933508fd2aadae3a67b830dcfbb6633c",
-          "run_id": "24051666210-1--benchmark"
+          "timestamp": "2026-04-06T22:16:13.474Z",
+          "value": 424.34,
+          "commit": "f1ffc2856c9b9d89183c263c50761b0c4a160a7d",
+          "run_id": "24053886292-1--benchmark"
         }
       ]
     },
     "test_server_create_empty": {
       "points": [
         {
+          "timestamp": "2025-12-10T15:52:07.000Z",
+          "value": 348.77,
+          "commit": "3d6fd465",
+          "run_id": "backfill-v2.14.0--benchmark"
+        },
+        {
+          "timestamp": "2026-01-19T23:24:47.000Z",
+          "value": 1571.48,
+          "commit": "c14ef132",
+          "run_id": "backfill-v3.0.0b1--benchmark"
+        },
+        {
+          "timestamp": "2026-02-18T16:21:45.000Z",
+          "value": 3785.85,
+          "commit": "92f4c503",
+          "run_id": "backfill-v3.0.0--benchmark"
+        },
+        {
+          "timestamp": "2026-03-02T21:09:48.000Z",
+          "value": 3342.19,
+          "commit": "8bc31360",
+          "run_id": "backfill-v3.1.0--benchmark"
+        },
+        {
           "timestamp": "2026-04-06T21:17:28.556Z",
           "value": 2038.06,
           "commit": "3106f3c1933508fd2aadae3a67b830dcfbb6633c",
           "run_id": "24051666210-1--benchmark"
+        },
+        {
+          "timestamp": "2026-04-06T22:16:13.474Z",
+          "value": 2027.55,
+          "commit": "f1ffc2856c9b9d89183c263c50761b0c4a160a7d",
+          "run_id": "24053886292-1--benchmark"
         }
       ]
     },
     "test_server_create_1_tool": {
       "points": [
         {
+          "timestamp": "2025-12-10T15:52:07.000Z",
+          "value": 197.69,
+          "commit": "3d6fd465",
+          "run_id": "backfill-v2.14.0--benchmark"
+        },
+        {
+          "timestamp": "2026-01-19T23:24:47.000Z",
+          "value": 867.99,
+          "commit": "c14ef132",
+          "run_id": "backfill-v3.0.0b1--benchmark"
+        },
+        {
+          "timestamp": "2026-02-18T16:21:45.000Z",
+          "value": 1319.58,
+          "commit": "92f4c503",
+          "run_id": "backfill-v3.0.0--benchmark"
+        },
+        {
+          "timestamp": "2026-03-02T21:09:48.000Z",
+          "value": 1033.66,
+          "commit": "8bc31360",
+          "run_id": "backfill-v3.1.0--benchmark"
+        },
+        {
           "timestamp": "2026-04-06T21:17:28.556Z",
           "value": 668.5,
           "commit": "3106f3c1933508fd2aadae3a67b830dcfbb6633c",
           "run_id": "24051666210-1--benchmark"
+        },
+        {
+          "timestamp": "2026-04-06T22:16:13.474Z",
+          "value": 663.01,
+          "commit": "f1ffc2856c9b9d89183c263c50761b0c4a160a7d",
+          "run_id": "24053886292-1--benchmark"
         }
       ]
     },
     "test_server_create_10_tools": {
       "points": [
         {
+          "timestamp": "2025-12-10T15:52:07.000Z",
+          "value": 83.92,
+          "commit": "3d6fd465",
+          "run_id": "backfill-v2.14.0--benchmark"
+        },
+        {
+          "timestamp": "2026-01-19T23:24:47.000Z",
+          "value": 173.21,
+          "commit": "c14ef132",
+          "run_id": "backfill-v3.0.0b1--benchmark"
+        },
+        {
+          "timestamp": "2026-02-18T16:21:45.000Z",
+          "value": 202.69,
+          "commit": "92f4c503",
+          "run_id": "backfill-v3.0.0--benchmark"
+        },
+        {
+          "timestamp": "2026-03-02T21:09:48.000Z",
+          "value": 201.48,
+          "commit": "8bc31360",
+          "run_id": "backfill-v3.1.0--benchmark"
+        },
+        {
           "timestamp": "2026-04-06T21:17:28.556Z",
           "value": 88.34,
           "commit": "3106f3c1933508fd2aadae3a67b830dcfbb6633c",
           "run_id": "24051666210-1--benchmark"
+        },
+        {
+          "timestamp": "2026-04-06T22:16:13.474Z",
+          "value": 88.04,
+          "commit": "f1ffc2856c9b9d89183c263c50761b0c4a160a7d",
+          "run_id": "24053886292-1--benchmark"
         }
       ]
     },
     "test_server_create_100_tools": {
       "points": [
         {
+          "timestamp": "2025-12-10T15:52:07.000Z",
+          "value": 7.9,
+          "commit": "3d6fd465",
+          "run_id": "backfill-v2.14.0--benchmark"
+        },
+        {
+          "timestamp": "2026-01-19T23:24:47.000Z",
+          "value": 27.45,
+          "commit": "c14ef132",
+          "run_id": "backfill-v3.0.0b1--benchmark"
+        },
+        {
+          "timestamp": "2026-02-18T16:21:45.000Z",
+          "value": 22.93,
+          "commit": "92f4c503",
+          "run_id": "backfill-v3.0.0--benchmark"
+        },
+        {
+          "timestamp": "2026-03-02T21:09:48.000Z",
+          "value": 27.36,
+          "commit": "8bc31360",
+          "run_id": "backfill-v3.1.0--benchmark"
+        },
+        {
           "timestamp": "2026-04-06T21:17:28.556Z",
           "value": 9.26,
           "commit": "3106f3c1933508fd2aadae3a67b830dcfbb6633c",
           "run_id": "24051666210-1--benchmark"
+        },
+        {
+          "timestamp": "2026-04-06T22:16:13.474Z",
+          "value": 9.17,
+          "commit": "f1ffc2856c9b9d89183c263c50761b0c4a160a7d",
+          "run_id": "24053886292-1--benchmark"
         }
       ]
     },
     "test_stdio_startup_time": {
       "points": [
         {
+          "timestamp": "2025-12-10T15:52:07.000Z",
+          "value": 1.13,
+          "commit": "3d6fd465",
+          "run_id": "backfill-v2.14.0--benchmark"
+        },
+        {
+          "timestamp": "2026-01-19T23:24:47.000Z",
+          "value": 1.38,
+          "commit": "c14ef132",
+          "run_id": "backfill-v3.0.0b1--benchmark"
+        },
+        {
+          "timestamp": "2026-02-18T16:21:45.000Z",
+          "value": 0.88,
+          "commit": "92f4c503",
+          "run_id": "backfill-v3.0.0--benchmark"
+        },
+        {
+          "timestamp": "2026-03-02T21:09:48.000Z",
+          "value": 0.59,
+          "commit": "8bc31360",
+          "run_id": "backfill-v3.1.0--benchmark"
+        },
+        {
           "timestamp": "2026-04-06T21:17:28.556Z",
           "value": 0.77,
           "commit": "3106f3c1933508fd2aadae3a67b830dcfbb6633c",
           "run_id": "24051666210-1--benchmark"
+        },
+        {
+          "timestamp": "2026-04-06T22:16:13.474Z",
+          "value": 0.75,
+          "commit": "f1ffc2856c9b9d89183c263c50761b0c4a160a7d",
+          "run_id": "24053886292-1--benchmark"
         }
       ]
     },
     "test_stdio_tool_call_latency": {
       "points": [
         {
+          "timestamp": "2025-12-10T15:52:07.000Z",
+          "value": 1.64,
+          "commit": "3d6fd465",
+          "run_id": "backfill-v2.14.0--benchmark"
+        },
+        {
+          "timestamp": "2026-01-19T23:24:47.000Z",
+          "value": 1.18,
+          "commit": "c14ef132",
+          "run_id": "backfill-v3.0.0b1--benchmark"
+        },
+        {
+          "timestamp": "2026-02-18T16:21:45.000Z",
+          "value": 1.07,
+          "commit": "92f4c503",
+          "run_id": "backfill-v3.0.0--benchmark"
+        },
+        {
+          "timestamp": "2026-03-02T21:09:48.000Z",
+          "value": 0.82,
+          "commit": "8bc31360",
+          "run_id": "backfill-v3.1.0--benchmark"
+        },
+        {
           "timestamp": "2026-04-06T21:17:28.556Z",
           "value": 0.77,
           "commit": "3106f3c1933508fd2aadae3a67b830dcfbb6633c",
           "run_id": "24051666210-1--benchmark"
+        },
+        {
+          "timestamp": "2026-04-06T22:16:13.474Z",
+          "value": 0.75,
+          "commit": "f1ffc2856c9b9d89183c263c50761b0c4a160a7d",
+          "run_id": "24053886292-1--benchmark"
         }
       ]
     },
     "test_list_tools_10": {
       "points": [
         {
+          "timestamp": "2025-12-10T15:52:07.000Z",
+          "value": 323.35,
+          "commit": "3d6fd465",
+          "run_id": "backfill-v2.14.0--benchmark"
+        },
+        {
+          "timestamp": "2026-01-19T23:24:47.000Z",
+          "value": 344.19,
+          "commit": "c14ef132",
+          "run_id": "backfill-v3.0.0b1--benchmark"
+        },
+        {
+          "timestamp": "2026-02-18T16:21:45.000Z",
+          "value": 218.03,
+          "commit": "92f4c503",
+          "run_id": "backfill-v3.0.0--benchmark"
+        },
+        {
+          "timestamp": "2026-03-02T21:09:48.000Z",
+          "value": 81.38,
+          "commit": "8bc31360",
+          "run_id": "backfill-v3.1.0--benchmark"
+        },
+        {
           "timestamp": "2026-04-06T21:17:28.556Z",
           "value": 169.39,
           "commit": "3106f3c1933508fd2aadae3a67b830dcfbb6633c",
           "run_id": "24051666210-1--benchmark"
+        },
+        {
+          "timestamp": "2026-04-06T22:16:13.474Z",
+          "value": 169.16,
+          "commit": "f1ffc2856c9b9d89183c263c50761b0c4a160a7d",
+          "run_id": "24053886292-1--benchmark"
         }
       ]
     },
     "test_list_tools_100": {
       "points": [
         {
+          "timestamp": "2025-12-10T15:52:07.000Z",
+          "value": 324.46,
+          "commit": "3d6fd465",
+          "run_id": "backfill-v2.14.0--benchmark"
+        },
+        {
+          "timestamp": "2026-01-19T23:24:47.000Z",
+          "value": 178.62,
+          "commit": "c14ef132",
+          "run_id": "backfill-v3.0.0b1--benchmark"
+        },
+        {
+          "timestamp": "2026-02-18T16:21:45.000Z",
+          "value": 172.13,
+          "commit": "92f4c503",
+          "run_id": "backfill-v3.0.0--benchmark"
+        },
+        {
+          "timestamp": "2026-03-02T21:09:48.000Z",
+          "value": 62.14,
+          "commit": "8bc31360",
+          "run_id": "backfill-v3.1.0--benchmark"
+        },
+        {
           "timestamp": "2026-04-06T21:17:28.556Z",
           "value": 131.92,
           "commit": "3106f3c1933508fd2aadae3a67b830dcfbb6633c",
           "run_id": "24051666210-1--benchmark"
+        },
+        {
+          "timestamp": "2026-04-06T22:16:13.474Z",
+          "value": 131.09,
+          "commit": "f1ffc2856c9b9d89183c263c50761b0c4a160a7d",
+          "run_id": "24053886292-1--benchmark"
         }
       ]
     },
     "test_call_tool_10": {
       "points": [
         {
+          "timestamp": "2025-12-10T15:52:07.000Z",
+          "value": 193.95,
+          "commit": "3d6fd465",
+          "run_id": "backfill-v2.14.0--benchmark"
+        },
+        {
+          "timestamp": "2026-01-19T23:24:47.000Z",
+          "value": 183.22,
+          "commit": "c14ef132",
+          "run_id": "backfill-v3.0.0b1--benchmark"
+        },
+        {
+          "timestamp": "2026-02-18T16:21:45.000Z",
+          "value": 110.07,
+          "commit": "92f4c503",
+          "run_id": "backfill-v3.0.0--benchmark"
+        },
+        {
+          "timestamp": "2026-03-02T21:09:48.000Z",
+          "value": 53.25,
+          "commit": "8bc31360",
+          "run_id": "backfill-v3.1.0--benchmark"
+        },
+        {
           "timestamp": "2026-04-06T21:17:28.556Z",
           "value": 116.64,
           "commit": "3106f3c1933508fd2aadae3a67b830dcfbb6633c",
           "run_id": "24051666210-1--benchmark"
+        },
+        {
+          "timestamp": "2026-04-06T22:16:13.474Z",
+          "value": 116.31,
+          "commit": "f1ffc2856c9b9d89183c263c50761b0c4a160a7d",
+          "run_id": "24053886292-1--benchmark"
         }
       ]
     },
     "test_call_tool_burst_10": {
       "points": [
         {
+          "timestamp": "2025-12-10T15:52:07.000Z",
+          "value": 39.29,
+          "commit": "3d6fd465",
+          "run_id": "backfill-v2.14.0--benchmark"
+        },
+        {
+          "timestamp": "2026-01-19T23:24:47.000Z",
+          "value": 46.9,
+          "commit": "c14ef132",
+          "run_id": "backfill-v3.0.0b1--benchmark"
+        },
+        {
+          "timestamp": "2026-02-18T16:21:45.000Z",
+          "value": 14.38,
+          "commit": "92f4c503",
+          "run_id": "backfill-v3.0.0--benchmark"
+        },
+        {
+          "timestamp": "2026-03-02T21:09:48.000Z",
+          "value": 15.3,
+          "commit": "8bc31360",
+          "run_id": "backfill-v3.1.0--benchmark"
+        },
+        {
           "timestamp": "2026-04-06T21:17:28.556Z",
           "value": 23.19,
           "commit": "3106f3c1933508fd2aadae3a67b830dcfbb6633c",
           "run_id": "24051666210-1--benchmark"
+        },
+        {
+          "timestamp": "2026-04-06T22:16:13.474Z",
+          "value": 22.93,
+          "commit": "f1ffc2856c9b9d89183c263c50761b0c4a160a7d",
+          "run_id": "24053886292-1--benchmark"
+        }
+      ]
+    },
+    "test_mount_1_child": {
+      "points": [
+        {
+          "timestamp": "2026-01-19T23:24:47.000Z",
+          "value": 209.54,
+          "commit": "c14ef132",
+          "run_id": "backfill-v3.0.0b1--benchmark"
+        },
+        {
+          "timestamp": "2026-02-18T16:21:45.000Z",
+          "value": 122.08,
+          "commit": "92f4c503",
+          "run_id": "backfill-v3.0.0--benchmark"
+        },
+        {
+          "timestamp": "2026-03-02T21:09:48.000Z",
+          "value": 37.53,
+          "commit": "8bc31360",
+          "run_id": "backfill-v3.1.0--benchmark"
+        },
+        {
+          "timestamp": "2026-04-06T21:17:28.556Z",
+          "value": 84.48,
+          "commit": "3106f3c1933508fd2aadae3a67b830dcfbb6633c",
+          "run_id": "24051666210-1--benchmark"
+        },
+        {
+          "timestamp": "2026-04-06T22:16:13.474Z",
+          "value": 82.71,
+          "commit": "f1ffc2856c9b9d89183c263c50761b0c4a160a7d",
+          "run_id": "24053886292-1--benchmark"
+        }
+      ]
+    },
+    "test_mount_5_children": {
+      "points": [
+        {
+          "timestamp": "2026-01-19T23:24:47.000Z",
+          "value": 34.9,
+          "commit": "c14ef132",
+          "run_id": "backfill-v3.0.0b1--benchmark"
+        },
+        {
+          "timestamp": "2026-02-18T16:21:45.000Z",
+          "value": 38.42,
+          "commit": "92f4c503",
+          "run_id": "backfill-v3.0.0--benchmark"
+        },
+        {
+          "timestamp": "2026-03-02T21:09:48.000Z",
+          "value": 14.33,
+          "commit": "8bc31360",
+          "run_id": "backfill-v3.1.0--benchmark"
+        },
+        {
+          "timestamp": "2026-04-06T21:17:28.556Z",
+          "value": 18.24,
+          "commit": "3106f3c1933508fd2aadae3a67b830dcfbb6633c",
+          "run_id": "24051666210-1--benchmark"
+        },
+        {
+          "timestamp": "2026-04-06T22:16:13.474Z",
+          "value": 17.6,
+          "commit": "f1ffc2856c9b9d89183c263c50761b0c4a160a7d",
+          "run_id": "24053886292-1--benchmark"
+        }
+      ]
+    },
+    "test_mount_10_children": {
+      "points": [
+        {
+          "timestamp": "2026-01-19T23:24:47.000Z",
+          "value": 13.84,
+          "commit": "c14ef132",
+          "run_id": "backfill-v3.0.0b1--benchmark"
+        },
+        {
+          "timestamp": "2026-02-18T16:21:45.000Z",
+          "value": 9.85,
+          "commit": "92f4c503",
+          "run_id": "backfill-v3.0.0--benchmark"
+        },
+        {
+          "timestamp": "2026-03-02T21:09:48.000Z",
+          "value": 3.67,
+          "commit": "8bc31360",
+          "run_id": "backfill-v3.1.0--benchmark"
+        },
+        {
+          "timestamp": "2026-04-06T21:17:28.556Z",
+          "value": 9.02,
+          "commit": "3106f3c1933508fd2aadae3a67b830dcfbb6633c",
+          "run_id": "24051666210-1--benchmark"
+        },
+        {
+          "timestamp": "2026-04-06T22:16:13.474Z",
+          "value": 8.88,
+          "commit": "f1ffc2856c9b9d89183c263c50761b0c4a160a7d",
+          "run_id": "24053886292-1--benchmark"
         }
       ]
     }
