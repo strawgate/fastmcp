@@ -5,116 +5,293 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>FastMCP &middot; Performance</title>
   <style>
-    :root { --bg: #0d1117; --surface: #161b22; --surface2: #1c2128; --border: #30363d; --text: #e6edf3; --muted: #8b949e; --accent: #58a6ff; --green: #3fb950; --red: #f85149; --purple: #bc8cff; }
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; }
-    a { color: var(--accent); text-decoration: none; }
+    html { scroll-snap-type: y mandatory; scroll-behavior: smooth; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: #e6edf3; line-height: 1.6; overflow-x: hidden; }
+    a { color: #58a6ff; text-decoration: none; }
     a:hover { text-decoration: underline; }
-    code { background: var(--surface2); padding: 2px 6px; border-radius: 4px; font-size: 0.875em; }
-    .container { max-width: 960px; margin: 0 auto; padding: 32px 20px; }
+    code { background: rgba(255,255,255,0.08); padding: 2px 8px; border-radius: 6px; font-size: 0.9em; }
 
-    /* Hero */
-    .hero { text-align: center; margin-bottom: 48px; padding: 40px 0; }
-    .hero h1 { font-size: 2rem; font-weight: 700; margin-bottom: 8px; }
-    .hero .tagline { color: var(--muted); font-size: 1.125rem; margin-bottom: 16px; }
-    .hero .powered { font-size: 0.75rem; color: var(--muted); background: var(--surface); border: 1px solid var(--border); padding: 4px 12px; border-radius: 16px; display: inline-block; }
-    .hero .powered a { color: var(--accent); }
+    /* ── Chapter layout ───────────────────────────────── */
+    .ch {
+      min-height: 100vh; scroll-snap-align: start; scroll-snap-stop: always;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      padding: 80px 24px; position: relative; overflow: hidden;
+    }
+    .ch-inner { max-width: 880px; width: 100%; z-index: 2; }
 
-    /* Story */
-    .story { margin-bottom: 48px; }
-    .chapter { margin-bottom: 40px; }
-    .chapter .narration { font-size: 1.05rem; color: var(--muted); margin-bottom: 16px; line-height: 1.7; }
-    .chapter .narration .num { color: var(--purple); font-weight: 600; font-family: "SF Mono", "Fira Code", monospace; }
-    .chapter .narration .fast { color: var(--green); font-weight: 600; }
+    /* ── Chapter backgrounds ──────────────────────────── */
+    .ch-hero    { background: linear-gradient(180deg, #070b1e 0%, #0a1628 40%, #0d1f3c 100%); }
+    .ch-import  { background: linear-gradient(180deg, #fffbf0 0%, #fff7e0 100%); color: #1a1a2e; }
+    .ch-server  { background: linear-gradient(180deg, #0d1117 0%, #0f2027 35%, #203a43 70%, #2c5364 100%); }
+    .ch-calls   { background: linear-gradient(180deg, #f0f7ff 0%, #e4effc 100%); color: #1a1a2e; }
+    .ch-mount   { background: linear-gradient(180deg, #0a0e27 0%, #12062e 50%, #1a0a3a 100%); }
+    .ch-stdio   { background: linear-gradient(180deg, #fffbf0 0%, #fff3d6 100%); color: #1a1a2e; }
+    .ch-history { background: linear-gradient(180deg, #0d1117 0%, #161b22 100%); }
+    .ch-cta     { background: linear-gradient(180deg, #0d1117 0%, #161b22 100%); }
 
-    /* Tiles */
-    .tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; margin-top: 12px; }
-    .tile { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 16px; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
-    .tile .info { flex: 1; min-width: 0; }
-    .tile .label { font-size: 0.8rem; color: var(--muted); margin-bottom: 2px; }
-    .tile .val { font-size: 1.75rem; font-weight: 700; font-family: "SF Mono", "Fira Code", monospace; white-space: nowrap; }
-    .tile .val .unit { font-size: 0.875rem; font-weight: 400; color: var(--muted); margin-left: 2px; }
-    .tile .val .delta { font-size: 0.75rem; margin-left: 6px; }
-    .tile .spark { flex-shrink: 0; width: 80px; height: 32px; }
-    .tile .spark polyline { fill: none; stroke: var(--accent); stroke-width: 1.5; }
-    .tile .spark .area { fill: var(--accent); opacity: 0.08; stroke: none; }
-    .improve { color: var(--green); }
-    .regress { color: var(--red); }
+    /* ── Typography ───────────────────────────────────── */
+    .ch-tag { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.18em; margin-bottom: 16px; }
+    .ch-heading { font-size: clamp(2rem, 5vw, 3.2rem); font-weight: 800; line-height: 1.15; margin-bottom: 24px; }
+    .ch-body { font-size: clamp(1rem, 2.5vw, 1.2rem); line-height: 1.8; max-width: 680px; }
+    .ch-body .num { font-weight: 700; font-family: "SF Mono", "Fira Code", monospace; }
 
-    /* Run log */
-    .run-log { margin-bottom: 48px; }
-    .run-log h2 { font-size: 1.25rem; font-weight: 600; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
-    .run-table-wrap { overflow-x: auto; }
+    /* dark chapter nums */
+    .ch-hero .num, .ch-server .num, .ch-mount .num, .ch-history .num, .ch-cta .num { color: #bc8cff; }
+    /* light chapter nums */
+    .ch-import .num, .ch-calls .num, .ch-stdio .num { color: #7c3aed; }
+    .ch-import .fast, .ch-calls .fast, .ch-stdio .fast { color: #16a34a; font-weight: 700; }
+    .ch-hero .fast, .ch-server .fast, .ch-mount .fast { color: #3fb950; font-weight: 700; }
+
+    /* ── Metric cards ─────────────────────────────────── */
+    .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; margin-top: 28px; }
+
+    /* Dark chapter cards */
+    .card-dark {
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 20px; padding: 24px 20px; text-align: center;
+    }
+    .card-dark .card-emoji { font-size: 2.4rem; margin-bottom: 8px; }
+    .card-dark .card-label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: rgba(255,255,255,0.5); margin-bottom: 4px; }
+    .card-dark .card-val { font-size: 2rem; font-weight: 800; font-family: "SF Mono", "Fira Code", monospace; }
+    .card-dark .card-val .unit { font-size: 0.85rem; font-weight: 400; opacity: 0.5; margin-left: 2px; }
+    .card-dark .card-spark { margin: 12px auto 8px; width: 100px; height: 28px; }
+    .card-dark .card-spark polyline { fill: none; stroke: #58a6ff; stroke-width: 1.5; }
+    .card-dark .card-spark .area { fill: #58a6ff; opacity: 0.06; stroke: none; }
+    .card-dark .card-quip { font-size: 0.82rem; font-style: italic; color: rgba(255,255,255,0.35); margin-top: 4px; }
+
+    /* Light chapter cards */
+    .card-light {
+      background: #fff; border: 1px solid rgba(0,0,0,0.06);
+      border-radius: 20px; padding: 24px 20px; text-align: center;
+      box-shadow: 0 2px 16px rgba(0,0,0,0.05);
+    }
+    .card-light .card-emoji { font-size: 2.4rem; margin-bottom: 8px; }
+    .card-light .card-label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: rgba(0,0,0,0.4); margin-bottom: 4px; }
+    .card-light .card-val { font-size: 2rem; font-weight: 800; font-family: "SF Mono", "Fira Code", monospace; color: #1a1a2e; }
+    .card-light .card-val .unit { font-size: 0.85rem; font-weight: 400; opacity: 0.4; margin-left: 2px; }
+    .card-light .card-spark { margin: 12px auto 8px; width: 100px; height: 28px; }
+    .card-light .card-spark polyline { fill: none; stroke: #7c3aed; stroke-width: 1.5; }
+    .card-light .card-spark .area { fill: #7c3aed; opacity: 0.06; stroke: none; }
+    .card-light .card-quip { font-size: 0.82rem; font-style: italic; color: rgba(0,0,0,0.35); margin-top: 4px; }
+
+    /* ── Speed streaks (hero) ─────────────────────────── */
+    .streak {
+      position: absolute; font-size: 1.2rem; opacity: 0;
+      animation: streak linear infinite;
+    }
+    @keyframes streak {
+      0%   { transform: translateX(-60px); opacity: 0; }
+      10%  { opacity: 0.7; }
+      90%  { opacity: 0.7; }
+      100% { transform: translateX(calc(100vw + 60px)); opacity: 0; }
+    }
+
+    /* ── Twinkle (mount chapter) ──────────────────────── */
+    .twinkle {
+      position: absolute; animation: twinkle ease-in-out infinite alternate;
+    }
+    @keyframes twinkle {
+      0%   { opacity: 0.1; transform: scale(1); }
+      100% { opacity: 0.7; transform: scale(1.4); }
+    }
+
+    /* ── FadeIn on scroll ─────────────────────────────── */
+    .fade-in {
+      opacity: 0; transform: translateY(30px);
+      transition: opacity 0.7s ease, transform 0.7s ease;
+    }
+    .fade-in.visible { opacity: 1; transform: translateY(0); }
+
+    /* ── Scroll prompt ────────────────────────────────── */
+    .scroll-prompt {
+      position: absolute; bottom: 32px; left: 50%; transform: translateX(-50%);
+      font-size: 0.7rem; letter-spacing: 0.12em; text-transform: uppercase;
+      color: rgba(255,255,255,0.2); animation: bob 2s ease-in-out infinite;
+    }
+    @keyframes bob { 0%, 100% { transform: translateX(-50%) translateY(0); } 50% { transform: translateX(-50%) translateY(8px); } }
+
+    /* ── Gradient text ────────────────────────────────── */
+    .grad-text {
+      background: linear-gradient(135deg, #fbbf24 0%, #e6edf3 60%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    /* ── Run log ──────────────────────────────────────── */
+    .run-table-wrap { overflow-x: auto; margin-top: 24px; }
     .run-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
-    .run-table th { text-align: left; color: var(--muted); font-weight: 500; padding: 8px 12px; border-bottom: 1px solid var(--border); white-space: nowrap; }
-    .run-table td { padding: 8px 12px; border-bottom: 1px solid var(--border); white-space: nowrap; }
-    .run-table tr.run-expand:hover td { background: var(--surface); cursor: pointer; }
+    .run-table th { text-align: left; color: rgba(255,255,255,0.4); font-weight: 500; padding: 10px 14px; border-bottom: 1px solid rgba(255,255,255,0.08); }
+    .run-table td { padding: 10px 14px; border-bottom: 1px solid rgba(255,255,255,0.06); white-space: nowrap; }
+    .run-table tr.run-row:hover td { background: rgba(255,255,255,0.03); cursor: pointer; }
     .mono { font-family: "SF Mono", "Fira Code", monospace; font-size: 0.8rem; }
-    .commit-link { color: var(--accent); font-family: "SF Mono", "Fira Code", monospace; font-size: 0.8rem; }
+    .commit-link { color: #58a6ff; font-family: "SF Mono", "Fira Code", monospace; font-size: 0.8rem; }
     .run-detail { display: none; }
     .run-detail.open { display: table-row; }
     .run-detail td { padding: 0; }
-    .run-detail-inner { padding: 12px 20px; background: var(--surface2); }
+    .run-detail-inner { padding: 16px 20px; background: rgba(255,255,255,0.02); }
     .run-detail-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; }
     .run-detail-item { display: flex; justify-content: space-between; padding: 4px 0; font-size: 0.8rem; }
-    .run-detail-item .name { color: var(--muted); }
+    .run-detail-item .name { color: rgba(255,255,255,0.4); }
     .run-detail-item .val { font-family: "SF Mono", "Fira Code", monospace; font-weight: 600; }
 
-    footer { margin-top: 48px; padding-top: 24px; border-top: 1px solid var(--border); text-align: center; font-size: 0.75rem; color: var(--muted); }
-    footer a { color: var(--accent); }
-    .loading { text-align: center; padding: 64px; color: var(--muted); }
-    .error { text-align: center; padding: 64px; color: var(--red); }
-    @media (max-width: 640px) { .tiles { grid-template-columns: 1fr; } .tile .val { font-size: 1.35rem; } .hero h1 { font-size: 1.5rem; } }
+    /* ── Footer ───────────────────────────────────────── */
+    .ch-cta .cta-tagline { font-size: 0.85rem; color: rgba(255,255,255,0.3); margin-top: 24px; }
+    .powered-pill { display: inline-block; font-size: 0.75rem; color: rgba(255,255,255,0.4); background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); padding: 4px 14px; border-radius: 20px; margin-top: 16px; }
+    .powered-pill a { color: #58a6ff; }
+
+    .loading { text-align: center; padding: 80px; color: rgba(255,255,255,0.4); font-size: 1.1rem; }
+
+    @media (max-width: 640px) {
+      .cards { grid-template-columns: 1fr; }
+      .ch { padding: 60px 16px; }
+    }
   </style>
 </head>
 <body>
-  <div class="container">
-    <div class="hero">
-      <h1>&#9889; FastMCP Performance</h1>
-      <p class="tagline">Real benchmarks, every commit, tracked automatically</p>
-      <span class="powered">measured by <a href="https://github.com/strawgate/octo11y">octo11y</a></span>
+
+<!-- ═══════════════════════════════════════════════════════
+     Chapter 1: Hero — "How fast is fast?"
+     ═══════════════════════════════════════════════════════ -->
+<section class="ch ch-hero" id="hero">
+  <div class="ch-inner" style="text-align:center">
+    <div class="fade-in" style="font-size:4rem;margin-bottom:12px">&#9889;</div>
+    <h1 class="ch-heading fade-in grad-text">How fast is fast?</h1>
+    <p class="ch-body fade-in" style="margin:0 auto;text-align:center;color:rgba(255,255,255,0.6)">
+      Your MCP server boots, registers tools, handles calls, and responds &mdash;
+      all before your LLM finishes its next token.<br>
+      <strong style="color:#e6edf3">These are real benchmarks. Every number is live.</strong>
+    </p>
+    <div class="powered-pill fade-in" style="margin-top:24px">
+      measured by <a href="https://github.com/strawgate/octo11y">octo11y</a>
     </div>
-    <div id="content"><div class="loading">Fetching benchmark data&hellip;</div></div>
-    <footer>
-      Data from <a href="https://github.com/strawgate/fastmcp/tree/bench-data">bench-data</a> branch &middot;
-      <a href="https://github.com/strawgate/fastmcp/actions/workflows/benchmarks.yml">CI runs</a> &middot;
-      Powered by <a href="https://github.com/strawgate/octo11y">octo11y</a>
-    </footer>
   </div>
+  <div class="scroll-prompt">&darr; scroll to begin</div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════
+     Chapter 2: The Import — warm cream
+     ═══════════════════════════════════════════════════════ -->
+<section class="ch ch-import" id="import">
+  <div class="ch-inner">
+    <div class="ch-tag fade-in" style="color:#b45309">CHAPTER ONE</div>
+    <h2 class="ch-heading fade-in" style="color:#1a1a2e">It all starts with an import.</h2>
+    <p class="ch-body fade-in" id="narr-import"></p>
+    <div class="cards fade-in" id="cards-import"></div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════
+     Chapter 3: Server creation — dark teal
+     ═══════════════════════════════════════════════════════ -->
+<section class="ch ch-server" id="server">
+  <div class="ch-inner">
+    <div class="ch-tag fade-in" style="color:#3fb950">CHAPTER TWO</div>
+    <h2 class="ch-heading fade-in">From zero to server.</h2>
+    <p class="ch-body fade-in" id="narr-server"></p>
+    <div class="cards fade-in" id="cards-server"></div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════
+     Chapter 4: Tool calls — light blue
+     ═══════════════════════════════════════════════════════ -->
+<section class="ch ch-calls" id="calls">
+  <div class="ch-inner">
+    <div class="ch-tag fade-in" style="color:#7c3aed">CHAPTER THREE</div>
+    <h2 class="ch-heading fade-in" style="color:#1a1a2e">The moment of truth.</h2>
+    <p class="ch-body fade-in" id="narr-calls"></p>
+    <div class="cards fade-in" id="cards-calls"></div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════
+     Chapter 5: Mount / composition — deep indigo
+     ═══════════════════════════════════════════════════════ -->
+<section class="ch ch-mount" id="mount">
+  <div class="ch-inner">
+    <div class="ch-tag fade-in" style="color:#a78bfa">CHAPTER FOUR</div>
+    <h2 class="ch-heading fade-in">Building bigger.</h2>
+    <p class="ch-body fade-in" id="narr-mount"></p>
+    <div class="cards fade-in" id="cards-mount"></div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════
+     Chapter 6: Stdio — warm cream
+     ═══════════════════════════════════════════════════════ -->
+<section class="ch ch-stdio" id="stdio">
+  <div class="ch-inner">
+    <div class="ch-tag fade-in" style="color:#b45309">CHAPTER FIVE</div>
+    <h2 class="ch-heading fade-in" style="color:#1a1a2e">Where rubber meets road.</h2>
+    <p class="ch-body fade-in" id="narr-stdio"></p>
+    <div class="cards fade-in" id="cards-stdio"></div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════
+     Chapter 7: Run history — dark
+     ═══════════════════════════════════════════════════════ -->
+<section class="ch ch-history" id="history">
+  <div class="ch-inner">
+    <div class="ch-tag fade-in" style="color:#58a6ff">THE FULL PICTURE</div>
+    <h2 class="ch-heading fade-in">Every run, remembered.</h2>
+    <p class="ch-body fade-in" style="color:rgba(255,255,255,0.5)">
+      No more &ldquo;it used to be faster.&rdquo; Every benchmark, every commit, tracked forever.
+      Click a row to see the full breakdown.
+    </p>
+    <div class="fade-in" id="run-log"></div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════
+     Chapter 8: CTA
+     ═══════════════════════════════════════════════════════ -->
+<section class="ch ch-cta" id="cta">
+  <div class="ch-inner" style="text-align:center">
+    <div class="fade-in" style="font-size:3.5rem;margin-bottom:12px">&#127942;</div>
+    <h2 class="ch-heading fade-in">Your code deserves a scoreboard.</h2>
+    <p class="ch-body fade-in" style="margin:0 auto;text-align:center;color:rgba(255,255,255,0.5)">
+      FastMCP is fast. Now you can <em>prove</em> it &mdash; on every commit.
+    </p>
+    <p class="cta-tagline fade-in">Zero servers &middot; Zero databases &middot; Just pytest-benchmark and a YAML file</p>
+    <div style="margin-top:20px" class="fade-in">
+      <a href="https://github.com/strawgate/fastmcp/tree/bench-data" style="margin-right:12px">bench-data &rarr;</a>
+      <a href="https://github.com/strawgate/fastmcp/actions/workflows/benchmarks.yml">CI runs &rarr;</a>
+    </div>
+    <div class="powered-pill fade-in">
+      powered by <a href="https://github.com/strawgate/octo11y">octo11y</a>
+    </div>
+  </div>
+</section>
+
+<div id="loading-overlay" class="loading">Fetching live data&hellip;</div>
+
 <script>
-/* globals */
+/* ══════════════════════════════════════════════════════════
+   Data + rendering
+   ══════════════════════════════════════════════════════════ */
 var OWNER = "strawgate", REPO = "fastmcp", BRANCH = "bench-data";
 var BASE = "https://raw.githubusercontent.com/" + OWNER + "/" + REPO + "/" + BRANCH;
 
-/* ── Unit formatting ─────────────────────────────────── */
-function fmtTime(seconds) {
-  if (seconds == null || isNaN(seconds)) return { v: "\u2014", u: "" };
-  var ms = seconds * 1000;
+/* ── Formatting ──────────────────────────────────────────── */
+function fmtTime(s) {
+  if (s == null || isNaN(s)) return { v: "\u2014", u: "" };
+  var ms = s * 1000;
   if (ms >= 1000) return { v: (ms / 1000).toFixed(1), u: "s" };
   if (ms >= 1) return { v: ms < 10 ? ms.toFixed(1) : ms.toFixed(0), u: "ms" };
   var us = ms * 1000;
   return { v: us < 10 ? us.toFixed(1) : us.toFixed(0), u: "\u00b5s" };
 }
-function fmtS(s) { var r = fmtTime(s); return r.v + "\u2009" + r.u; }
-function fmtH(s) { var r = fmtTime(s); return r.v + '<span class="unit">' + r.u + "</span>"; }
+function fS(s) { var r = fmtTime(s); return r.v + "\u2009" + r.u; }
+function fH(s) { var r = fmtTime(s); return r.v + '<span class="unit">' + r.u + "</span>"; }
 function clean(n) { return n.replace(/^test_/, "").replace(/_/g, " ").replace(/\b\w/g, function(c) { return c.toUpperCase(); }); }
-
-function ago(iso) {
-  var d = Date.now() - new Date(iso).getTime();
-  var m = Math.floor(d / 60000);
-  if (m < 60) return m + "m ago";
-  var h = Math.floor(m / 60);
-  if (h < 24) return h + "h ago";
-  return Math.floor(h / 24) + "d ago";
-}
-
-function cLink(sha) {
-  return '<a class="commit-link" href="https://github.com/' + OWNER + "/" + REPO + "/commit/" + sha + '">' + sha.slice(0, 7) + "</a>";
-}
+function ago(iso) { var d = Date.now() - new Date(iso).getTime(), m = Math.floor(d / 60000); if (m < 60) return m + "m ago"; var h = Math.floor(m / 60); if (h < 24) return h + "h ago"; return Math.floor(h / 24) + "d ago"; }
+function cLink(sha) { return '<a class="commit-link" href="https://github.com/' + OWNER + "/" + REPO + "/commit/" + sha + '">' + sha.slice(0, 7) + "</a>"; }
 
 function spark(pts, w, h) {
-  w = w || 80; h = h || 32;
-  if (!pts || pts.length < 2) return '<svg class="spark" viewBox="0 0 ' + w + " " + h + '"></svg>';
+  w = w || 100; h = h || 28;
+  if (!pts || pts.length < 2) return '<svg class="card-spark" viewBox="0 0 ' + w + " " + h + '"></svg>';
   var vs = pts.map(function(p) { return p.value; });
   var mn = Math.min.apply(null, vs), mx = Math.max.apply(null, vs), rng = mx - mn || 1, pad = 2;
   var cs = vs.map(function(v, i) {
@@ -123,99 +300,155 @@ function spark(pts, w, h) {
     return x.toFixed(1) + "," + y.toFixed(1);
   });
   var ln = cs.join(" ");
-  return '<svg class="spark" viewBox="0 0 ' + w + " " + h + '" preserveAspectRatio="none">' +
+  return '<svg class="card-spark" viewBox="0 0 ' + w + " " + h + '" preserveAspectRatio="none">' +
     '<polygon class="area" points="' + pad + "," + (h - pad) + " " + ln + " " + (w - pad) + "," + (h - pad) + '"/>' +
     '<polyline points="' + ln + '"/></svg>';
 }
 
-function delta(pts) {
-  if (!pts || pts.length < 2) return "";
-  var prev = pts[pts.length - 2].value, curr = pts[pts.length - 1].value;
-  if (prev === 0) return "";
-  var pct = ((curr - prev) / prev * 100).toFixed(1);
-  var cls = curr < prev ? "improve" : curr > prev ? "regress" : "";
-  var sign = curr < prev ? "" : "+";
-  return '<span class="delta ' + cls + '">' + sign + pct + "%</span>";
-}
-
-function tile(label, secs, pts) {
-  return '<div class="tile"><div class="info"><div class="label">' + label +
-    '</div><div class="val">' + fmtH(secs) + delta(pts) +
-    '</div></div>' + spark(pts) + "</div>";
+function card(cls, emoji, label, secs, pts, quip) {
+  return '<div class="' + cls + '">' +
+    '<div class="card-emoji">' + emoji + '</div>' +
+    '<div class="card-label">' + label + '</div>' +
+    '<div class="card-val">' + fH(secs) + '</div>' +
+    spark(pts) +
+    '<div class="card-quip">"' + quip + '"</div>' +
+    '</div>';
 }
 
 function fj(url) { return fetch(url).then(function(r) { if (!r.ok) throw new Error("" + r.status); return r.json(); }); }
 
-/* ── Story chapters ──────────────────────────────────── */
+/* ── Speed streaks for hero ──────────────────────────────── */
+function addStreaks() {
+  var hero = document.getElementById("hero");
+  var chars = ["\u26a1", "\u26a1", "\u26a1", "\u2728", "\u26a1"];
+  var colors = ["#fbbf24", "#a78bfa", "#58a6ff", "#fbbf24", "#3fb950"];
+  for (var i = 0; i < 18; i++) {
+    var el = document.createElement("span");
+    el.className = "streak";
+    el.textContent = chars[i % chars.length];
+    el.style.color = colors[i % colors.length];
+    el.style.top = (8 + Math.random() * 84) + "%";
+    el.style.animationDuration = (2.2 + Math.random() * 2.8) + "s";
+    el.style.animationDelay = (Math.random() * 4) + "s";
+    el.style.fontSize = (0.8 + Math.random() * 1) + "rem";
+    hero.appendChild(el);
+  }
+}
+
+/* ── Twinkle stars for mount chapter ─────────────────────── */
+function addTwinkles() {
+  var ch = document.getElementById("mount");
+  var chars = ["\u2726", "\u2728", "\u2726", "\u2734"];
+  var colors = ["rgba(167,139,250,0.6)", "rgba(255,255,255,0.3)", "rgba(251,191,36,0.5)", "rgba(255,255,255,0.2)"];
+  for (var i = 0; i < 20; i++) {
+    var el = document.createElement("span");
+    el.className = "twinkle";
+    el.textContent = chars[i % chars.length];
+    el.style.color = colors[i % colors.length];
+    el.style.left = (3 + Math.random() * 94) + "%";
+    el.style.top = (3 + Math.random() * 94) + "%";
+    el.style.fontSize = (0.5 + Math.random() * 0.8) + "rem";
+    el.style.animationDuration = (1.5 + Math.random() * 2) + "s";
+    el.style.animationDelay = (Math.random() * 3) + "s";
+    ch.appendChild(el);
+  }
+}
+
+/* ── Intersection observer for fade-in ───────────────────── */
+function setupFadeIn() {
+  var obs = new IntersectionObserver(function(entries) {
+    entries.forEach(function(e) { if (e.isIntersecting) e.target.classList.add("visible"); });
+  }, { threshold: 0.15 });
+  document.querySelectorAll(".fade-in").forEach(function(el) { obs.observe(el); });
+}
+
+/* ── Quips per benchmark ─────────────────────────────────── */
+var QUIPS = {
+  test_cold_import: "All your dependencies in one go.",
+  test_warm_import: "Bytecode cache for the win.",
+  test_server_create_empty: "Just an object. Nothing more.",
+  test_server_create_1_tool: "One tool? No sweat.",
+  test_server_create_10_tools: "Still barely warming up.",
+  test_server_create_100_tools: "Enterprise-grade, actually fast.",
+  test_list_tools_10: "Instant catalog.",
+  test_list_tools_100: "100 tools, who cares?",
+  test_call_tool_10: "In and out. No drama.",
+  test_call_tool_burst_10: "10 at once? Easy.",
+  test_mount_1_child: "Microservice number one.",
+  test_mount_5_children: "A small constellation.",
+  test_mount_10_children: "A whole galaxy, still linear.",
+  test_stdio_startup_time: "Cold steel, warm heart.",
+  test_stdio_tool_call_latency: "Through the pipe and back.",
+};
+
+/* ── Story chapters ──────────────────────────────────────── */
 var STORY = [
   {
-    id: "import",
+    el: "import", cls: "card-light",
     narr: function(d) {
-      return 'You add <code>fastmcp</code> to your project and type <code>from fastmcp import FastMCP</code>. '
-        + 'A cold import \u2014 loading the module fresh in a new process \u2014 takes <span class="num">' + fmtS(d.test_cold_import) + '</span>. '
-        + 'That\u2019s the full dependency chain: pydantic, mcp, httpx, starlette, and the rest. '
-        + 'On subsequent imports it drops to <span class="num">' + fmtS(d.test_warm_import) + '</span>.';
+      return 'You type <code>from fastmcp import FastMCP</code> and the clock starts ticking. A cold import &mdash; fresh process, full dependency tree &mdash; takes <span class="num">' + fS(d.test_cold_import) + '</span>. That\u2019s pydantic, httpx, starlette, the whole crew showing up for work. But once they\u2019re warmed up? <span class="num">' + fS(d.test_warm_import) + '</span>. <span class="fast">Five hundred times faster.</span>';
     },
-    benchmarks: ["test_cold_import", "test_warm_import"],
-    labels: { test_cold_import: "Cold import", test_warm_import: "Warm import (cached)" }
+    benchmarks: [
+      { key: "test_cold_import", emoji: "\ud83e\udde8", label: "Cold Import" },
+      { key: "test_warm_import", emoji: "\u26a1", label: "Warm Import" },
+    ]
   },
   {
-    id: "server",
+    el: "server", cls: "card-dark",
     narr: function(d) {
-      return 'Now you create a server. <code>FastMCP("demo")</code> takes <span class="num">' + fmtS(d.test_server_create_empty) + '</span> \u2014 '
-        + 'just allocating the server object. Register one tool and it\u2019s <span class="num">' + fmtS(d.test_server_create_1_tool) + '</span>. '
-        + 'Ten tools: <span class="num">' + fmtS(d.test_server_create_10_tools) + '</span>. '
-        + 'A hundred? <span class="num">' + fmtS(d.test_server_create_100_tools) + '</span>. '
-        + 'Tool registration scales <span class="fast">linearly</span>.';
+      return '<code>FastMCP("demo")</code> &mdash; and in <span class="num">' + fS(d.test_server_create_empty) + '</span> you have a server. Add a tool: <span class="num">' + fS(d.test_server_create_1_tool) + '</span>. Add ten: <span class="num">' + fS(d.test_server_create_10_tools) + '</span>. Add a hundred &mdash; think a full OpenAPI integration &mdash; and it\u2019s <span class="num">' + fS(d.test_server_create_100_tools) + '</span>. <span class="fast">Perfectly linear.</span> No surprises.';
     },
-    benchmarks: ["test_server_create_empty", "test_server_create_1_tool", "test_server_create_10_tools", "test_server_create_100_tools"],
-    labels: { test_server_create_empty: "Empty server", test_server_create_1_tool: "1 tool", test_server_create_10_tools: "10 tools", test_server_create_100_tools: "100 tools" }
+    benchmarks: [
+      { key: "test_server_create_empty", emoji: "\ud83d\udce6", label: "Empty Server" },
+      { key: "test_server_create_1_tool", emoji: "\ud83d\udd27", label: "1 Tool" },
+      { key: "test_server_create_10_tools", emoji: "\ud83d\udee0\ufe0f", label: "10 Tools" },
+      { key: "test_server_create_100_tools", emoji: "\ud83c\udfed", label: "100 Tools" },
+    ]
   },
   {
-    id: "tool-call",
+    el: "calls", cls: "card-light",
     narr: function(d) {
       var perCall = d.test_call_tool_burst_10 ? d.test_call_tool_burst_10 / 10 : 0;
-      return 'An LLM calls your tool. Over the in-memory transport, listing 10 tools takes <span class="num">' + fmtS(d.test_list_tools_10) + '</span>. '
-        + 'A hundred tools: <span class="num">' + fmtS(d.test_list_tools_100) + '</span>. '
-        + 'A single tool call round-trip: <span class="num">' + fmtS(d.test_call_tool_10) + '</span>. '
-        + 'Fire 10 calls in a burst and the total is <span class="num">' + fmtS(d.test_call_tool_burst_10) + '</span> \u2014 '
-        + 'about <span class="num">' + fmtS(perCall) + '</span> per call.';
+      return 'An LLM asks for your tools. Listing ten: <span class="num">' + fS(d.test_list_tools_10) + '</span>. A hundred: <span class="num">' + fS(d.test_list_tools_100) + '</span>. Calling a tool and getting a result: <span class="num">' + fS(d.test_call_tool_10) + '</span>. Fire off ten calls in a burst? <span class="num">' + fS(d.test_call_tool_burst_10) + '</span> total &mdash; <span class="num">' + fS(perCall) + '</span> per call. <span class="fast">Faster than the model can think.</span>';
     },
-    benchmarks: ["test_list_tools_10", "test_list_tools_100", "test_call_tool_10", "test_call_tool_burst_10"],
-    labels: { test_list_tools_10: "List 10 tools", test_list_tools_100: "List 100 tools", test_call_tool_10: "Call tool", test_call_tool_burst_10: "10-call burst" }
+    benchmarks: [
+      { key: "test_list_tools_10", emoji: "\ud83d\udccb", label: "List 10 Tools" },
+      { key: "test_list_tools_100", emoji: "\ud83d\udcda", label: "List 100 Tools" },
+      { key: "test_call_tool_10", emoji: "\ud83c\udfaf", label: "Call Tool" },
+      { key: "test_call_tool_burst_10", emoji: "\ud83d\ude80", label: "10-Call Burst" },
+    ]
   },
   {
-    id: "mount",
+    el: "mount", cls: "card-dark",
     narr: function(d) {
-      return 'You compose servers with <code>mount()</code> to build multi-service applications. '
-        + 'One child server (10 tools each): <span class="num">' + fmtS(d.test_mount_1_child) + '</span>. '
-        + 'Five: <span class="num">' + fmtS(d.test_mount_5_children) + '</span>. '
-        + 'Ten: <span class="num">' + fmtS(d.test_mount_10_children) + '</span>. '
-        + 'Composition cost grows <span class="fast">linearly</span>.';
+      return 'You compose servers with <code>mount()</code> &mdash; the pattern for building multi-service MCP gateways. One child: <span class="num">' + fS(d.test_mount_1_child) + '</span>. Five: <span class="num">' + fS(d.test_mount_5_children) + '</span>. Ten: <span class="num">' + fS(d.test_mount_10_children) + '</span>. Each server brings 10 tools. <span class="fast">Composition scales linearly.</span> Build as big as you want.';
     },
-    benchmarks: ["test_mount_1_child", "test_mount_5_children", "test_mount_10_children"],
-    labels: { test_mount_1_child: "Mount 1 server", test_mount_5_children: "Mount 5 servers", test_mount_10_children: "Mount 10 servers" }
+    benchmarks: [
+      { key: "test_mount_1_child", emoji: "\ud83e\uddf1", label: "Mount 1" },
+      { key: "test_mount_5_children", emoji: "\ud83c\udfd7\ufe0f", label: "Mount 5" },
+      { key: "test_mount_10_children", emoji: "\ud83c\udf0c", label: "Mount 10" },
+    ]
   },
   {
-    id: "stdio",
+    el: "stdio", cls: "card-light",
     narr: function(d) {
-      return 'The real-world transport: <code>stdio</code>. This starts a fresh Python process, initializes the server, and negotiates the MCP protocol. '
-        + 'That cold start takes <span class="num">' + fmtS(d.test_stdio_startup_time) + '</span>. '
-        + 'Once connected, a full tool call round-trip over the pipe: <span class="num">' + fmtS(d.test_stdio_tool_call_latency) + '</span>. '
-        + 'Most of the time is Python startup and module loading.';
+      return 'The real-world transport: <code>stdio</code>. A fresh Python process spins up, the server initializes, MCP handshakes complete. That cold start: <span class="num">' + fS(d.test_stdio_startup_time) + '</span>. Once connected, a full tool call round-trip through the pipe: <span class="num">' + fS(d.test_stdio_tool_call_latency) + '</span>. Most of that is Python startup &mdash; <span class="fast">the framework adds almost nothing.</span>';
     },
-    benchmarks: ["test_stdio_startup_time", "test_stdio_tool_call_latency"],
-    labels: { test_stdio_startup_time: "Stdio cold start", test_stdio_tool_call_latency: "Stdio tool call" }
-  }
+    benchmarks: [
+      { key: "test_stdio_startup_time", emoji: "\ud83d\udd0c", label: "Stdio Cold Start" },
+      { key: "test_stdio_tool_call_latency", emoji: "\ud83d\udd04", label: "Stdio Round-Trip" },
+    ]
+  },
 ];
 
-/* ── Main ────────────────────────────────────────────── */
+/* ── Main ────────────────────────────────────────────────── */
 function main() {
-  var el = document.getElementById("content");
+  addStreaks();
+  addTwinkles();
 
   fj(BASE + "/data/index.json").then(function(idx) {
-    if (!idx.metrics || idx.metrics.length === 0) {
-      el.innerHTML = '<div class="loading"><p>No benchmark data yet.</p></div>';
+    if (!idx.metrics || !idx.metrics.length) {
+      document.getElementById("loading-overlay").textContent = "No benchmark data yet.";
       return;
     }
 
@@ -227,8 +460,9 @@ function main() {
       latest ? fj(BASE + "/data/views/runs/" + latest.id + "/detail.json").catch(function() { return null; }) : Promise.resolve(null)
     ]).then(function(results) {
       var med = results[0], rd = results[1];
+      document.getElementById("loading-overlay").style.display = "none";
 
-      /* Build value map: run detail (full precision) > series */
+      /* Build value map */
       var vals = {};
       if (rd) {
         var snap = (rd.metricSnapshots || []).find(function(s) { return s.metric === "median"; });
@@ -240,86 +474,65 @@ function main() {
           if (!(n in vals) && e.points && e.points.length) vals[n] = e.points[e.points.length - 1].value;
         });
       }
-
-      /* Points for sparklines */
       var pts = {};
-      if (med) {
-        Object.keys(med.series || {}).forEach(function(n) { pts[n] = med.series[n].points || []; });
-      }
+      if (med) Object.keys(med.series || {}).forEach(function(n) { pts[n] = med.series[n].points || []; });
 
-      /* Render story */
-      var html = '<div class="story">';
+      /* Render story chapters */
       STORY.forEach(function(ch) {
-        html += '<div class="chapter" id="' + ch.id + '">';
-        html += '<p class="narration">' + ch.narr(vals) + '</p>';
-        html += '<div class="tiles">';
-        ch.benchmarks.forEach(function(b) { html += tile(ch.labels[b] || clean(b), vals[b], pts[b]); });
-        html += '</div></div>';
+        document.getElementById("narr-" + ch.el).innerHTML = ch.narr(vals);
+        var html = "";
+        ch.benchmarks.forEach(function(b) {
+          html += card(ch.cls, b.emoji, b.label, vals[b.key], pts[b.key], QUIPS[b.key] || "");
+        });
+        document.getElementById("cards-" + ch.el).innerHTML = html;
       });
-      html += '</div>';
 
       /* Render run log */
-      html += '<div class="run-log"><h2>Run History</h2>';
-      if (runs.length === 0) {
-        html += '<p style="color:var(--muted)">No runs yet.</p>';
+      var logEl = document.getElementById("run-log");
+      if (!runs.length) {
+        logEl.innerHTML = '<p style="color:rgba(255,255,255,0.3)">No runs yet.</p>';
       } else {
-        html += '<div class="run-table-wrap"><table class="run-table"><thead><tr>';
-        html += '<th style="width:24px"></th><th>Run</th><th>Commit</th><th>Benchmarks</th><th>Time</th>';
-        html += '</tr></thead><tbody>';
+        var h = '<div class="run-table-wrap"><table class="run-table"><thead><tr><th style="width:24px"></th><th>Run</th><th>Commit</th><th>Benchmarks</th><th>When</th></tr></thead><tbody>';
         var sorted = runs.slice().reverse();
         sorted.forEach(function(r, i) {
-          html += '<tr class="run-expand" data-run="' + r.id + '" data-idx="' + i + '">';
-          html += '<td style="color:var(--muted)">\u25b6</td>';
-          html += '<td class="mono">' + r.id.split("--")[0] + '</td>';
-          html += '<td>' + (r.commit ? cLink(r.commit) : '\u2014') + '</td>';
-          html += '<td>' + (r.benchmarks || 0) + ' tests</td>';
-          html += '<td style="color:var(--muted)">' + ago(r.timestamp) + '</td></tr>';
-          html += '<tr class="run-detail" id="detail-' + i + '"><td colspan="5">';
-          html += '<div class="run-detail-inner" id="detail-inner-' + i + '">Loading\u2026</div>';
-          html += '</td></tr>';
+          h += '<tr class="run-row" data-run="' + r.id + '" data-idx="' + i + '">';
+          h += '<td style="color:rgba(255,255,255,0.3)">\u25b6</td>';
+          h += '<td class="mono">' + r.id.split("--")[0] + '</td>';
+          h += '<td>' + (r.commit ? cLink(r.commit) : '\u2014') + '</td>';
+          h += '<td>' + (r.benchmarks || 0) + ' tests</td>';
+          h += '<td style="color:rgba(255,255,255,0.3)">' + ago(r.timestamp) + '</td></tr>';
+          h += '<tr class="run-detail" id="det-' + i + '"><td colspan="5"><div class="run-detail-inner" id="det-in-' + i + '">Loading\u2026</div></td></tr>';
         });
-        html += '</tbody></table></div>';
+        h += '</tbody></table></div>';
+        logEl.innerHTML = h;
+
+        document.querySelectorAll(".run-row").forEach(function(row) {
+          row.addEventListener("click", function() {
+            var ri = row.getAttribute("data-idx"), rid = row.getAttribute("data-run");
+            var det = document.getElementById("det-" + ri), inner = document.getElementById("det-in-" + ri), arrow = row.querySelector("td");
+            if (det.classList.contains("open")) { det.classList.remove("open"); arrow.textContent = "\u25b6"; return; }
+            det.classList.add("open"); arrow.textContent = "\u25bc";
+            fj(BASE + "/data/views/runs/" + rid + "/detail.json").then(function(d) {
+              var sn = (d.metricSnapshots || []).find(function(s) { return s.metric === "median"; });
+              if (!sn || !sn.values || !sn.values.length) { inner.textContent = "No data."; return; }
+              var g = '<div class="run-detail-grid">';
+              sn.values.slice().sort(function(a, b) { return a.name.localeCompare(b.name); }).forEach(function(v) {
+                g += '<div class="run-detail-item"><span class="name">' + clean(v.name) + '</span><span class="val">' + fS(v.value) + '</span></div>';
+              });
+              inner.innerHTML = g + '</div>';
+            }).catch(function(e) { inner.textContent = "Error: " + e.message; });
+          });
+        });
       }
-      html += '</div>';
 
-      el.innerHTML = html;
-
-      /* Wire expandable rows */
-      document.querySelectorAll(".run-expand").forEach(function(row) {
-        row.addEventListener("click", function() {
-          var ri = row.getAttribute("data-idx");
-          var rid = row.getAttribute("data-run");
-          var det = document.getElementById("detail-" + ri);
-          var inner = document.getElementById("detail-inner-" + ri);
-          var arrow = row.querySelector("td");
-
-          if (det.classList.contains("open")) {
-            det.classList.remove("open");
-            arrow.textContent = "\u25b6";
-            return;
-          }
-          det.classList.add("open");
-          arrow.textContent = "\u25bc";
-
-          fj(BASE + "/data/views/runs/" + rid + "/detail.json").then(function(d) {
-            var snap2 = (d.metricSnapshots || []).find(function(s) { return s.metric === "median"; });
-            if (!snap2 || !snap2.values || !snap2.values.length) { inner.textContent = "No data."; return; }
-            var g = '<div class="run-detail-grid">';
-            snap2.values.slice().sort(function(a, b) { return a.name.localeCompare(b.name); }).forEach(function(v) {
-              g += '<div class="run-detail-item"><span class="name">' + clean(v.name) + '</span><span class="val">' + fmtS(v.value) + '</span></div>';
-            });
-            inner.innerHTML = g + '</div>';
-          }).catch(function(e) { inner.textContent = "Error: " + e.message; });
-        });
-      });
+      setupFadeIn();
     });
   }).catch(function(e) {
-    if (e.message.indexOf("404") !== -1) {
-      el.innerHTML = '<div class="loading"><p>No benchmark data yet.</p></div>';
-    } else {
-      el.innerHTML = '<div class="error">Error: ' + e.message + '</div>';
-    }
+    document.getElementById("loading-overlay").textContent = e.message.indexOf("404") !== -1 ? "No benchmark data yet." : "Error: " + e.message;
   });
+
+  /* fade-in for static elements even before data loads */
+  setupFadeIn();
 }
 
 main();
