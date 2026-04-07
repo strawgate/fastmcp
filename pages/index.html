@@ -4,107 +4,43 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>FastMCP · Performance</title>
-  <style>
+    <style>
     *{box-sizing:border-box;margin:0;padding:0}
-    html{scroll-snap-type:y mandatory;scroll-behavior:smooth;width:100%;overflow-x:hidden}
-    body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:#e6edf3;line-height:1.6;overflow-x:hidden;width:100%;min-width:0;margin:0;padding:0}
-    a { color: #58a6ff; text-decoration: none; } a:hover { text-decoration: underline; }
-    code { background: rgba(255,255,255,0.08); padding: 2px 8px; border-radius: 6px; font-size: 0.9em; word-break: break-word; }
+    html{scroll-snap-type: y mandatory; scroll-behavior: smooth;}
+    body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:#e6edf3;line-height:1.6;background:#0d1117;overflow-x:hidden}
+    a{color:#58a6ff;text-decoration:none} a:hover{text-decoration:underline}
+    code{background:rgba(255,255,255,0.08);padding:2px 8px;border-radius:6px;font-size:0.9em}
 
-    .ch{min-height:100vh;scroll-snap-align:start;scroll-snap-stop:always;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:80px 24px;position:relative;overflow:hidden;width:100%;max-width:100vw}
-    
-    .flying-f { position: absolute; font-weight: 900; font-style: italic; opacity: 0; animation: flyF linear infinite; z-index: 1; pointer-events: none; }
-    @keyframes flyF {
-      0% { transform: translateX(-100px) rotate(0deg); opacity: 0; }
-      10% { opacity: 0.4; }
-      90% { opacity: 0.4; }
-      100% { transform: translateX(calc(100vw + 100px)) rotate(360deg); opacity: 0; }
-    }
-    .ch-inner{max-width:880px;width:100%;z-index:2;overflow:hidden}
+    .ch{height:100vh; scroll-snap-align:start; scroll-snap-stop:always; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:40px 24px; position:relative; overflow:hidden}
+    .ch-inner{max-width:900px;width:100%;z-index:2}
 
     .ch-hero   {background:linear-gradient(180deg,#070b1e 0%,#0a1628 40%,#0d1f3c 100%)}
-    .ch-import {background:linear-gradient(180deg,#fffbf0 0%,#fff7e0 100%);color:#1a1a2e}
-    .ch-server {background:linear-gradient(180deg,#0d1117 0%,#0f2027 35%,#203a43 70%,#2c5364 100%)}
-    .ch-calls  {background:linear-gradient(180deg,#f0f7ff 0%,#e4effc 100%);color:#1a1a2e}
-    .ch-mount  {background:linear-gradient(180deg,#0a0e27 0%,#12062e 50%,#1a0a3a 100%)}
-    .ch-stdio  {background:linear-gradient(180deg,#fffbf0 0%,#fff3d6 100%);color:#1a1a2e}
-    .ch-history{background:linear-gradient(180deg,#0d1117 0%,#161b22 100%)}
-    .ch-cta    {background:linear-gradient(180deg,#0d1117 0%,#161b22 100%)}
+    .ch-import {background:#fffbf0; color:#1a1a2e}
+    .ch-server {background:#0d1117}
+    .ch-calls  {background:#f0f7ff; color:#1a1a2e}
+    .ch-mount  {background:#0a0e27}
+    .ch-stdio  {background:#fffbf0; color:#1a1a2e}
+    .ch-history{background:#0d1117}
 
-    .ch-tag{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.18em;margin-bottom:16px}
-    .ch-heading{font-size:clamp(2rem,5vw,3.2rem);font-weight:800;line-height:1.15;margin-bottom:24px}
-    .ch-body{font-size:clamp(1rem,2.5vw,1.2rem);line-height:1.8;max-width:680px}
-    .ch-body .num{font-weight:700;font-family:"SF Mono","Fira Code",monospace}
-    .ch-hero .num,.ch-server .num,.ch-mount .num,.ch-history .num,.ch-cta .num{color:#bc8cff}
-    .ch-import .num,.ch-calls .num,.ch-stdio .num{color:#7c3aed}
-    .ch-import .fast,.ch-calls .fast,.ch-stdio .fast{color:#16a34a;font-weight:700}
-    .ch-hero .fast,.ch-server .fast,.ch-mount .fast{color:#3fb950;font-weight:700}
+    .ch-tag{font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.2em;margin-bottom:12px}
+    .ch-heading{font-size:clamp(2rem,5vw,3rem);font-weight:800;line-height:1.1;margin-bottom:20px}
+    .ch-body{font-size:1.1rem;line-height:1.6;max-width:700px}
+    .num{font-weight:700;font-family:monospace}
 
-    .viz{margin-top:32px;width:100%}
-    .viz svg{width:100%;height:auto;display:block}
+    .flying-f { position: absolute; font-weight: 900; font-style: italic; opacity: 0; animation: flyF linear infinite; z-index: 1; pointer-events: none; }
+    @keyframes flyF { 0% { transform: translateX(-100px) rotate(0deg); opacity: 0; } 10% { opacity: 0.3; } 90% { opacity: 0.3; } 100% { transform: translateX(calc(100vw + 100px)) rotate(360deg); opacity: 0; } }
 
-    .streak{position:absolute;font-size:1.2rem;opacity:0;animation:streak linear infinite;z-index:1;pointer-events:none}
-    @keyframes streak{0%{transform:translateX(-60px);opacity:0}10%{opacity:.45}90%{opacity:.45}100%{transform:translateX(calc(100vw + 60px));opacity:0}}
-    .twinkle{position:absolute;animation:twinkle ease-in-out infinite alternate;z-index:1;pointer-events:none}
-    @keyframes twinkle{0%{opacity:.1;transform:scale(1)}100%{opacity:.4;transform:scale(1.2)}}
-    .fade-in{opacity:0;transform:translateY(30px);transition:opacity .7s ease,transform .7s ease}
-    .fade-in.visible{opacity:1;transform:translateY(0)}
-    .scroll-prompt{position:absolute;bottom:32px;left:50%;transform:translateX(-50%);font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.2);animation:bob 2s ease-in-out infinite}
-    @keyframes bob{0%,100%{transform:translateX(-50%) translateY(0)}50%{transform:translateX(-50%) translateY(8px)}}
-    .grad-text{background:linear-gradient(135deg,#fbbf24 0%,#e6edf3 60%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+    /* Modal */
+    #modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);display:none;align-items:center;justify-content:center;z-index:1000;backdrop-filter:blur(4px)}
+    #modal-content{background:#161b22;width:90%;max-width:800px;padding:30px;border-radius:12px;border:1px solid #333;position:relative;box-shadow:0 20px 50px rgba(0,0,0,0.5)}
+    .close-modal{position:absolute;top:15px;right:20px;font-size:24px;cursor:pointer;color:#888}.close-modal:hover{color:#fff}
 
-    /* ── Trace / span explorer (Ch3) ─────────────── */
-    .trace-box{background:#fff;border:1px solid rgba(0,0,0,.08);border-radius:16px;padding:28px 24px 20px;box-shadow:0 4px 24px rgba(0,0,0,.06);margin-top:28px;overflow:hidden}
-    .trace-header{display:flex;align-items:center;gap:10px;margin-bottom:20px;padding-bottom:14px;border-bottom:1px solid rgba(0,0,0,.06)}
-    .trace-header .dot{width:10px;height:10px;border-radius:50%}
-    .trace-header .title{font-size:.85rem;font-weight:700;color:#1a1a2e}
-    .trace-header .meta{font-size:.72rem;color:rgba(0,0,0,.35);margin-left:auto;font-family:"SF Mono","Fira Code",monospace}
-    .trace-row{display:flex;align-items:center;gap:0;margin-bottom:10px;position:relative}
-    .trace-row:last-child{margin-bottom:0}
-    .trace-label{width:150px;flex-shrink:0;display:flex;align-items:center;gap:8px;font-size:.8rem;font-weight:600;color:#1a1a2e}
-    .trace-label .emoji{font-size:1.1rem}
-    .trace-lane{flex:1;position:relative;height:36px}
-    .trace-bar{position:absolute;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:flex-end;padding-right:12px;font-family:"SF Mono","Fira Code",monospace;font-size:.8rem;font-weight:700;color:white;min-width:60px;transition:width 1.2s cubic-bezier(.4,0,.2,1)}
-    .trace-bar .spark-overlay{position:absolute;bottom:4px;left:12px;height:14px;opacity:.45}
-    .trace-bar .spark-overlay polyline{fill:none;stroke:white;stroke-width:2}
-    .trace-connector{position:absolute;left:149px;top:0;bottom:0;width:2px}
-    .trace-quip{text-align:center;margin-top:16px;font-size:.82rem;font-style:italic;color:rgba(0,0,0,.25)}
+    .bench-btn{display:inline-flex;align-items:center;gap:8px;background:rgba(0,0,0,0.05);padding:8px 12px;border-radius:6px;font-size:0.85rem;font-weight:600;color:#1a1a2e;border:1px solid rgba(0,0,0,0.1);cursor:pointer;transition:all 0.2s}
+    .bench-btn:hover{background:rgba(0,0,0,0.1);transform:translateY(-1px)}
 
-    /* ── Run log ─────────────────────────────────── */
-    .run-table-wrap{overflow-x:auto;margin-top:24px}
-    .run-table{width:100%;border-collapse:collapse;font-size:.85rem}
-    .run-table th{text-align:left;color:rgba(255,255,255,.4);font-weight:500;padding:10px 14px;border-bottom:1px solid rgba(255,255,255,.08)}
-    .run-table td{padding:10px 14px;border-bottom:1px solid rgba(255,255,255,.06);white-space:nowrap}
-    .run-table tr.run-row:hover td{background:rgba(255,255,255,.03);cursor:pointer}
-    .mono{font-family:"SF Mono","Fira Code",monospace;font-size:.8rem}
-    .commit-link{color:#58a6ff;font-family:"SF Mono","Fira Code",monospace;font-size:.8rem}
-    .run-detail{display:none}.run-detail.open{display:table-row}
-    .run-detail td{padding:0}
-    .run-detail-inner{padding:16px 20px;background:rgba(255,255,255,.02)}
-    .run-detail-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px}
-    .run-detail-item{display:flex;justify-content:space-between;padding:4px 0;font-size:.8rem}
-    .run-detail-item .name{color:rgba(255,255,255,.4)}
-    .run-detail-item .val{font-family:"SF Mono","Fira Code",monospace;font-weight:600}
-
-    .cta-tagline{font-size:.85rem;color:rgba(255,255,255,.3);margin-top:24px}
-    .cta-btn{display:inline-block;padding:10px 20px;border-radius:8px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);color:#e6edf3;font-size:.9rem;transition:all .2s}
-    .cta-btn:hover{background:rgba(255,255,255,.12);text-decoration:none;border-color:rgba(255,255,255,.25)}
-    .cta-btn.primary{background:linear-gradient(135deg,#238636 0%,#2ea043 100%);border-color:#3fb950;color:white;font-weight:600}
-    .cta-btn.primary:hover{background:linear-gradient(135deg,#2ea043 0%,#3fb950 100%)}
-    .powered-pill{display:inline-block;font-size:.75rem;color:rgba(255,255,255,.4);background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);padding:6px 16px;border-radius:20px;margin-top:32px}
-    .powered-pill a{color:#58a6ff}
-    .loading{text-align:center;padding:80px;color:rgba(255,255,255,.4);font-size:1.1rem}
-
-    @media(max-width:640px){
-      .ch{padding:60px 16px}
-      .ch-body{max-width:100%}
-      .trace-box{padding:20px 16px 16px}
-      .trace-label{width:90px;font-size:.7rem}
-      .trace-bar{font-size:.7rem;min-width:45px;padding-right:8px}
-      .trace-header .meta{display:none}
-      .run-table-wrap{margin-left:-16px;margin-right:-16px;padding:0 16px}
-      .run-detail-grid{grid-template-columns:1fr}
-    }
+    /* Trace Explorer Sparkline Popover */
+    .spark-popover{position:absolute; background:#2d2d2d; padding:8px; border-radius:6px; border:1px solid #444; opacity:0; pointer-events:none; transition:opacity 0.2s; z-index:100; box-shadow:0 10px 20px rgba(0,0,0,0.4)}
+    .trace-row:hover .spark-popover{opacity:1}
   </style>
 </head>
 <body>
@@ -359,53 +295,33 @@ function renderRace(cid,vals,pts){
    ══════════════════════════════════════════════════════ */
 function renderPodium(cid,items,vals,pts){
   var W=800,H=360;
-  var s='<svg viewBox="0 0 '+W+' '+H+'" xmlns="http://www.w3.org/2000/svg" style="max-height:360px; width:100%; height:auto">';
+  var s='<svg viewBox="0 0 '+W+' '+H+'" xmlns="http://www.w3.org/2000/svg" style="width:100%; height:auto">';
   
-  // Columns
-  s+='<rect x="40" y="20" width="320" height="300" rx="12" fill="rgba(245,158,11,0.05)" stroke="rgba(245,158,11,0.2)" stroke-width="2"/>';
-  s+='<text x="200" y="50" text-anchor="middle" font-size="14" font-weight="800" fill="#f59e0b" letter-spacing="0.1em">THINKING 🧠</text>';
+  s+='<rect x="20" y="40" width="360" height="280" rx="16" fill="rgba(245,158,11,0.03)" stroke="rgba(245,158,11,0.15)" stroke-width="2"/>';
+  s+='<text x="200" y="30" text-anchor="middle" font-size="12" font-weight="900" fill="#f59e0b" letter-spacing="0.2em">THINKING 🧠</text>';
   
-  s+='<rect x="440" y="20" width="320" height="300" rx="12" fill="rgba(63,185,80,0.05)" stroke="rgba(63,185,80,0.2)" stroke-width="2"/>';
-  s+='<text x="600" y="50" text-anchor="middle" font-size="14" font-weight="800" fill="#3fb950" letter-spacing="0.1em">DOING ⚡</text>';
+  s+='<rect x="420" y="40" width="360" height="280" rx="16" fill="rgba(63,185,80,0.03)" stroke="rgba(63,185,80,0.15)" stroke-width="2"/>';
+  s+='<text x="600" y="30" text-anchor="middle" font-size="12" font-weight="900" fill="#3fb950" letter-spacing="0.2em">DOING ⚡</text>';
 
   var pairs = [
-    { 
-      think: { label: "Deciding to build a server", val: "3 months, 45 beers" },
-      do: { label: "Creating the server object", key: "test_server_create_empty" }
-    },
-    { 
-      think: { label: "Deciding which 10 tools to add", val: "Existential agony" },
-      do: { label: "Adding 10 tools", key: "test_server_create_10_tools" }
-    },
-    { 
-      think: { label: "Agreeing on an API spec", val: "4 endless meetings" },
-      do: { label: "Adding 100 tools", key: "test_server_create_100_tools" }
-    }
+    { think: "Deciding to build a server", detail: "3 months, 45 beers", key: "test_server_create_empty", label: "FastMCP(\"demo\")" },
+    { think: "Deciding which 10 tools to add", detail: "Existential agony", key: "test_server_create_10_tools", label: "Add 10 tools" },
+    { think: "Agreeing on an API spec", detail: "4 endless meetings", key: "test_server_create_100_tools", label: "Add 100 tools" }
   ];
 
-  pairs.forEach(function(pair, i){
-    var y = 100 + i * 80;
+  pairs.forEach(function(p, i){
+    var y = 100 + i * 85;
+    s+='<text x="200" y="'+y+'" text-anchor="middle" font-size="14" font-weight="700" fill="#e6edf3">'+p.think+'</text>';
+    s+='<text x="200" y="'+(y+20)+'" text-anchor="middle" font-size="12" font-style="italic" fill="rgba(255,255,255,0.4)">'+p.detail+'</text>';
     
-    // Left side (Thinking)
-    s+='<text x="200" y="'+y+'" text-anchor="middle" font-size="13" font-weight="700" fill="rgba(255,255,255,0.9)">'+pair.think.label+'</text>';
-    s+='<text x="200" y="'+(y+20)+'" text-anchor="middle" font-size="13" font-style="italic" fill="rgba(255,255,255,0.5)">'+pair.think.val+'</text>';
+    s+='<path d="M 380 '+y+' L 420 '+y+'" stroke="rgba(255,255,255,0.2)" stroke-width="2" stroke-dasharray="4 2" marker-end="url(#arr)"/>';
     
-    // Arrow
-    s+='<line x1="360" y1="'+(y+5)+'" x2="440" y2="'+(y+5)+'" stroke="rgba(255,255,255,0.2)" stroke-width="2" stroke-dasharray="4 4" marker-end="url(#arrow)"/>';
-    
-    // Right side (Doing)
-    var valStr = fS(vals[pair.do.key]||0);
-    s+='<text x="600" y="'+y+'" text-anchor="middle" font-size="13" font-weight="700" fill="rgba(255,255,255,0.9)">'+pair.do.label+'</text>';
-    s+='<text x="600" y="'+(y+22)+'" text-anchor="middle" font-family="SF Mono,Fira Code,monospace" font-size="18" font-weight="800" fill="#fff">'+valStr+'</text>';
-    
-    if(pts[pair.do.key]) {
-      var sc = sparkCoords(pts[pair.do.key], 560, y+30, 80, 15);
-      if(sc) s+='<polyline points="'+sc+'" fill="none" stroke="rgba(63,185,80,0.4)" stroke-width="1.5"/>';
-    }
+    var v = fS(vals[p.key]||0);
+    s+='<text x="600" y="'+y+'" text-anchor="middle" font-size="14" font-weight="700" fill="#e6edf3">'+p.label+'</text>';
+    s+='<text x="600" y="'+(y+22)+'" text-anchor="middle" font-family="monospace" font-size="18" font-weight="800" fill="#3fb950">'+v+'</text>';
   });
 
-  s+='<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="rgba(255,255,255,0.2)"/></marker></defs>';
-
+  s+='<defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="rgba(255,255,255,0.2)"/></marker></defs>';
   s+='</svg>';
   document.getElementById(cid).innerHTML = s;
 }
@@ -416,168 +332,98 @@ function renderPodium(cid,items,vals,pts){
    ══════════════════════════════════════════════════════ */
 function renderTrace(cid,items,vals,pts){
   var spans=[
-    {key:'test_list_tools_10',emoji:'📋',label:'mcp.list_tools',color:'#6366f1',note:'List 10 tools'},
-    {key:'test_call_tool_10',emoji:'🎯',label:'mcp.call_tool',color:'#06b6d4',note:'Call tool 1'},
-    {key:'test_call_tool_10',emoji:'🎯',label:'mcp.call_tool',color:'#06b6d4',note:'Call tool 2'},
-    {key:'test_call_tool_10',emoji:'🎯',label:'mcp.call_tool',color:'#06b6d4',note:'Call tool 3'},
-    {key:'test_call_tool_10',emoji:'🎯',label:'mcp.call_tool',color:'#06b6d4',note:'Call tool 4'},
-    {key:'llm_ref', emoji:'🤖', label:'llm.generate', color:'linear-gradient(90deg,#dc2626 0%,#991b1b 100%)', note:'Average Claude/GPT response time (~5s)', isLlm:true}
+    {key:'test_list_tools_10',emoji:'📋',label:'list_tools',color:'#6366f1',note:'Init'},
+    {key:'test_call_tool_10',emoji:'🎯',label:'call_tool',color:'#06b6d4',note:'Step 1'},
+    {key:'test_call_tool_10',emoji:'🎯',label:'call_tool',color:'#06b6d4',note:'Step 2'},
+    {key:'test_call_tool_10',emoji:'🎯',label:'call_tool',color:'#06b6d4',note:'Step 3'},
+    {key:'test_call_tool_10',emoji:'🎯',label:'call_tool',color:'#06b6d4',note:'Step 4'},
+    {key:'llm_ref', emoji:'🤖', label:'llm.generate', color:'linear-gradient(90deg,#dc2626 0%,#991b1b 100%)', note:'Output', isLlm:true}
   ];
 
   var el=document.getElementById(cid);
-  var h='<style>.trace-row:hover .spark-popover{opacity:1; transform:translateY(0); pointer-events:auto}</style>';
-  h+='<div class="trace-box" style="background:#1e1e1e; color:#d4d4d4; border:1px solid #333; box-shadow:0 10px 30px rgba(0,0,0,0.5); font-family:-apple-system,BlinkMacSystemFont,sans-serif; padding-bottom:10px">';
-  h+='<div class="trace-header" style="border-bottom:1px solid #333; margin-bottom:12px; padding-bottom:12px">';
-  h+='<div class="dot" style="background:#ed6a5e"></div><div class="dot" style="background:#f4bf4f"></div><div class="dot" style="background:#61c554"></div>';
-  h+='<span class="title" style="color:#d4d4d4; font-weight:600">🔍 Trace Explorer: Tool Execution vs LLM</span>';
-  h+='<span class="meta" style="color:#888; font-family:monospace; margin-left:auto">trace_id: 8f2b1a9c</span>';
-  h+='</div>';
-  h+='<div style="position:relative; margin-bottom: 24px">';
+  var h='<div class="trace-box" style="background:#1e1e1e; color:#d4d4d4; border:1px solid #333; padding:20px; border-radius:12px">';
+  h+='<div style="display:flex; margin-bottom:15px; font-size:0.7rem; font-weight:bold; color:#666"><span>MCP EXECUTION TRACE</span><span style="margin-left:auto">8f2b1a9c</span></div>';
 
   var totalTimeMs = 5000;
-  var cumVisualPct = 0;
+  var currentMs = 0;
 
   spans.forEach(function(sp,i){
     var isLlm = sp.isLlm;
     var v = isLlm ? 5.0 : (vals[sp.key]||0);
     var ms = v * 1000;
-    
-    // Minimum visual width so it's visible
-    var rawPct = (ms / totalTimeMs) * 100;
-    var pct = isLlm ? (100 - cumVisualPct) : Math.max(1.5, rawPct);
-    var leftPct = cumVisualPct;
-    
-    var f = isLlm ? {v:'~5.0', u:'s'} : fmtTime(v);
-    var sparkPts = !isLlm ? pts[sp.key] : null;
+    var pct = isLlm ? (100 - (currentMs/totalTimeMs)*100 - 2) : Math.max(2, (ms/totalTimeMs)*100);
+    var leftPct = (currentMs / totalTimeMs) * 100;
 
-    h+='<div class="trace-row" style="margin-bottom:12px; z-index:1; position:relative">';
-    h+='<div class="trace-label" style="width:160px; color:#d4d4d4; font-size:0.75rem; font-family:SF Mono,Fira Code,monospace">';
-    h+='<span class="emoji" style="margin-right:6px">'+sp.emoji+'</span><span>'+sp.label+'</span></div>';
+    h+='<div class="trace-row" style="display:flex; align-items:center; margin-bottom:10px; position:relative; height:30px">';
+    h+='<div style="width:140px; font-family:monospace; font-size:0.75rem; color:#aaa; overflow:hidden; white-space:nowrap">'+sp.emoji+' '+sp.label+'</div>';
+    h+='<div style="flex:1; position:relative; height:100%; border-left:1px solid #333">';
     
-    h+='<div class="trace-lane" style="height:24px; display:flex; align-items:center; position:relative; flex:1">';
+    h+='<div class="trace-bar" style="position:absolute; left:'+leftPct+'%; width:'+pct+'%; height:18px; top:6px; background:'+sp.color+'; border-radius:3px"></div>';
     
-    h+='<div class="trace-bar" style="left:'+leftPct+'%; height:20px; width:'+pct+'%; background:'+sp.color+'; border-radius:4px; box-shadow:0 2px 5px rgba(0,0,0,0.2); position:absolute"></div>';
-
-    if(isLlm) {
-       h+='<div style="position:absolute;left:'+(leftPct + pct*0.4)+'%;top:0px;bottom:0px;width:20px;background:#1e1e1e;transform:skewX(-20deg);border-left:2px solid #991b1b;border-right:2px solid #dc2626; z-index:2"></div>';
-       h+='<div style="position:absolute;left:'+(leftPct + pct*0.45)+'%;top:0px;bottom:0px;width:20px;background:#1e1e1e;transform:skewX(-20deg);border-left:2px solid #991b1b;border-right:2px solid #dc2626; z-index:2"></div>';
+    var textLeft = isLlm ? (leftPct + 5) : (leftPct + pct + 1);
+    h+='<div style="position:absolute; left:'+textLeft+'%; top:6px; font-family:monospace; font-size:0.7rem; color:#fff; white-space:nowrap; font-weight:bold">'+fS(v)+' <span style="color:#666; font-weight:normal">'+sp.note+'</span></div>';
+    
+    if(!isLlm && pts[sp.key]){
+        h+='<div class="spark-popover" style="left:'+leftPct+'%; top:-40px">';
+        var sc = sparkCoords(pts[sp.key], 0, 15, 60, 10);
+        h+='<svg width="60" height="20"><polyline points="'+sc+'" fill="none" stroke="'+sp.color+'" stroke-width="2"/></svg></div>';
     }
-
-    if(sparkPts&&sparkPts.length>=2){
-      var svgW=100,svgH=30;
-      var vs=sparkPts.map(function(p){return p.value});
-      var mn=Math.min.apply(null,vs),mx=Math.max.apply(null,vs),rng=mx-mn||1;
-      var coords=vs.map(function(vv,ii){
-        var x=4+(ii/(vs.length-1))*(svgW-8);
-        var y=4+(1-(vv-mn)/rng)*(svgH-8);
-        return x.toFixed(1)+','+y.toFixed(1);
-      }).join(' ');
-      
-      h+='<div class="spark-popover" style="position:absolute; left:'+leftPct+'%; top:-45px; background:#2d2d2d; padding:6px 10px; border-radius:6px; border:1px solid #444; opacity:0; transform:translateY(5px); transition:all 0.2s; pointer-events:none; z-index:10; display:flex; flex-direction:column; align-items:center; box-shadow:0 4px 12px rgba(0,0,0,0.5)">';
-      h+='<span style="font-size:0.65rem; color:#ccc; margin-bottom:4px; font-weight:600">History</span>';
-      h+='<svg viewBox="0 0 '+svgW+' '+svgH+'" style="width:60px; height:18px"><polyline points="'+coords+'" fill="none" stroke="'+(isLlm?'#fff':sp.color)+'" stroke-width="2"/></svg>';
-      h+='</div>';
-    }
-
-    var textLeft = isLlm ? (leftPct + pct/2 - 5) : (leftPct + pct + 1.5);
-    var tAlign = isLlm ? 'center' : 'left';
     
-    // Add text inline
-    h+='<div style="position:absolute; left:'+textLeft+'%; width:100px; text-align:'+tAlign+'">';
-    h+='<span style="color:#fff; text-shadow:0 1px 2px rgba(0,0,0,0.8); font-size:0.75rem; font-family:SF Mono,Fira Code,monospace; font-weight:600; white-space:nowrap; z-index:3">'+f.v+' '+f.u+'</span>';
-    h+='<div style="font-size:0.65rem; color:#888; font-family:-apple-system,BlinkMacSystemFont,sans-serif; margin-top:2px">'+sp.note+'</div>';
-    h+='</div>';
-
-    h+='</div>'; 
-    h+='</div>'; 
-
-    cumVisualPct += pct;
+    h+='</div></div>';
+    currentMs += ms;
   });
-
-  h+='</div>'; 
-  h+='<div class="trace-quip" style="color:#666; margin-top:24px; margin-bottom:12px">"FastMCP overhead is a tiny blip on the radar before the LLM starts generating."</div>';
   h+='</div>';
-
-  el.innerHTML=h;
-
-  var bars=el.querySelectorAll('.trace-bar');
-  bars.forEach(function(bar){
-    var targetW=bar.style.width;
-    bar.style.width='0%';
-    var obs=new IntersectionObserver(function(entries){
-      entries.forEach(function(e){
-        if(e.isIntersecting){bar.style.width=targetW;obs.unobserve(bar)}
-      });
-    },{threshold:0.3});
-    obs.observe(bar);
-  });
+  el.innerHTML = h;
 }
 
 /* ══════════════════════════════════════════════════════
    VIZ 4 — City Skyline (Mount)
    ══════════════════════════════════════════════════════ */
 function renderSkyline(cid,items,vals,pts){
-  var W=800,H=340;
-  var maxVal=0;
-  items.forEach(function(b){if((vals[b.key]||0)>maxVal)maxVal=vals[b.key]});
-  if(!maxVal)maxVal=0.1;
-
-  var clusters = [
-    {x: 140, y: 140, count: 1},
-    {x: 400, y: 140, count: 5},
-    {x: 660, y: 140, count: 10}
-  ];
-
-  var s='<svg viewBox="0 0 '+W+' '+H+'" xmlns="http://www.w3.org/2000/svg" style="width:100%; height:auto">';
+  var el = document.getElementById(cid);
+  el.style.minHeight = '400px';
+  el.innerHTML = '<div id="rocket-sprawl" style="width:100%; height:400px"></div>';
   
-  s+='<g opacity="0.05">';
-  for(var gx=0;gx<W;gx+=40) s+='<line x1="'+gx+'" y1="0" x2="'+gx+'" y2="'+H+'" stroke="white" stroke-width="1"/>';
-  for(var gy=0;gy<H;gy+=40) s+='<line x1="0" y1="'+gy+'" x2="'+W+'" y2="'+gy+'" stroke="white" stroke-width="1"/>';
-  s+='</g>';
-
-  items.forEach(function(b,i){
-    var c = clusters[i];
-    var v=vals[b.key]||0;
-    var f=fmtTime(v);
+  function update(){
+    var rect = el.getBoundingClientRect();
+    var viewH = window.innerHeight;
+    var p = 1 - Math.max(0, Math.min(1, rect.top / (viewH * 0.5)));
     
-    // Fallback to static render if IntersectionObserver fails by not using opacity:0 initially
-    var groupS = '<g class="hub-cluster" style="transform-origin:'+c.x+'px '+c.y+'px; transition:all 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275)">';
+    var nodeCount = 1;
+    if(p > 0.3) nodeCount = 5;
+    if(p > 0.7) nodeCount = 20;
     
-    if (c.count > 1) {
-      for(var j=0; j<c.count; j++){
-        var angle = (j / c.count) * Math.PI * 2;
-        var r = c.count === 5 ? 50 : 70;
-        var nodeX = c.x + Math.cos(angle) * r;
-        var nodeY = c.y + Math.sin(angle) * r;
-        
-        groupS+='<line x1="'+c.x+'" y1="'+c.y+'" x2="'+nodeX+'" y2="'+nodeY+'" stroke="rgba(167,139,250,0.4)" stroke-width="2"/>';
-        groupS+='<circle cx="'+nodeX+'" cy="'+nodeY+'" r="10" fill="#1a0a3a" stroke="#8b5cf6" stroke-width="2"/>';
-        groupS+='<text x="'+nodeX+'" y="'+(nodeY+4)+'" text-anchor="middle" font-size="10">🚀</text>';
+    var W=800,H=400;
+    var s = '<svg viewBox="0 0 '+W+' '+H+'" style="width:100%; height:100%">';
+    var midX=400, midY=200;
+    
+    // Connections
+    if(nodeCount > 1){
+      for(var i=0; i<nodeCount; i++){
+        var ang = (i/nodeCount) * Math.PI * 2;
+        var dist = 120 + (nodeCount > 5 ? Math.random()*40 : 0);
+        var tx = midX + Math.cos(ang)*dist;
+        var ty = midY + Math.sin(ang)*dist;
+        s+='<line x1="'+midX+'" y1="'+midY+'" x2="'+tx+'" y2="'+ty+'" stroke="#a78bfa" stroke-width="1" opacity="0.3"/>';
+        s+='<text x="'+tx+'" y="'+ty+'" text-anchor="middle" font-size="'+(nodeCount > 5 ? 12 : 18)+'">🚀</text>';
       }
     }
     
-    groupS+='<circle cx="'+c.x+'" cy="'+c.y+'" r="24" fill="#1a0a3a" stroke="#a78bfa" stroke-width="3"/>';
-    groupS+='<text x="'+c.x+'" y="'+(c.y+8)+'" text-anchor="middle" font-size="22">🔌</text>';
-
-    groupS+='<rect x="'+(c.x-45)+'" y="'+(c.y+90)+'" width="90" height="40" rx="6" fill="#12062e" stroke="rgba(167,139,250,0.3)" stroke-width="1"/>';
-    groupS+='<text x="'+c.x+'" y="'+(c.y+109)+'" text-anchor="middle" font-family="SF Mono,Fira Code,monospace" font-size="16" font-weight="800" fill="white">'+f.v+'</text>';
-    groupS+='<text x="'+c.x+'" y="'+(c.y+123)+'" text-anchor="middle" font-family="SF Mono,Fira Code,monospace" font-size="10" fill="white" opacity="0.4">'+f.u+'</text>';
-    groupS+='<text x="'+c.x+'" y="'+(c.y+145)+'" text-anchor="middle" font-size="11" font-weight="700" fill="rgba(167,139,250,0.7)">'+b.label.toUpperCase()+'</text>';
-
-    if(pts[b.key]){
-      var sc=sparkCoords(pts[b.key],c.x-30,c.y+155,60,10);
-      if(sc)groupS+='<polyline points="'+sc+'" fill="none" stroke="rgba(167,139,250,0.4)" stroke-width="1.5"/>';
-    }
-
-    groupS+='</g>';
-    s += groupS;
-  });
-
-  s+='<text x="400" y="320" text-anchor="middle" font-size="12" font-style="italic" fill="rgba(255,255,255,0.2)">"Composition scales effortlessly. Add servers, connect tools, measure latency."</text>';
-  s+='</svg>';
-
-  var el = document.getElementById(cid);
-  el.innerHTML=s;
+    s+='<circle cx="'+midX+'" cy="'+midY+'" r="35" fill="#1a0a3a" stroke="#a78bfa" stroke-width="3"/>';
+    s+='<text x="'+midX+'" y="'+(midY+12)+'" text-anchor="middle" font-size="40">🚀</text>';
+    
+    var vKey = nodeCount === 1 ? 'test_mount_1_child' : (nodeCount === 5 ? 'test_mount_5_children' : 'test_mount_10_children');
+    var v = fS(vals[vKey]||0);
+    s+='<rect x="'+(midX-50)+'" y="'+(midY+50)+'" width="100" height="35" rx="18" fill="#a78bfa"/>';
+    s+='<text x="'+midX+'" y="'+(midY+73)+'" text-anchor="middle" font-family="monospace" font-size="14" font-weight="900" fill="#1a0a3a">'+v+'</text>';
+    s+='<text x="'+midX+'" y="'+(midY-50)+'" text-anchor="middle" font-size="12" font-weight="bold" fill="#a78bfa">'+nodeCount+' SERVERS</text>';
+    
+    s+='</svg>';
+    document.getElementById('rocket-sprawl').innerHTML = s;
+  }
+  
+  window.addEventListener('scroll', update);
+  update();
 }
 
 /* ══════════════════════════════════════════════════════
@@ -585,37 +431,52 @@ function renderSkyline(cid,items,vals,pts){
    ══════════════════════════════════════════════════════ */
 function renderPipe(cid,vals,pts){
   var el = document.getElementById(cid);
-  var s = '';
-  
   var keys = Object.keys(vals).filter(function(k){ return k.startsWith('test_'); }).sort();
-  
-  if (keys.length === 0) {
-    el.innerHTML = '<div style="color:rgba(255,255,255,0.4); text-align:center; padding:20px">No test metrics found.</div>';
-    return;
-  }
-  
+  var h = '';
   keys.forEach(function(k){
-     var name = clean(k);
-     s += '<a href="benchmark.html?metric='+k+'" style="display:inline-flex; align-items:center; gap:8px; background:rgba(0,0,0,0.03); padding:10px 16px; border-radius:8px; font-size:0.9rem; font-weight:600; color:#1a1a2e; border:1px solid rgba(0,0,0,0.1); box-shadow:0 1px 2px rgba(0,0,0,0.05); text-decoration:none; transition:all 0.2s">';
-     s += '<span>'+name+'</span>';
-     
-     var sparkPts = pts[k];
-     if(sparkPts && sparkPts.length >= 2) {
-       var svgW=30,svgH=10;
-       var vs=sparkPts.map(function(p){return p.value});
-       var mn=Math.min.apply(null,vs),mx=Math.max.apply(null,vs),rng=mx-mn||1;
-       var coords=vs.map(function(vv,ii){
-         var x=(ii/(vs.length-1))*svgW;
-         var y=(1-(vv-mn)/rng)*svgH;
-         return x.toFixed(1)+','+y.toFixed(1);
-       }).join(' ');
-       s += '<svg viewBox="0 0 '+svgW+' '+svgH+'" style="width:30px; height:10px; margin-left:4px"><polyline points="'+coords+'" fill="none" stroke="#16a34a" stroke-width="1.5"/></svg>';
-     }
-     
-     s += '<span style="color:#16a34a">&rarr;</span></a>';
+    h += '<button class="bench-btn" onclick="showBenchModal(\''+k+'\')">'+clean(k)+' &rarr;</button>';
   });
+  el.innerHTML = h || 'No benchmarks found.';
+}
+
+window.showBenchModal = function(key){
+  var overlay = document.getElementById('modal-overlay');
+  var content = document.getElementById('modal-body');
+  overlay.style.display = 'flex';
   
-  el.innerHTML = s;
+  var series = window.GLOBAL_PTS[key] || [];
+  if(!series.length) { content.innerHTML = 'No history for '+key; return; }
+  
+  var W=700, H=300;
+  var vs = series.map(function(p){return p.value});
+  var mn=Math.min.apply(null,vs), mx=Math.max.apply(null,vs), rng=mx-mn||mx*0.1;
+  mn = Math.max(0, mn - rng*0.1); mx += rng*0.1; rng=mx-mn;
+  
+  var coords = series.map(function(p,i){
+    return ((i/(series.length-1||1))*W).toFixed(1) + ',' + (H - ((p.value-mn)/rng)*H).toFixed(1);
+  }).join(' ');
+  
+  var s = '<h3 style="margin-bottom:20px; color:#3fb950">'+clean(key)+'</h3>';
+  s += '<svg viewBox="0 0 '+W+' '+H+'" style="width:100%; height:250px; background:#0d1117; border-radius:8px; padding:20px">';
+  s += '<polyline points="'+coords+'" fill="none" stroke="#3fb950" stroke-width="3"/>';
+  series.forEach(function(p,i){
+    var x = (i/(series.length-1||1))*W;
+    var y = H - ((p.value-mn)/rng)*H;
+    s += '<circle cx="'+x+'" cy="'+y+'" r="4" fill="#3fb950"/>';
+  });
+  s += '</svg>';
+  
+  s += '<table style="width:100%; margin-top:20px; font-size:0.8rem; border-collapse:collapse">';
+  series.slice().reverse().forEach(function(p){
+    s += '<tr style="border-bottom:1px solid #333"><td style="padding:8px">'+(p.run ? p.run.split('--')[0] : 'run')+'</td><td style="text-align:right; font-weight:bold">'+fS(p.value)+'</td></tr>';
+  });
+  s += '</table>';
+  
+  content.innerHTML = s;
+}
+
+window.closeBenchModal = function(){
+  document.getElementById('modal-overlay').style.display = 'none';
 }
 
 /* ══════════════════════════════════════════════════════
@@ -672,7 +533,7 @@ function main(){
       var vals={};
       if(rd){var snap=(rd.metricSnapshots||[]).find(function(s){return s.metric==='median'});if(snap)snap.values.forEach(function(v){vals[v.name]=v.value})}
       if(med){Object.keys(med.series||{}).forEach(function(n){var e=med.series[n];if(!(n in vals)&&e.points&&e.points.length)vals[n]=e.points[e.points.length-1].value})}
-      var pts={};
+      var pts={}; window.GLOBAL_PTS = pts;
       if(med)Object.keys(med.series||{}).forEach(function(n){pts[n]=med.series[n].points||[]});
 
       CHAPTERS.forEach(function(ch){document.getElementById('narr-'+ch.el).innerHTML=ch.narr(vals);ch.render(vals,pts)});
@@ -736,4 +597,11 @@ function main(){
 }
 main();
 </script>
+
+<div id="modal-overlay" onclick="if(event.target===this)closeBenchModal()">
+  <div id="modal-content">
+    <span class="close-modal" onclick="closeBenchModal()">&times;</span>
+    <div id="modal-body"></div>
+  </div>
+</div>
 </body></html>
