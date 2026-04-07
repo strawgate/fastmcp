@@ -161,10 +161,10 @@
 
 <section class="ch ch-stdio" id="stdio">
   <div class="ch-inner">
-    <div class="ch-tag fade-in" style="color:#b45309">CHAPTER FIVE</div>
-    <h2 class="ch-heading fade-in" style="color:#1a1a2e">Where rubber meets road.</h2>
-    <p class="ch-body fade-in" id="narr-stdio"></p>
-    <div class="viz fade-in" id="viz-stdio"></div>
+    <div class="ch-tag fade-in" style="color:#b45309">DEEP DIVE</div>
+    <h2 class="ch-heading fade-in" style="color:#1a1a2e">Care about something in particular?</h2>
+    <p class="ch-body fade-in" style="color:rgba(0,0,0,0.6)">Every metric we track, available for detailed inspection across versions and commits. Click any benchmark to view its historical performance.</p>
+    <div class="viz fade-in" id="viz-stdio" style="display:flex; flex-wrap:wrap; gap:12px; margin-top:32px"></div>
   </div>
 </section>
 
@@ -314,9 +314,7 @@ function renderRace(cid,vals,pts){
 
   /* Lightning / Hare (infinitely loops) */
   s+='<g id="racer-warm">';
-  s+='<animateTransform attributeName="transform" type="translate" values="'+startX+',0; '+finishX+',0; '+finishX+',0" keyTimes="0; 0.4; 1" dur="1.5s" repeatCount="indefinite"/>';
-  s+='<animate attributeName="opacity" values="0; 1; 1; 0; 0" keyTimes="0; 0.05; 0.35; 0.4; 1" dur="1.5s" repeatCount="indefinite"/>';
-  /* Speed lines */
+  s+='<animateTransform attributeName="transform" type="translate" values="80,0; 720,0; 80,0" keyTimes="0; 0.5; 1" dur="3s" repeatCount="indefinite"/>';
   s+='<line x1="-30" y1="152" x2="-18" y2="152" stroke="#16a34a" stroke-width="2" opacity="0.4" stroke-linecap="round"/>';
   s+='<line x1="-48" y1="158" x2="-32" y2="158" stroke="#16a34a" stroke-width="2" opacity="0.25" stroke-linecap="round"/>';
   s+='<line x1="-38" y1="146" x2="-24" y2="146" stroke="#16a34a" stroke-width="2" opacity="0.3" stroke-linecap="round"/>';
@@ -414,15 +412,16 @@ function renderPodium(cid,items,vals,pts){
    ══════════════════════════════════════════════════════ */
 function renderTrace(cid,items,vals,pts){
   var spans=[
-    {key:'test_list_tools_10',emoji:'📋',label:'mcp.list_tools',color:'#6366f1',note:'10 tools', indent:0},
-    {key:'test_list_tools_100',emoji:'📚',label:'mcp.list_tools',color:'#8b5cf6',note:'100 tools', indent:0},
-    {key:'test_call_tool_10',emoji:'🎯',label:'mcp.call_tool',color:'#06b6d4',note:'Execute and return', indent:0},
-    {key:'test_call_tool_burst_10',emoji:'🚀',label:'mcp.call_tool',color:'#f59e0b',note:'Burst ×10', indent:0},
-    {key:'llm_ref', emoji:'🤖', label:'llm.generate', color:'linear-gradient(90deg,#dc2626 0%,#991b1b 100%)', note:'Average Claude/GPT response time (~5s)', isLlm:true, indent:0}
+    {key:'test_list_tools_10',emoji:'📋',label:'mcp.list_tools',color:'#6366f1',note:'10 tools'},
+    {key:'test_list_tools_100',emoji:'📚',label:'mcp.list_tools',color:'#8b5cf6',note:'100 tools'},
+    {key:'test_call_tool_10',emoji:'🎯',label:'mcp.call_tool',color:'#06b6d4',note:'Execute and return'},
+    {key:'test_call_tool_burst_10',emoji:'🚀',label:'mcp.call_tool',color:'#f59e0b',note:'Burst ×10'},
+    {key:'llm_ref', emoji:'🤖', label:'llm.generate', color:'linear-gradient(90deg,#dc2626 0%,#991b1b 100%)', note:'Average Claude/GPT response time (~5s)', isLlm:true}
   ];
 
   var el=document.getElementById(cid);
-  var h='<div class="trace-box" style="background:#1e1e1e; color:#d4d4d4; border:1px solid #333; box-shadow:0 10px 30px rgba(0,0,0,0.5); font-family:-apple-system,BlinkMacSystemFont,sans-serif">';
+  var h='<style>.trace-row:hover .spark-popover{opacity:1; transform:translateY(0); pointer-events:auto}</style>';
+  h+='<div class="trace-box" style="background:#1e1e1e; color:#d4d4d4; border:1px solid #333; box-shadow:0 10px 30px rgba(0,0,0,0.5); font-family:-apple-system,BlinkMacSystemFont,sans-serif">';
   h+='<div class="trace-header" style="border-bottom:1px solid #333; margin-bottom:12px; padding-bottom:12px">';
   h+='<div class="dot" style="background:#ed6a5e"></div><div class="dot" style="background:#f4bf4f"></div><div class="dot" style="background:#61c554"></div>';
   h+='<span class="title" style="color:#d4d4d4; font-weight:600">🔍 Trace Explorer: Tool Execution vs LLM</span>';
@@ -442,51 +441,56 @@ function renderTrace(cid,items,vals,pts){
     var leftPct = (cumTime / totalTimeMs) * 100;
     
     if(isLlm) {
-        pct = 95 - leftPct;
+        pct = 98 - leftPct;
     }
     
-    cumTime += ms;
-
     var f = isLlm ? {v:'~5.0', u:'s'} : fmtTime(v);
     var sparkPts = !isLlm ? pts[sp.key] : null;
 
-    h+='<div class="trace-row" style="margin-bottom:8px; z-index:1">';
-    h+='<div class="trace-label" style="width:150px; padding-left:'+(sp.indent*12)+'px; color:#d4d4d4; font-size:0.8rem; font-family:SF Mono,Fira Code,monospace">';
+    h+='<div class="trace-row" style="margin-bottom:8px; z-index:1; position:relative">';
+    h+='<div class="trace-label" style="width:150px; color:#d4d4d4; font-size:0.8rem; font-family:SF Mono,Fira Code,monospace">';
     h+='<span class="emoji" style="margin-right:6px">'+sp.emoji+'</span><span>'+sp.label+'</span></div>';
     
-    h+='<div class="trace-lane" style="height:28px">';
-    h+='<div class="trace-bar" style="left:'+leftPct+'%; height:28px; width:'+pct+'%; background:'+sp.color+'; border-radius:4px; box-shadow:0 2px 5px rgba(0,0,0,0.2); justify-content:flex-end; padding-right:8px; font-size:0.75rem; position:absolute">';
+    h+='<div class="trace-lane" style="height:28px; display:flex; align-items:center; position:relative; flex:1">';
+    
+    h+='<div class="trace-bar" style="left:'+leftPct+'%; height:20px; width:'+pct+'%; background:'+sp.color+'; border-radius:4px; box-shadow:0 2px 5px rgba(0,0,0,0.2); position:absolute"></div>';
 
     if(isLlm) {
-       h+='<div style="position:absolute;left:40%;top:-5px;bottom:-5px;width:20px;background:#1e1e1e;transform:skewX(-20deg);border-left:2px solid #991b1b;border-right:2px solid #dc2626"></div>';
-       h+='<div style="position:absolute;left:45%;top:-5px;bottom:-5px;width:20px;background:#1e1e1e;transform:skewX(-20deg);border-left:2px solid #991b1b;border-right:2px solid #dc2626"></div>';
+       h+='<div style="position:absolute;left:'+(leftPct + pct*0.4)+'%;top:0px;bottom:0px;width:20px;background:#1e1e1e;transform:skewX(-20deg);border-left:2px solid #991b1b;border-right:2px solid #dc2626; z-index:2"></div>';
+       h+='<div style="position:absolute;left:'+(leftPct + pct*0.45)+'%;top:0px;bottom:0px;width:20px;background:#1e1e1e;transform:skewX(-20deg);border-left:2px solid #991b1b;border-right:2px solid #dc2626; z-index:2"></div>';
     }
 
     if(sparkPts&&sparkPts.length>=2){
-      var svgW=60,svgH=12;
+      var svgW=100,svgH=30;
       var vs=sparkPts.map(function(p){return p.value});
       var mn=Math.min.apply(null,vs),mx=Math.max.apply(null,vs),rng=mx-mn||1;
       var coords=vs.map(function(vv,ii){
-        var x=2+(ii/(vs.length-1))*(svgW-4);
-        var y=1+(1-(vv-mn)/rng)*(svgH-2);
+        var x=4+(ii/(vs.length-1))*(svgW-8);
+        var y=4+(1-(vv-mn)/rng)*(svgH-8);
         return x.toFixed(1)+','+y.toFixed(1);
       }).join(' ');
-      h+='<svg class="spark-overlay" viewBox="0 0 '+svgW+' '+svgH+'" preserveAspectRatio="none" style="width:40px;opacity:.6;bottom:8px;left:8px;height:12px;position:absolute"><polyline points="'+coords+'" fill="none" stroke="rgba(255,255,255,0.8)" stroke-width="1.5"/></svg>';
+      
+      h+='<div class="spark-popover" style="position:absolute; left:'+leftPct+'%; top:-40px; background:#2d2d2d; padding:4px 8px; border-radius:6px; border:1px solid #444; opacity:0; transform:translateY(5px); transition:all 0.2s; pointer-events:none; z-index:10; display:flex; flex-direction:column; align-items:center">';
+      h+='<span style="font-size:0.6rem; color:#aaa; margin-bottom:2px">History</span>';
+      h+='<svg viewBox="0 0 '+svgW+' '+svgH+'" style="width:60px; height:18px"><polyline points="'+coords+'" fill="none" stroke="'+(isLlm?'#fff':sp.color)+'" stroke-width="2"/></svg>';
+      h+='</div>';
     }
 
-    h+='<span style="color:#fff; text-shadow:0 1px 2px rgba(0,0,0,0.5); z-index:2; position:relative">'+f.v+' '+f.u+'</span>';
-    h+='</div>'; 
+    var numLeft = isLlm ? 50 : leftPct + pct + 1;
+    h+='<span style="position:absolute; left:'+numLeft+'%; color:#fff; text-shadow:0 1px 2px rgba(0,0,0,0.5); font-size:0.75rem; font-family:SF Mono,Fira Code,monospace; white-space:nowrap; z-index:3">'+f.v+' '+f.u+'</span>';
 
     h+='</div>'; 
     h+='</div>'; 
 
-    h+='<div style="margin-left:150px; margin-bottom:'+((i<spans.length-1)?14:0)+'px; font-size:0.7rem; color:#888; font-family:-apple-system,BlinkMacSystemFont,sans-serif">';
-    h+='<span style="display:inline-block; margin-left:'+leftPct+'%; transform:translateX('+ (pct < 10 ? 10 : 0) +'px)">'+sp.note+'</span>';
+    h+='<div style="margin-left:150px; margin-bottom:'+((i<spans.length-1)?14:0)+'px; font-size:0.7rem; color:#888; font-family:-apple-system,BlinkMacSystemFont,sans-serif; position:relative">';
+    h+='<span style="position:absolute; left:'+leftPct+'%">'+sp.note+'</span>';
     h+='</div>';
+
+    cumTime += ms;
   });
 
   h+='</div>'; 
-  h+='<div class="trace-quip" style="color:#666; margin-top:24px">"FastMCP overhead is a tiny blip on the radar before the LLM starts generating."</div>';
+  h+='<div class="trace-quip" style="color:#666; margin-top:36px">"FastMCP overhead is a tiny blip on the radar before the LLM starts generating."</div>';
   h+='</div>';
 
   el.innerHTML=h;
@@ -514,12 +518,12 @@ function renderSkyline(cid,items,vals,pts){
   if(!maxVal)maxVal=0.1;
 
   var clusters = [
-    {x: 140, y: 170, count: 1},
-    {x: 400, y: 170, count: 5},
-    {x: 660, y: 170, count: 10}
+    {x: 140, y: 140, count: 1},
+    {x: 400, y: 140, count: 5},
+    {x: 660, y: 140, count: 10}
   ];
 
-  var s='<svg viewBox="0 0 '+W+' '+H+'" xmlns="http://www.w3.org/2000/svg" style="max-height:360px">';
+  var s='<svg viewBox="0 0 '+W+' '+H+'" xmlns="http://www.w3.org/2000/svg" style="max-height:360px; width:100%; height:auto">';
   
   s+='<g opacity="0.05">';
   for(var gx=0;gx<W;gx+=40) s+='<line x1="'+gx+'" y1="0" x2="'+gx+'" y2="'+H+'" stroke="white" stroke-width="1"/>';
@@ -531,7 +535,7 @@ function renderSkyline(cid,items,vals,pts){
     var v=vals[b.key]||0;
     var f=fmtTime(v);
     
-    var groupS = '<g class="hub-cluster" style="opacity:0; transform-origin:'+c.x+'px '+c.y+'px; transform:scale(0.8); transition:all 1s ease-out '+ (i*0.4) +'s">';
+    var groupS = '<g class="hub-cluster" style="opacity:0; transform-origin:'+c.x+'px '+c.y+'px; transform:translateY(20px); transition:all 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) '+ (i*0.2) +'s">';
     
     if (c.count > 1) {
       for(var j=0; j<c.count; j++){
@@ -541,27 +545,27 @@ function renderSkyline(cid,items,vals,pts){
         var nodeY = c.y + Math.sin(angle) * r;
         
         groupS+='<line x1="'+c.x+'" y1="'+c.y+'" x2="'+nodeX+'" y2="'+nodeY+'" stroke="rgba(167,139,250,0.4)" stroke-width="2"/>';
-        groupS+='<circle cx="'+nodeX+'" cy="'+nodeY+'" r="8" fill="#1a0a3a" stroke="#8b5cf6" stroke-width="2"/>';
-        groupS+='<text x="'+nodeX+'" y="'+(nodeY+3)+'" text-anchor="middle" font-size="8">🚀</text>';
+        groupS+='<circle cx="'+nodeX+'" cy="'+nodeY+'" r="10" fill="#1a0a3a" stroke="#8b5cf6" stroke-width="2"/>';
+        groupS+='<text x="'+nodeX+'" y="'+(nodeY+4)+'" text-anchor="middle" font-size="10">🚀</text>';
       }
     }
     
-    groupS+='<circle cx="'+c.x+'" cy="'+c.y+'" r="22" fill="#1a0a3a" stroke="#a78bfa" stroke-width="3"/>';
-    groupS+='<text x="'+c.x+'" y="'+(c.y+7)+'" text-anchor="middle" font-size="20">🔌</text>';
+    groupS+='<circle cx="'+c.x+'" cy="'+c.y+'" r="24" fill="#1a0a3a" stroke="#a78bfa" stroke-width="3"/>';
+    groupS+='<text x="'+c.x+'" y="'+(c.y+8)+'" text-anchor="middle" font-size="22">🔌</text>';
 
-    groupS+='<rect x="'+(c.x-45)+'" y="'+(c.y+85)+'" width="90" height="40" rx="6" fill="#12062e" stroke="rgba(167,139,250,0.3)" stroke-width="1"/>';
-    groupS+='<text x="'+c.x+'" y="'+(c.y+104)+'" text-anchor="middle" font-family="SF Mono,Fira Code,monospace" font-size="16" font-weight="800" fill="white">'+f.v+'</text>';
-    groupS+='<text x="'+c.x+'" y="'+(c.y+118)+'" text-anchor="middle" font-family="SF Mono,Fira Code,monospace" font-size="10" fill="white" opacity="0.4">'+f.u+'</text>';
-    groupS+='<text x="'+c.x+'" y="'+(c.y+140)+'" text-anchor="middle" font-size="11" font-weight="700" fill="rgba(167,139,250,0.7)">'+b.label.toUpperCase()+'</text>';
+    groupS+='<rect x="'+(c.x-45)+'" y="'+(c.y+90)+'" width="90" height="40" rx="6" fill="#12062e" stroke="rgba(167,139,250,0.3)" stroke-width="1"/>';
+    groupS+='<text x="'+c.x+'" y="'+(c.y+109)+'" text-anchor="middle" font-family="SF Mono,Fira Code,monospace" font-size="16" font-weight="800" fill="white">'+f.v+'</text>';
+    groupS+='<text x="'+c.x+'" y="'+(c.y+123)+'" text-anchor="middle" font-family="SF Mono,Fira Code,monospace" font-size="10" fill="white" opacity="0.4">'+f.u+'</text>';
+    groupS+='<text x="'+c.x+'" y="'+(c.y+145)+'" text-anchor="middle" font-size="11" font-weight="700" fill="rgba(167,139,250,0.7)">'+b.label.toUpperCase()+'</text>';
 
-    var sc=sparkCoords(pts[b.key],c.x-30,c.y+150,60,10);
+    var sc=sparkCoords(pts[b.key],c.x-30,c.y+155,60,10);
     if(sc)groupS+='<polyline points="'+sc+'" fill="none" stroke="rgba(167,139,250,0.4)" stroke-width="1.5"/>';
 
     groupS+='</g>';
     s += groupS;
   });
 
-  s+='<text x="400" y="'+H+'" text-anchor="middle" font-size="12" font-style="italic" fill="rgba(255,255,255,0.2)">"Composition scales effortlessly. Add servers, connect tools, measure latency."</text>';
+  s+='<text x="400" y="320" text-anchor="middle" font-size="12" font-style="italic" fill="rgba(255,255,255,0.2)">"Composition scales effortlessly. Add servers, connect tools, measure latency."</text>';
   s+='</svg>';
 
   var el = document.getElementById(cid);
@@ -572,7 +576,7 @@ function renderSkyline(cid,items,vals,pts){
     entries.forEach(function(e){
       if(e.isIntersecting){
         e.target.style.opacity='1';
-        e.target.style.transform='scale(1)';
+        e.target.style.transform='translateY(0)';
         obs.unobserve(e.target);
       }
     });
@@ -584,64 +588,33 @@ function renderSkyline(cid,items,vals,pts){
    VIZ 5 — The Pipe (Stdio)
    ══════════════════════════════════════════════════════ */
 function renderPipe(cid,vals,pts){
-  var startup=vals.test_stdio_startup_time||0;
-  var roundTrip=vals.test_stdio_tool_call_latency||0;
+  var el = document.getElementById(cid);
+  var s = '';
   
-  var W=800,H=260;
-  var s='<svg viewBox="0 0 '+W+' '+H+'" xmlns="http://www.w3.org/2000/svg" style="max-height:280px">';
-
-  var midX = 400;
-
-  s+='<g class="build-side">';
-  s+='<rect x="60" y="40" width="280" height="130" rx="12" fill="#92400e" opacity="0.1" stroke="#b45309" stroke-width="2" stroke-dasharray="8 4"/>';
+  var keys = Object.keys(vals).filter(function(k){ return k.startsWith('test_'); }).sort();
   
-  s+='<line x1="80" y1="160" x2="320" y2="160" stroke="#b45309" stroke-width="2" opacity="0.5"/>';
-  s+='<line x1="100" y1="160" x2="100" y2="70" stroke="#b45309" stroke-width="2" opacity="0.5"/>';
-  s+='<line x1="150" y1="160" x2="150" y2="70" stroke="#b45309" stroke-width="2" opacity="0.5"/>';
-  s+='<line x1="200" y1="160" x2="200" y2="70" stroke="#b45309" stroke-width="2" opacity="0.5"/>';
-  s+='<line x1="250" y1="160" x2="250" y2="70" stroke="#b45309" stroke-width="2" opacity="0.5"/>';
-  s+='<line x1="300" y1="160" x2="300" y2="70" stroke="#b45309" stroke-width="2" opacity="0.5"/>';
-  s+='<line x1="100" y1="160" x2="150" y2="115" stroke="#b45309" stroke-width="1" opacity="0.3"/>';
-  s+='<line x1="150" y1="160" x2="200" y2="115" stroke="#b45309" stroke-width="1" opacity="0.3"/>';
-  s+='<line x1="200" y1="160" x2="250" y2="115" stroke="#b45309" stroke-width="1" opacity="0.3"/>';
-  s+='<line x1="250" y1="160" x2="300" y2="115" stroke="#b45309" stroke-width="1" opacity="0.3"/>';
-
-  s+='<text x="200" y="115" text-anchor="middle" font-size="40">🏗️</text>';
+  keys.forEach(function(k){
+     var name = clean(k);
+     s += '<a href="benchmark.html?metric='+k+'" style="display:inline-flex; align-items:center; gap:8px; background:rgba(0,0,0,0.03); padding:10px 16px; border-radius:8px; font-size:0.9rem; font-weight:600; color:#1a1a2e; border:1px solid rgba(0,0,0,0.1); box-shadow:0 1px 2px rgba(0,0,0,0.05); text-decoration:none; transition:all 0.2s">';
+     s += '<span>'+name+'</span>';
+     
+     var sparkPts = pts[k];
+     if(sparkPts && sparkPts.length >= 2) {
+       var svgW=30,svgH=10;
+       var vs=sparkPts.map(function(p){return p.value});
+       var mn=Math.min.apply(null,vs),mx=Math.max.apply(null,vs),rng=mx-mn||1;
+       var coords=vs.map(function(vv,ii){
+         var x=(ii/(vs.length-1))*svgW;
+         var y=(1-(vv-mn)/rng)*svgH;
+         return x.toFixed(1)+','+y.toFixed(1);
+       }).join(' ');
+       s += '<svg viewBox="0 0 '+svgW+' '+svgH+'" style="width:30px; height:10px; margin-left:4px"><polyline points="'+coords+'" fill="none" stroke="#16a34a" stroke-width="1.5"/></svg>';
+     }
+     
+     s += '<span style="color:#16a34a">&rarr;</span></a>';
+  });
   
-  var fs=fmtTime(startup);
-  s+='<rect x="140" y="180" width="120" height="30" rx="15" fill="#78350f"/>';
-  s+='<text x="200" y="200" text-anchor="middle" font-family="SF Mono,Fira Code,monospace" font-size="16" font-weight="800" fill="#fef3c7">'+fs.v+'<tspan font-size="10" opacity="0.7"> '+fs.u+'</tspan></text>';
-  s+='<text x="200" y="30" text-anchor="middle" font-size="12" font-weight="700" fill="#b45309" letter-spacing="0.1em">COLD START (BUILT)</text>';
-  s+='</g>';
-
-  s+='<line x1="400" y1="20" x2="400" y2="220" stroke="rgba(0,0,0,0.1)" stroke-width="2" stroke-dasharray="5 5"/>';
-  s+='<circle cx="400" cy="120" r="14" fill="#fffbf0" stroke="rgba(0,0,0,0.1)" stroke-width="2"/>';
-  s+='<text x="400" y="124" text-anchor="middle" font-size="10" font-weight="bold" fill="rgba(0,0,0,0.3)">VS</text>';
-
-  s+='<g class="use-side">';
-  s+='<rect x="460" y="40" width="280" height="130" rx="12" fill="#166534" opacity="0.1" stroke="#15803d" stroke-width="2"/>';
-  
-  s+='<line x1="480" y1="105" x2="740" y2="105" stroke="#15803d" stroke-width="4" stroke-linecap="round" opacity="0.2"/>';
-  for(var di=0;di<3;di++){
-    var delay=(di*0.6).toFixed(1);
-    s+='<circle cx="480" cy="105" r="6" fill="#22c55e">';
-    s+='<animate attributeName="cx" from="480" to="740" dur="1.5s" begin="'+delay+'s" repeatCount="indefinite"/>';
-    s+='<animate attributeName="opacity" values="0;1;1;0" keyTimes="0;0.1;0.9;1" dur="1.5s" begin="'+delay+'s" repeatCount="indefinite"/>';
-    s+='</circle>';
-  }
-  s+='<text x="600" y="90" text-anchor="middle" font-size="32">🚀</text>';
-  s+='<text x="600" y="140" text-anchor="middle" font-size="32">⚡</text>';
-  
-  var fr=fmtTime(roundTrip);
-  s+='<rect x="540" y="180" width="120" height="30" rx="15" fill="#14532d"/>';
-  s+='<text x="600" y="200" text-anchor="middle" font-family="SF Mono,Fira Code,monospace" font-size="16" font-weight="800" fill="#dcfce7">'+fr.v+'<tspan font-size="10" opacity="0.7"> '+fr.u+'</tspan></text>';
-  s+='<text x="600" y="30" text-anchor="middle" font-size="12" font-weight="700" fill="#15803d" letter-spacing="0.1em">ROUND TRIP (USED)</text>';
-  s+='</g>';
-
-  s+='<text x="400" y="245" text-anchor="middle" font-size="11" font-style="italic" fill="rgba(0,0,0,0.3)">"FastMCP overhead: ~5ms. The rest is Python."</text>';
-  s+='</svg>';
-  
-  document.getElementById(cid).innerHTML=s;
+  el.innerHTML = s;
 }
 
 /* ══════════════════════════════════════════════════════
@@ -673,7 +646,7 @@ var CHAPTERS=[
   },
   {
     el:'stdio',
-    narr:function(v){return 'Now the real-world transport: <code>stdio</code>. Unlike the in-memory benchmarks above, this spawns a fresh Python process. Cold start (Python + dependencies + MCP handshake): <span class="num">'+fS(v.test_stdio_startup_time)+'</span>. Once warmed up, a tool call through the pipe: <span class="num">'+fS(v.test_stdio_tool_call_latency)+'</span>. That\u2019s dominated by process overhead \u2014 <span class="fast">FastMCP adds only ~5ms.</span>'},
+    narr:function(v){return ''},
     render:function(vals,pts){renderPipe('viz-stdio',vals,pts)}
   }
 ];
