@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>FastMCP Benchmarks</title>
+  <title>FastMCP · Performance</title>
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
     html{scroll-snap-type:y mandatory;scroll-behavior:smooth}
@@ -35,10 +35,10 @@
     .viz{margin-top:32px;width:100%}
     .viz svg{width:100%;height:auto;display:block}
 
-    .streak{position:absolute;font-size:1.2rem;opacity:0;animation:streak linear infinite}
-    @keyframes streak{0%{transform:translateX(-60px);opacity:0}10%{opacity:.7}90%{opacity:.7}100%{transform:translateX(calc(100vw + 60px));opacity:0}}
-    .twinkle{position:absolute;animation:twinkle ease-in-out infinite alternate}
-    @keyframes twinkle{0%{opacity:.1;transform:scale(1)}100%{opacity:.7;transform:scale(1.4)}}
+    .streak{position:absolute;font-size:1.2rem;opacity:0;animation:streak linear infinite;z-index:1;pointer-events:none}
+    @keyframes streak{0%{transform:translateX(-60px);opacity:0}10%{opacity:.45}90%{opacity:.45}100%{transform:translateX(calc(100vw + 60px));opacity:0}}
+    .twinkle{position:absolute;animation:twinkle ease-in-out infinite alternate;z-index:1;pointer-events:none}
+    @keyframes twinkle{0%{opacity:.1;transform:scale(1)}100%{opacity:.4;transform:scale(1.2)}}
     .fade-in{opacity:0;transform:translateY(30px);transition:opacity .7s ease,transform .7s ease}
     .fade-in.visible{opacity:1;transform:translateY(0)}
     .scroll-prompt{position:absolute;bottom:32px;left:50%;transform:translateX(-50%);font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.2);animation:bob 2s ease-in-out infinite}
@@ -215,13 +215,15 @@ function addStreaks(){
   var hero=document.getElementById('hero');
   var chars=['\u26a1','\u26a1','\u26a1','\u2728','\u26a1'];
   var colors=['#fbbf24','#a78bfa','#58a6ff','#fbbf24','#3fb950'];
-  for(var i=0;i<18;i++){
+  for(var i=0;i<10;i++){
     var el=document.createElement('span');el.className='streak';
     el.textContent=chars[i%chars.length];el.style.color=colors[i%colors.length];
-    el.style.top=(8+Math.random()*84)+'%';
-    el.style.animationDuration=(2.2+Math.random()*2.8)+'s';
-    el.style.animationDelay=(Math.random()*4)+'s';
-    el.style.fontSize=(0.8+Math.random()*1)+'rem';
+    /* Keep streaks in top/bottom bands, away from center text */
+    var band=Math.random()>0.5?(3+Math.random()*18):(78+Math.random()*18);
+    el.style.top=band+'%';
+    el.style.animationDuration=(3+Math.random()*3)+'s';
+    el.style.animationDelay=(Math.random()*5)+'s';
+    el.style.fontSize=(0.6+Math.random()*0.6)+'rem';
     hero.appendChild(el);
   }
 }
@@ -229,11 +231,13 @@ function addTwinkles(){
   var ch=document.getElementById('mount');
   var chars=['\u2726','\u2728','\u2726','\u2734'];
   var colors=['rgba(167,139,250,0.6)','rgba(255,255,255,0.3)','rgba(251,191,36,0.5)','rgba(255,255,255,0.2)'];
-  for(var i=0;i<20;i++){
+  for(var i=0;i<12;i++){
     var el=document.createElement('span');el.className='twinkle';
     el.textContent=chars[i%chars.length];el.style.color=colors[i%colors.length];
-    el.style.left=(3+Math.random()*94)+'%';el.style.top=(3+Math.random()*94)+'%';
-    el.style.fontSize=(0.5+Math.random()*0.8)+'rem';
+    /* Keep twinkles in peripheral areas, avoid center text area */
+    var lx=Math.random()*100,ly=Math.random()>0.5?(2+Math.random()*20):(75+Math.random()*22);
+    el.style.left=lx+'%';el.style.top=ly+'%';
+    el.style.fontSize=(0.4+Math.random()*0.5)+'rem';
     el.style.animationDuration=(1.5+Math.random()*2)+'s';
     el.style.animationDelay=(Math.random()*3)+'s';
     ch.appendChild(el);
@@ -361,20 +365,25 @@ function renderPodium(cid,items,vals,pts){
 
     s+='<rect x="'+(px-podiumW/2)+'" y="'+py+'" width="'+podiumW+'" height="'+ph+'" rx="6" fill="'+podiumColors[idx]+'" opacity="0.85"/>';
     s+='<rect x="'+(px-podiumW/2)+'" y="'+py+'" width="'+podiumW+'" height="6" rx="3" fill="white" opacity="0.15"/>';
-    s+='<text x="'+px+'" y="'+(ground-16)+'" text-anchor="middle" font-size="42" font-weight="900" fill="'+podiumDark[idx]+'" opacity="0.2">'+(idx+1)+'</text>';
-    s+='<text x="'+px+'" y="'+(py-6)+'" text-anchor="middle" font-size="32">'+medal[idx]+'</text>';
-    s+='<text x="'+px+'" y="'+(py-48)+'" text-anchor="middle" font-size="10" font-weight="700" fill="rgba(255,255,255,0.45)">'+bm.label.toUpperCase()+'</text>';
+    /* Ghosted rank number — inside podium body, low and centered */
+    s+='<text x="'+px+'" y="'+(ground-12)+'" text-anchor="middle" font-size="38" font-weight="900" fill="'+podiumDark[idx]+'" opacity="0.15">'+(idx+1)+'</text>';
+    /* Medal above podium */
+    s+='<text x="'+px+'" y="'+(py-10)+'" text-anchor="middle" font-size="28">'+medal[idx]+'</text>';
+    /* Label above medal */
+    s+='<text x="'+px+'" y="'+(py-52)+'" text-anchor="middle" font-size="10" font-weight="700" fill="rgba(255,255,255,0.45)">'+bm.label.toUpperCase()+'</text>';
     var f=fmtTime(vals[bm.key]);
-    s+='<text x="'+px+'" y="'+(py-30)+'" text-anchor="middle" font-size="18" font-weight="800" fill="white" font-family="SF Mono,Fira Code,monospace">'+f.v+'<tspan font-size="10" opacity="0.5"> '+f.u+'</tspan></text>';
-    var sc=sparkCoords(pts[bm.key],px-35,py+14,70,22);
-    if(sc)s+='<polyline points="'+sc+'" fill="none" stroke="'+podiumDark[idx]+'" stroke-width="1.5" opacity="0.25"/>';
+    /* Time value between label and medal */
+    s+='<text x="'+px+'" y="'+(py-34)+'" text-anchor="middle" font-size="18" font-weight="800" fill="white" font-family="SF Mono,Fira Code,monospace">'+f.v+'<tspan font-size="10" opacity="0.5"> '+f.u+'</tspan></text>';
+    /* Sparkline inside podium body, well below the top edge */
+    var sc=sparkCoords(pts[bm.key],px-35,py+20,70,18);
+    if(sc)s+='<polyline points="'+sc+'" fill="none" stroke="'+podiumDark[idx]+'" stroke-width="1.5" opacity="0.2"/>';
   }
 
   if(sorted.length>3){
     var bm4=sorted[3],f4=fmtTime(vals[bm4.key]);
-    s+='<text x="700" y="'+(ground-6)+'" text-anchor="middle" font-size="24">\ud83d\ude05</text>';
-    s+='<text x="700" y="'+(ground-36)+'" text-anchor="middle" font-size="9" font-weight="700" fill="rgba(255,255,255,0.35)">'+bm4.label.toUpperCase()+'</text>';
-    s+='<text x="700" y="'+(ground-20)+'" text-anchor="middle" font-size="13" font-weight="700" fill="rgba(255,255,255,0.5)" font-family="SF Mono,Fira Code,monospace">'+f4.v+' '+f4.u+'</text>';
+    s+='<text x="680" y="'+(ground-6)+'" text-anchor="middle" font-size="22">\ud83d\ude05</text>';
+    s+='<text x="680" y="'+(ground-38)+'" text-anchor="middle" font-size="9" font-weight="700" fill="rgba(255,255,255,0.35)">'+bm4.label.toUpperCase()+'</text>';
+    s+='<text x="680" y="'+(ground-22)+'" text-anchor="middle" font-size="13" font-weight="700" fill="rgba(255,255,255,0.5)" font-family="SF Mono,Fira Code,monospace">'+f4.v+' '+f4.u+'</text>';
   }
 
   s+='<defs><linearGradient id="podG" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="white"/><stop offset="100%" stop-color="transparent"/></linearGradient></defs>';
