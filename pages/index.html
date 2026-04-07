@@ -6,12 +6,12 @@
   <title>FastMCP · Performance</title>
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
-    html { scroll-snap-type: y mandatory; scroll-behavior: smooth; overflow-y: scroll; height: 100%; }
-    body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: #e6edf3; line-height: 1.6; overflow-x: hidden; width: 100%; min-width: 0; height: 100%; }
+    html{scroll-snap-type:y mandatory;scroll-behavior:smooth;width:100%;overflow-x:hidden}
+    body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:#e6edf3;line-height:1.6;overflow-x:hidden;width:100%;min-width:0;margin:0;padding:0}
     a { color: #58a6ff; text-decoration: none; } a:hover { text-decoration: underline; }
     code { background: rgba(255,255,255,0.08); padding: 2px 8px; border-radius: 6px; font-size: 0.9em; word-break: break-word; }
 
-    .ch { height: 100dvh; scroll-snap-align: start; scroll-snap-stop: always; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 80px 24px; position: relative; overflow: hidden; width: 100%; max-width: 100vw; }
+    .ch{min-height:100vh;scroll-snap-align:start;scroll-snap-stop:always;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:80px 24px;position:relative;overflow:hidden;width:100%;max-width:100vw}
     
     .flying-f { position: absolute; font-weight: 900; font-style: italic; opacity: 0; animation: flyF linear infinite; z-index: 1; pointer-events: none; }
     @keyframes flyF {
@@ -358,49 +358,53 @@ function renderRace(cid,vals,pts){
    Shows that server creation time scales linearly with tools
    ══════════════════════════════════════════════════════ */
 function renderPodium(cid,items,vals,pts){
-  var W=800,H=340;
-  
+  var W=800,H=360;
   var s='<svg viewBox="0 0 '+W+' '+H+'" xmlns="http://www.w3.org/2000/svg" style="max-height:360px; width:100%; height:auto">';
   
-  s+='<line x1="400" y1="20" x2="400" y2="300" stroke="rgba(255,255,255,0.1)" stroke-width="2" stroke-dasharray="4 4"/>';
+  // Columns
+  s+='<rect x="40" y="20" width="320" height="300" rx="12" fill="rgba(245,158,11,0.05)" stroke="rgba(245,158,11,0.2)" stroke-width="2"/>';
+  s+='<text x="200" y="50" text-anchor="middle" font-size="14" font-weight="800" fill="#f59e0b" letter-spacing="0.1em">THINKING 🧠</text>';
+  
+  s+='<rect x="440" y="20" width="320" height="300" rx="12" fill="rgba(63,185,80,0.05)" stroke="rgba(63,185,80,0.2)" stroke-width="2"/>';
+  s+='<text x="600" y="50" text-anchor="middle" font-size="14" font-weight="800" fill="#3fb950" letter-spacing="0.1em">DOING ⚡</text>';
 
-  var events = [
-    { label: "Deciding to build a server", val: "3 months, 45 beers", isJoke: true, emoji: "🍻" },
-    { label: "Creating the server object", key: "test_server_create_empty", emoji: "⚡" },
-    { label: "Deciding which 10 tools to add", val: "Existential agony", isJoke: true, emoji: "🤯" },
-    { label: "Adding 10 tools", key: "test_server_create_10_tools", emoji: "🛠️" },
-    { label: "Agreeing on an API spec", val: "4 endless meetings", isJoke: true, emoji: "📅" },
-    { label: "Adding 100 tools", key: "test_server_create_100_tools", emoji: "🚀" }
+  var pairs = [
+    { 
+      think: { label: "Deciding to build a server", val: "3 months, 45 beers" },
+      do: { label: "Creating the server object", key: "test_server_create_empty" }
+    },
+    { 
+      think: { label: "Deciding which 10 tools to add", val: "Existential agony" },
+      do: { label: "Adding 10 tools", key: "test_server_create_10_tools" }
+    },
+    { 
+      think: { label: "Agreeing on an API spec", val: "4 endless meetings" },
+      do: { label: "Adding 100 tools", key: "test_server_create_100_tools" }
+    }
   ];
 
-  events.forEach(function(ev, i){
-    var y = 40 + i * 48;
-    var isLeft = i % 2 === 0;
+  pairs.forEach(function(pair, i){
+    var y = 100 + i * 80;
     
-    var dotColor = ev.isJoke ? "#f59e0b" : "#3fb950";
-    s+='<circle cx="400" cy="'+y+'" r="8" fill="#0d1117" stroke="'+dotColor+'" stroke-width="3"/>';
+    // Left side (Thinking)
+    s+='<text x="200" y="'+y+'" text-anchor="middle" font-size="13" font-weight="700" fill="rgba(255,255,255,0.9)">'+pair.think.label+'</text>';
+    s+='<text x="200" y="'+(y+20)+'" text-anchor="middle" font-size="13" font-style="italic" fill="rgba(255,255,255,0.5)">'+pair.think.val+'</text>';
     
-    var valStr = ev.isJoke ? ev.val : fS(vals[ev.key]||0);
-    var valColor = ev.isJoke ? "rgba(255,255,255,0.4)" : "#fff";
-    var valFont = ev.isJoke ? "italic 13px -apple-system, sans-serif" : "800 16px 'SF Mono', 'Fira Code', monospace";
+    // Arrow
+    s+='<line x1="360" y1="'+(y+5)+'" x2="440" y2="'+(y+5)+'" stroke="rgba(255,255,255,0.2)" stroke-width="2" stroke-dasharray="4 4" marker-end="url(#arrow)"/>';
     
-    var align = isLeft ? "end" : "start";
-    var textX = isLeft ? 380 : 420;
-    var valX = isLeft ? 380 : 420;
+    // Right side (Doing)
+    var valStr = fS(vals[pair.do.key]||0);
+    s+='<text x="600" y="'+y+'" text-anchor="middle" font-size="13" font-weight="700" fill="rgba(255,255,255,0.9)">'+pair.do.label+'</text>';
+    s+='<text x="600" y="'+(y+22)+'" text-anchor="middle" font-family="SF Mono,Fira Code,monospace" font-size="18" font-weight="800" fill="#fff">'+valStr+'</text>';
     
-    s+='<text x="'+textX+'" y="'+(y-6)+'" text-anchor="'+align+'" font-size="13" font-weight="700" fill="rgba(255,255,255,0.9)">'+ev.label+'</text>';
-    s+='<text x="'+valX+'" y="'+(y+12)+'" text-anchor="'+align+'" style="font:'+valFont+'; fill:'+valColor+'">'+valStr+'</text>';
-
-    var emojiX = isLeft ? 435 : 365;
-    s+='<text x="'+emojiX+'" y="'+(y+6)+'" text-anchor="middle" font-size="18">'+ev.emoji+'</text>';
-    
-    if(!ev.isJoke && pts[ev.key]) {
-      var sc = sparkCoords(pts[ev.key], isLeft ? 260 : 420, y+16, 60, 10);
-      if(sc) s+='<polyline points="'+sc+'" fill="none" stroke="rgba(63,185,80,0.3)" stroke-width="1.5"/>';
+    if(pts[pair.do.key]) {
+      var sc = sparkCoords(pts[pair.do.key], 560, y+30, 80, 15);
+      if(sc) s+='<polyline points="'+sc+'" fill="none" stroke="rgba(63,185,80,0.4)" stroke-width="1.5"/>';
     }
   });
 
-  s+='<text x="400" y="330" text-anchor="middle" font-size="12" font-style="italic" fill="rgba(255,255,255,0.2)">"The hard part is deciding what to build. FastMCP makes building it instant."</text>';
+  s+='<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="rgba(255,255,255,0.2)"/></marker></defs>';
 
   s+='</svg>';
   document.getElementById(cid).innerHTML = s;
@@ -412,46 +416,45 @@ function renderPodium(cid,items,vals,pts){
    ══════════════════════════════════════════════════════ */
 function renderTrace(cid,items,vals,pts){
   var spans=[
-    {key:'test_list_tools_10',emoji:'📋',label:'mcp.list_tools',color:'#6366f1',note:'10 tools'},
-    {key:'test_list_tools_100',emoji:'📚',label:'mcp.list_tools',color:'#8b5cf6',note:'100 tools'},
-    {key:'test_call_tool_10',emoji:'🎯',label:'mcp.call_tool',color:'#06b6d4',note:'Execute and return'},
-    {key:'test_call_tool_burst_10',emoji:'🚀',label:'mcp.call_tool',color:'#f59e0b',note:'Burst ×10'},
+    {key:'test_list_tools_10',emoji:'📋',label:'mcp.list_tools',color:'#6366f1',note:'List 10 tools'},
+    {key:'test_call_tool_10',emoji:'🎯',label:'mcp.call_tool',color:'#06b6d4',note:'Call tool 1'},
+    {key:'test_call_tool_10',emoji:'🎯',label:'mcp.call_tool',color:'#06b6d4',note:'Call tool 2'},
+    {key:'test_call_tool_10',emoji:'🎯',label:'mcp.call_tool',color:'#06b6d4',note:'Call tool 3'},
+    {key:'test_call_tool_10',emoji:'🎯',label:'mcp.call_tool',color:'#06b6d4',note:'Call tool 4'},
     {key:'llm_ref', emoji:'🤖', label:'llm.generate', color:'linear-gradient(90deg,#dc2626 0%,#991b1b 100%)', note:'Average Claude/GPT response time (~5s)', isLlm:true}
   ];
 
   var el=document.getElementById(cid);
   var h='<style>.trace-row:hover .spark-popover{opacity:1; transform:translateY(0); pointer-events:auto}</style>';
-  h+='<div class="trace-box" style="background:#1e1e1e; color:#d4d4d4; border:1px solid #333; box-shadow:0 10px 30px rgba(0,0,0,0.5); font-family:-apple-system,BlinkMacSystemFont,sans-serif">';
+  h+='<div class="trace-box" style="background:#1e1e1e; color:#d4d4d4; border:1px solid #333; box-shadow:0 10px 30px rgba(0,0,0,0.5); font-family:-apple-system,BlinkMacSystemFont,sans-serif; padding-bottom:10px">';
   h+='<div class="trace-header" style="border-bottom:1px solid #333; margin-bottom:12px; padding-bottom:12px">';
   h+='<div class="dot" style="background:#ed6a5e"></div><div class="dot" style="background:#f4bf4f"></div><div class="dot" style="background:#61c554"></div>';
   h+='<span class="title" style="color:#d4d4d4; font-weight:600">🔍 Trace Explorer: Tool Execution vs LLM</span>';
   h+='<span class="meta" style="color:#888; font-family:monospace; margin-left:auto">trace_id: 8f2b1a9c</span>';
   h+='</div>';
-  h+='<div style="position:relative">';
+  h+='<div style="position:relative; margin-bottom: 24px">';
 
   var totalTimeMs = 5000;
-  var cumTime = 0;
+  var cumVisualPct = 0;
 
   spans.forEach(function(sp,i){
     var isLlm = sp.isLlm;
     var v = isLlm ? 5.0 : (vals[sp.key]||0);
     var ms = v * 1000;
     
-    var pct = Math.max(0.5, (ms / totalTimeMs) * 100);
-    var leftPct = (cumTime / totalTimeMs) * 100;
-    
-    if(isLlm) {
-        pct = 98 - leftPct;
-    }
+    // Minimum visual width so it's visible
+    var rawPct = (ms / totalTimeMs) * 100;
+    var pct = isLlm ? (100 - cumVisualPct) : Math.max(1.5, rawPct);
+    var leftPct = cumVisualPct;
     
     var f = isLlm ? {v:'~5.0', u:'s'} : fmtTime(v);
     var sparkPts = !isLlm ? pts[sp.key] : null;
 
-    h+='<div class="trace-row" style="margin-bottom:8px; z-index:1; position:relative">';
-    h+='<div class="trace-label" style="width:150px; color:#d4d4d4; font-size:0.8rem; font-family:SF Mono,Fira Code,monospace">';
+    h+='<div class="trace-row" style="margin-bottom:12px; z-index:1; position:relative">';
+    h+='<div class="trace-label" style="width:160px; color:#d4d4d4; font-size:0.75rem; font-family:SF Mono,Fira Code,monospace">';
     h+='<span class="emoji" style="margin-right:6px">'+sp.emoji+'</span><span>'+sp.label+'</span></div>';
     
-    h+='<div class="trace-lane" style="height:28px; display:flex; align-items:center; position:relative; flex:1">';
+    h+='<div class="trace-lane" style="height:24px; display:flex; align-items:center; position:relative; flex:1">';
     
     h+='<div class="trace-bar" style="left:'+leftPct+'%; height:20px; width:'+pct+'%; background:'+sp.color+'; border-radius:4px; box-shadow:0 2px 5px rgba(0,0,0,0.2); position:absolute"></div>';
 
@@ -470,27 +473,29 @@ function renderTrace(cid,items,vals,pts){
         return x.toFixed(1)+','+y.toFixed(1);
       }).join(' ');
       
-      h+='<div class="spark-popover" style="position:absolute; left:'+leftPct+'%; top:-40px; background:#2d2d2d; padding:4px 8px; border-radius:6px; border:1px solid #444; opacity:0; transform:translateY(5px); transition:all 0.2s; pointer-events:none; z-index:10; display:flex; flex-direction:column; align-items:center">';
-      h+='<span style="font-size:0.6rem; color:#aaa; margin-bottom:2px">History</span>';
+      h+='<div class="spark-popover" style="position:absolute; left:'+leftPct+'%; top:-45px; background:#2d2d2d; padding:6px 10px; border-radius:6px; border:1px solid #444; opacity:0; transform:translateY(5px); transition:all 0.2s; pointer-events:none; z-index:10; display:flex; flex-direction:column; align-items:center; box-shadow:0 4px 12px rgba(0,0,0,0.5)">';
+      h+='<span style="font-size:0.65rem; color:#ccc; margin-bottom:4px; font-weight:600">History</span>';
       h+='<svg viewBox="0 0 '+svgW+' '+svgH+'" style="width:60px; height:18px"><polyline points="'+coords+'" fill="none" stroke="'+(isLlm?'#fff':sp.color)+'" stroke-width="2"/></svg>';
       h+='</div>';
     }
 
-    var numLeft = isLlm ? 50 : leftPct + pct + 1;
-    h+='<span style="position:absolute; left:'+numLeft+'%; color:#fff; text-shadow:0 1px 2px rgba(0,0,0,0.5); font-size:0.75rem; font-family:SF Mono,Fira Code,monospace; white-space:nowrap; z-index:3">'+f.v+' '+f.u+'</span>';
-
-    h+='</div>'; 
-    h+='</div>'; 
-
-    h+='<div style="margin-left:150px; margin-bottom:'+((i<spans.length-1)?14:0)+'px; font-size:0.7rem; color:#888; font-family:-apple-system,BlinkMacSystemFont,sans-serif; position:relative">';
-    h+='<span style="position:absolute; left:'+leftPct+'%">'+sp.note+'</span>';
+    var textLeft = isLlm ? (leftPct + pct/2 - 5) : (leftPct + pct + 1.5);
+    var tAlign = isLlm ? 'center' : 'left';
+    
+    // Add text inline
+    h+='<div style="position:absolute; left:'+textLeft+'%; width:100px; text-align:'+tAlign+'">';
+    h+='<span style="color:#fff; text-shadow:0 1px 2px rgba(0,0,0,0.8); font-size:0.75rem; font-family:SF Mono,Fira Code,monospace; font-weight:600; white-space:nowrap; z-index:3">'+f.v+' '+f.u+'</span>';
+    h+='<div style="font-size:0.65rem; color:#888; font-family:-apple-system,BlinkMacSystemFont,sans-serif; margin-top:2px">'+sp.note+'</div>';
     h+='</div>';
 
-    cumTime += ms;
+    h+='</div>'; 
+    h+='</div>'; 
+
+    cumVisualPct += pct;
   });
 
   h+='</div>'; 
-  h+='<div class="trace-quip" style="color:#666; margin-top:36px">"FastMCP overhead is a tiny blip on the radar before the LLM starts generating."</div>';
+  h+='<div class="trace-quip" style="color:#666; margin-top:24px; margin-bottom:12px">"FastMCP overhead is a tiny blip on the radar before the LLM starts generating."</div>';
   h+='</div>';
 
   el.innerHTML=h;
@@ -523,7 +528,7 @@ function renderSkyline(cid,items,vals,pts){
     {x: 660, y: 140, count: 10}
   ];
 
-  var s='<svg viewBox="0 0 '+W+' '+H+'" xmlns="http://www.w3.org/2000/svg" style="max-height:360px; width:100%; height:auto">';
+  var s='<svg viewBox="0 0 '+W+' '+H+'" xmlns="http://www.w3.org/2000/svg" style="width:100%; height:auto">';
   
   s+='<g opacity="0.05">';
   for(var gx=0;gx<W;gx+=40) s+='<line x1="'+gx+'" y1="0" x2="'+gx+'" y2="'+H+'" stroke="white" stroke-width="1"/>';
@@ -535,7 +540,8 @@ function renderSkyline(cid,items,vals,pts){
     var v=vals[b.key]||0;
     var f=fmtTime(v);
     
-    var groupS = '<g class="hub-cluster" style="opacity:0; transform-origin:'+c.x+'px '+c.y+'px; transform:translateY(20px); transition:all 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) '+ (i*0.2) +'s">';
+    // Fallback to static render if IntersectionObserver fails by not using opacity:0 initially
+    var groupS = '<g class="hub-cluster" style="transform-origin:'+c.x+'px '+c.y+'px; transition:all 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275)">';
     
     if (c.count > 1) {
       for(var j=0; j<c.count; j++){
@@ -558,8 +564,10 @@ function renderSkyline(cid,items,vals,pts){
     groupS+='<text x="'+c.x+'" y="'+(c.y+123)+'" text-anchor="middle" font-family="SF Mono,Fira Code,monospace" font-size="10" fill="white" opacity="0.4">'+f.u+'</text>';
     groupS+='<text x="'+c.x+'" y="'+(c.y+145)+'" text-anchor="middle" font-size="11" font-weight="700" fill="rgba(167,139,250,0.7)">'+b.label.toUpperCase()+'</text>';
 
-    var sc=sparkCoords(pts[b.key],c.x-30,c.y+155,60,10);
-    if(sc)groupS+='<polyline points="'+sc+'" fill="none" stroke="rgba(167,139,250,0.4)" stroke-width="1.5"/>';
+    if(pts[b.key]){
+      var sc=sparkCoords(pts[b.key],c.x-30,c.y+155,60,10);
+      if(sc)groupS+='<polyline points="'+sc+'" fill="none" stroke="rgba(167,139,250,0.4)" stroke-width="1.5"/>';
+    }
 
     groupS+='</g>';
     s += groupS;
@@ -570,18 +578,6 @@ function renderSkyline(cid,items,vals,pts){
 
   var el = document.getElementById(cid);
   el.innerHTML=s;
-
-  var clustersEl=el.querySelectorAll('.hub-cluster');
-  var obs=new IntersectionObserver(function(entries){
-    entries.forEach(function(e){
-      if(e.isIntersecting){
-        e.target.style.opacity='1';
-        e.target.style.transform='translateY(0)';
-        obs.unobserve(e.target);
-      }
-    });
-  },{threshold:0.1});
-  clustersEl.forEach(function(c){obs.observe(c)});
 }
 
 /* ══════════════════════════════════════════════════════
@@ -592,6 +588,11 @@ function renderPipe(cid,vals,pts){
   var s = '';
   
   var keys = Object.keys(vals).filter(function(k){ return k.startsWith('test_'); }).sort();
+  
+  if (keys.length === 0) {
+    el.innerHTML = '<div style="color:rgba(255,255,255,0.4); text-align:center; padding:20px">No test metrics found.</div>';
+    return;
+  }
   
   keys.forEach(function(k){
      var name = clean(k);
