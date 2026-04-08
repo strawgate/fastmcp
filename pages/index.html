@@ -4,324 +4,70 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>FastMCP · Performance</title>
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    html { scroll-snap-type: y mandatory; scroll-behavior: smooth; height: 100%; overflow-y: scroll; overflow-x: hidden; }
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: #e6edf3; line-height: 1.6; background: #0d1117; height: 100%; width: 100%; }
-    a { color: #58a6ff; text-decoration: none; } a:hover { text-decoration: underline; }
-    code { background: rgba(255,255,255,0.08); padding: 2px 8px; border-radius: 6px; font-size: 0.9em; }
-
-    .ch { height: 100vh; height: 100dvh; scroll-snap-align: start; scroll-snap-stop: always; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 24px; position: relative; overflow: hidden; width: 100%; }
-    .ch-inner { max-width: 960px; width: 100%; z-index: 2; position: relative; }
-
-    .ch-hero   { background: linear-gradient(180deg,#070b1e 0%,#0a1628 40%,#0d1f3c 100%); }
-    .ch-import { background: #fffbf0; color: #1a1a2e; }
-    .ch-server { background: #0d1117; }
-    .ch-calls  { background: #f0f7ff; color: #1a1a2e; }
-    .ch-mount  { background: #0a0e27; }
-    .ch-stdio  { background: #fffbf0; color: #1a1a2e; }
-    .ch-history{ background: #0d1117; }
-
-    .ch-tag { font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .2em; margin-bottom: 12px; }
-    .ch-heading { font-size: clamp(2.2rem, 5vw, 3.2rem); font-weight: 800; line-height: 1.1; margin-bottom: 20px; }
-    .ch-body { font-size: 1.15rem; line-height: 1.6; max-width: 720px; }
-    
-    .fade-in { opacity: 0; transform: translateY(30px); transition: all 0.8s cubic-bezier(0.2, 1, 0.3, 1); }
-    .fade-in.visible { opacity: 1; transform: translateY(0); }
-
-    .flying-f { position: absolute; font-weight: 900; font-style: italic; opacity: 0; animation: flyF linear infinite; z-index: 1; pointer-events: none; color: rgba(255,255,255,0.1); }
-    @keyframes flyF { 0% { transform: translateX(-100px) rotate(0deg); opacity: 0; } 10% { opacity: 0.3; } 90% { opacity: 0.3; } 100% { transform: translateX(calc(100vw + 100px)) rotate(360deg); opacity: 0; } }
-
-    #modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.9); display: none; align-items: center; justify-content: center; z-index: 1000; backdrop-filter: blur(10px); }
-    #modal-content { background: #161b22; width: 90%; max-width: 800px; padding: 40px; border-radius: 20px; border: 1px solid #333; position: relative; box-shadow: 0 30px 60px rgba(0,0,0,0.6); }
-    .close-modal { position: absolute; top: 20px; right: 25px; font-size: 32px; cursor: pointer; color: #666; transition: color 0.2s; } .close-modal:hover { color: #fff; }
-
-    .bench-btn { display: inline-flex; align-items: center; gap: 10px; background: #fff; padding: 14px 24px; border-radius: 10px; font-size: 0.95rem; font-weight: 700; color: #1a1a2e; border: 1px solid rgba(0,0,0,0.1); cursor: pointer; transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
-    .bench-btn:hover { transform: translateY(-3px); box-shadow: 0 10px 20px rgba(0,0,0,0.15); border-color: #3fb950; }
-
-    .run-table-wrap { width: 100%; overflow-x: auto; margin-top: 40px; border-radius: 12px; border: 1px solid #222; }
-    .run-table { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
-    .run-table th { text-align: left; padding: 16px; background: #111; color: #666; font-weight: 600; text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.1em; }
-    .run-table td { padding: 16px; border-bottom: 1px solid #222; }
-    .run-row:hover { background: rgba(255,255,255,0.03); cursor: pointer; }
-
-    .spark-popover { position: absolute; bottom: 100%; left: 0; background: #2d2d2d; border: 1px solid #444; padding: 12px; border-radius: 10px; box-shadow: 0 15px 35px rgba(0,0,0,0.6); opacity: 0; pointer-events: none; transition: all 0.2s ease; transform: translateY(10px); z-index: 100; }
-    .trace-row:hover .spark-popover { opacity: 1; transform: translateY(-8px); }
-
-    .scroll-prompt { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); color: rgba(255,255,255,0.3); font-size: 0.75rem; font-weight: 600; letter-spacing: 0.2em; text-transform: uppercase; animation: bob 2s infinite ease-in-out; pointer-events: none; }
-    @keyframes bob { 0%, 100% { transform: translateX(-50%) translateY(0); } 50% { transform: translateX(-50%) translateY(12px); } }
-  </style>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; background: #0d1117; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: #e6edf3; line-height: 1.6; background: #0d1117; width: 100%; }
+  .ch { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 80px 24px; position: relative; overflow: hidden; width: 100%; }
+  .ch-inner { max-width: 960px; width: 100%; z-index: 2; position: relative; }
+  .ch-hero   { background: linear-gradient(180deg,#070b1e 0%,#0a1628 40%,#0d1f3c 100%); }
+  .ch-import { background: #fffbf0; color: #1a1a2e; }
+  .ch-server { background: #0d1117; }
+  .ch-calls  { background: #f0f7ff; color: #1a1a2e; }
+  .ch-mount  { background: #0a0e27; }
+  .ch-stdio  { background: #fffbf0; color: #1a1a2e; }
+  .ch-history{ background: #0d1117; }
+  .ch-tag { font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .2em; margin-bottom: 12px; }
+  .ch-heading { font-size: clamp(2.2rem, 5vw, 3.2rem); font-weight: 800; line-height: 1.1; margin-bottom: 20px; }
+  .ch-body { font-size: 1.15rem; line-height: 1.6; max-width: 720px; margin-bottom: 30px; }
+  .num { font-weight: 700; font-family: ui-monospace, monospace; }
+  .fast { color: #3fb950; font-weight: 700; }
+  .bench-btn { display: inline-flex; align-items: center; gap: 10px; background: #fff; padding: 12px 20px; border-radius: 8px; font-size: 0.95rem; font-weight: 700; color: #1a1a2e; border: 1px solid rgba(0,0,0,0.1); cursor: pointer; transition: all 0.2s; text-decoration: none; }
+  .bench-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+  #modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.9); display: none; align-items: center; justify-content: center; z-index: 1000; backdrop-filter: blur(10px); }
+  #modal-content { background: #161b22; width: 90%; max-width: 800px; padding: 40px; border-radius: 12px; border: 1px solid #333; position: relative; color: #fff; }
+  .close-modal { position: absolute; top: 20px; right: 25px; font-size: 28px; cursor: pointer; color: #888; }
+  .run-table-wrap { width: 100%; overflow-x: auto; margin-top: 30px; border: 1px solid #222; border-radius: 8px; }
+  .run-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+  .run-table th { text-align: left; padding: 12px; background: #111; color: #666; }
+  .run-table td { padding: 12px; border-bottom: 1px solid #222; }
+  @media (min-height: 600px) { html { scroll-snap-type: y mandatory; } .ch { height: 100vh; scroll-snap-align: start; } }
+</style>
 </head>
 <body>
-
-<section class="ch ch-hero" id="hero">
-  <div class="ch-inner" style="text-align:center">
-    <div class="fade-in" style="font-size:5rem; margin-bottom:15px; filter: drop-shadow(0 0 20px rgba(255,255,255,0.2))">⚡</div>
-    <h1 class="ch-heading fade-in" style="background: linear-gradient(135deg, #fff 0%, #aaa 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-size: 4rem; letter-spacing: -0.02em;">How fast is fast?</h1>
-    <p class="ch-body fade-in" style="margin: 0 auto; color: rgba(255,255,255,0.5); font-weight: 500;">
-      MCP servers boot, register tools, and respond &mdash; all before an LLM finishes its next token.
-      <br><strong style="color:#fff; font-weight: 700;">Live benchmarks. Zero lag.</strong>
-    </p>
-  </div>
-  <div class="scroll-prompt">Scroll to begin &darr;</div>
-</section>
-
-<section class="ch ch-import" id="import">
-  <div class="ch-inner">
-    <div class="ch-tag fade-in" style="color:#b45309">CHAPTER ONE</div>
-    <h2 class="ch-heading fade-in">The Race to Import</h2>
-    <p class="ch-body fade-in" id="narr-import"></p>
-    <div class="viz fade-in" id="viz-import"></div>
-  </div>
-</section>
-
-<section class="ch ch-server" id="server">
-  <div class="ch-inner">
-    <div class="ch-tag fade-in" style="color:#3fb950">CHAPTER TWO</div>
-    <h2 class="ch-heading fade-in">Thinking vs Doing</h2>
-    <p class="ch-body fade-in" id="narr-server" style="margin-bottom:40px"></p>
-    <div class="viz fade-in" id="viz-server"></div>
-  </div>
-</section>
-
-<section class="ch ch-calls" id="calls">
-  <div class="ch-inner">
-    <div class="ch-tag fade-in" style="color:#7c3aed">CHAPTER THREE</div>
-    <h2 class="ch-heading fade-in">The Waterfall</h2>
-    <p class="ch-body fade-in" id="narr-calls" style="margin-bottom:40px"></p>
-    <div class="fade-in" id="viz-calls"></div>
-  </div>
-</section>
-
-<section class="ch ch-mount" id="mount">
-  <div class="ch-inner">
-    <div class="ch-tag fade-in" style="color:#a78bfa">CHAPTER FOUR</div>
-    <h2 class="ch-heading fade-in">Scaling Sprawl</h2>
-    <p class="ch-body fade-in" id="narr-mount" style="margin-bottom:40px"></p>
-    <div class="viz fade-in" id="viz-mount"></div>
-  </div>
-</section>
-
-<section class="ch ch-stdio" id="stdio">
-  <div class="ch-inner">
-    <div class="ch-tag fade-in" style="color:#b45309">DEEP DIVE</div>
-    <h2 class="ch-heading fade-in">Full Metrics Index</h2>
-    <p class="ch-body fade-in" id="narr-stdio">Every sub-millisecond metric we track, available for detailed inspection. Click any result to view historical trends.</p>
-    <div class="viz fade-in" id="viz-stdio" style="display:flex; flex-wrap:wrap; gap:12px; margin-top:32px"></div>
-  </div>
-</section>
-
-<section class="ch ch-history" id="history">
-  <div class="ch-inner">
-    <div class="ch-tag fade-in" style="color:#58a6ff">THE FULL PICTURE</div>
-    <h2 class="ch-heading fade-in">Every run, remembered.</h2>
-    <p class="ch-body fade-in" style="color:rgba(255,255,255,.5)">Benchmarks for every commit, tracked forever.</p>
-    <div class="fade-in" id="run-log"></div>
-  </div>
-</section>
-
-<div id="loading-overlay" style="position:fixed; top:0; left:0; width:100%; height:100%; background:#0d1117; display:flex; align-items:center; justify-content:center; z-index:2000; font-family:monospace; color:#888;">Fetching live data...</div>
-
+<section class="ch ch-hero" id="hero"><div class="ch-inner" style="text-align:center"><div style="font-size:5rem; margin-bottom:15px">⚡</div><h1 class="ch-heading">How fast is fast?</h1><p class="ch-body" style="color:rgba(255,255,255,0.6)">MCP servers respond before an LLM finishes its next token.</p></div></section>
+<section class="ch ch-import" id="import"><div class="ch-inner"><div class="ch-tag">CHAPTER ONE</div><h2 class="ch-heading">Race to Import</h2><p class="ch-body" id="narr-import"></p><div id="viz-import"></div></div></section>
+<section class="ch ch-server" id="server"><div class="ch-inner"><div class="ch-tag">CHAPTER TWO</div><h2 class="ch-heading">Thinking vs Doing</h2><p class="ch-body" id="narr-server"></p><div id="viz-server"></div></div></section>
+<section class="ch ch-calls" id="calls"><div class="ch-inner"><div class="ch-tag">CHAPTER THREE</div><h2 class="ch-heading">The Waterfall</h2><p class="ch-body" id="narr-calls"></p><div id="viz-calls"></div></div></section>
+<section class="ch ch-mount" id="mount"><div class="ch-inner"><div class="ch-tag">CHAPTER FOUR</div><h2 class="ch-heading">Scaling Sprawl</h2><p class="ch-body" id="narr-mount"></p><div id="viz-mount"></div></div></section>
+<section class="ch ch-stdio" id="stdio"><div class="ch-inner"><div class="ch-tag">DEEP DIVE</div><h2 class="ch-heading">Full Metrics Index</h2><div id="viz-stdio" style="display:flex; flex-wrap:wrap; gap:12px"></div></div></section>
+<section class="ch ch-history" id="history"><div class="ch-inner"><div class="ch-tag">HISTORY</div><h2 class="ch-heading">Every run, remembered</h2><div id="run-log"></div></div></section>
+<div id="loading-overlay" style="position:fixed;top:0;left:0;width:100%;height:100%;background:#0d1117;display:flex;align-items:center;justify-content:center;z-index:2000;color:#888;">Fetching live data...</div>
 <script>
-var OWNER='strawgate', REPO='fastmcp', BRANCH='bench-data';
-var BASE='https://raw.githubusercontent.com/'+OWNER+'/'+REPO+'/'+BRANCH;
-
-function fmtTime(s){
-  if(s==null||isNaN(s))return{v:'\u2014',u:''};
-  var ms=s*1000;
-  if(ms>=1000)return{v:(ms/1000).toFixed(1),u:'s'};
-  if(ms>=1)return{v:ms<10?ms.toFixed(1):ms.toFixed(0),u:'ms'};
-  var us=ms*1000;
-  return{v:us<10?us.toFixed(1):us.toFixed(0),u:'\u00b5s'};
-}
-function fS(s){var r=fmtTime(s);return r.v+' '+r.u}
-function clean(n){return n.replace(/^test_/,'').replace(/_/g,' ').replace(/\b\w/g,function(c){return c.toUpperCase()})}
-function ago(iso){var d=Date.now()-new Date(iso).getTime(),m=Math.floor(d/60000);if(m<60)return m+'m ago';var h=Math.floor(m/60);if(h<24)return h+'h ago';return Math.floor(h/24)+'d ago'}
-function fj(url){return fetch(url).then(function(r){if(!r.ok)throw new Error(''+r.status);return r.json()})}
-
-function sparkCoords(points,w,h){
-  if(!points||points.length<2)return '';
-  var vs=points.map(function(p){return p.value});
-  var mn=Math.min.apply(null,vs),mx=Math.max.apply(null,vs),rng=mx-mn||mx*0.1;
-  return vs.map(function(v,i){
-    var x=(i/(vs.length-1))*w;
-    var y=h-( (v-mn)/(rng||1) )*h;
-    return x.toFixed(1)+','+y.toFixed(1);
-  }).join(' ');
-}
-
-function renderRace(cid,vals,pts){
-  var startX=80, finishX=720, trackW=finishX-startX;
-  var s='<svg viewBox="0 0 800 220" style="width:100%; height:auto">';
-  s+='<rect x="40" y="30" width="720" height="160" rx="14" fill="#f5efe5" stroke="#e0d6c4" stroke-width="1.5"/>';
-  s+='<line x1="50" y1="110" x2="750" y2="110" stroke="#e0d6c4" stroke-width="1" stroke-dasharray="12 8"/>';
-  
-  // Turtle
-  s+='<g id="racer-cold" transform="translate('+startX+',0)"><text x="0" y="80" text-anchor="middle" font-size="28">🐢</text><rect x="18" y="58" width="75" height="24" rx="12" fill="#dc2626"/><text x="55" y="75" text-anchor="middle" font-size="11" font-weight="bold" fill="#fff" font-family="monospace">'+fS(vals.test_cold_import)+'</text></g>';
-  
-  // Hare
-  s+='<g id="racer-warm"><animateTransform attributeName="transform" type="translate" values="'+startX+',0; '+finishX+',0; '+startX+',0" keyTimes="0; 0.5; 1" dur="3s" repeatCount="indefinite"/><text x="0" y="160" text-anchor="middle" font-size="28">⚡</text><rect x="-90" y="138" width="75" height="24" rx="12" fill="#16a34a"/><text x="-52" y="155" text-anchor="middle" font-size="11" font-weight="bold" fill="#fff" font-family="monospace">'+fS(vals.test_warm_import)+'</text></g>';
-  s+='</svg>';
-  document.getElementById(cid).innerHTML=s;
-
-  var importSection=document.getElementById('import'), coldG=document.getElementById('racer-cold');
-  window.addEventListener('scroll', function(){
-    var rect=importSection.getBoundingClientRect();
-    var p=1-Math.max(0,Math.min(1, rect.top/window.innerHeight));
-    var cx=startX + (trackW * 0.2 * p);
-    coldG.setAttribute('transform','translate('+cx+',0)');
-  });
-}
-
-function renderPodium(cid,items,vals,pts){
-  var W=800, H=360;
-  var s='<svg viewBox="0 0 '+W+' '+H+'" style="width:100%; height:auto">';
-  s+='<rect x="40" y="20" width="320" height="300" rx="16" fill="rgba(245,158,11,0.05)" stroke="rgba(245,158,11,0.2)" stroke-width="2"/>';
-  s+='<text x="200" y="55" text-anchor="middle" font-size="14" font-weight="900" fill="#f59e0b" letter-spacing="0.2em">THINKING 🧠</text>';
-  s+='<rect x="440" y="20" width="320" height="300" rx="16" fill="rgba(63,185,80,0.05)" stroke="rgba(63,185,80,0.2)" stroke-width="2"/>';
-  s+='<text x="600" y="55" text-anchor="middle" font-size="14" font-weight="900" fill="#3fb950" letter-spacing="0.2em">DOING ⚡</text>';
-
-  var pairs = [
-    { think: "Deciding to build a server", detail: "3 months, 45 beers", key: "test_server_create_empty", label: "FastMCP(\"demo\")" },
-    { think: "Choosing which 10 tools", detail: "Existential agony", key: "test_server_create_10_tools", label: "Add 10 tools" },
-    { think: "Finalizing API spec", detail: "4 endless meetings", key: "test_server_create_100_tools", label: "Add 100 tools" }
-  ];
-
-  pairs.forEach(function(p, i){
-    var y = 120 + i * 85;
-    s+='<text x="200" y="'+y+'" text-anchor="middle" font-size="13" font-weight="700" fill="#fff">'+p.think+'</text>';
-    s+='<text x="200" y="'+(y+20)+'" text-anchor="middle" font-size="12" font-style="italic" fill="#888">'+p.detail+'</text>';
-    s+='<line x1="360" y1="'+(y+5)+'" x2="440" y2="'+(y+5)+'" stroke="rgba(255,255,255,0.2)" stroke-width="2" stroke-dasharray="4 2" marker-end="url(#arr)"/>';
-    s+='<text x="600" y="'+y+'" text-anchor="middle" font-size="13" font-weight="700" fill="#fff">'+p.label+'</text>';
-    s+='<text x="600" y="'+(y+22)+'" text-anchor="middle" font-family="monospace" font-size="18" font-weight="800" fill="#3fb950">'+fS(vals[p.key])+'</text>';
-  });
-  s+='<defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="rgba(255,255,255,0.2)"/></marker></defs></svg>';
-  document.getElementById(cid).innerHTML = s;
-}
-
-function renderTrace(cid,items,vals,pts){
-  var spans=[
-    {key:'test_list_tools_10',emoji:'📋',label:'list_tools',color:'#6366f1',note:'Init'},
-    {key:'test_call_tool_10',emoji:'🎯',label:'call_tool',color:'#06b6d4',note:'Call 1'},
-    {key:'test_call_tool_10',emoji:'🎯',label:'call_tool',color:'#06b6d4',note:'Call 2'},
-    {key:'test_call_tool_10',emoji:'🎯',label:'call_tool',color:'#06b6d4',note:'Call 3'},
-    {key:'test_call_tool_10',emoji:'🎯',label:'call_tool',color:'#06b6d4',note:'Call 4'},
-    {key:'llm_ref', emoji:'🤖', label:'llm.generate', color:'linear-gradient(90deg,#dc2626 0%,#991b1b 100%)', note:'Output', isLlm:true}
-  ];
-  var el=document.getElementById(cid), h='<div class="trace-box" style="background:#1e1e1e; border:1px solid #333; padding:20px; border-radius:12px">', cumPct = 0;
-  spans.forEach(function(sp,i){
-    var isLlm = sp.isLlm, v = isLlm ? 5.0 : (vals[sp.key]||0.001), pct = isLlm ? (98-cumPct) : Math.max(1.5, (v/5.0)*100);
-    h+='<div class="trace-row" style="display:flex; align-items:center; margin-bottom:12px; position:relative; height:30px">';
-    h+='<div style="width:140px; font-family:monospace; font-size:0.75rem; color:#aaa">'+sp.emoji+' '+sp.label+'</div>';
-    h+='<div style="flex:1; position:relative; height:100%; border-left:1px solid #333">';
-    h+='<div class="trace-bar" style="position:absolute; left:'+cumPct+'%; width:'+pct+'%; height:18px; top:6px; background:'+sp.color+'; border-radius:3px">';
-    if(isLlm) h+='<div style="position:absolute;left:40%;top:0;bottom:0;width:10px;background:#1e1e1e;transform:skewX(-25deg);border-left:1px solid #dc2626"></div>';
-    h+='</div>';
-    var textLeft = isLlm ? (cumPct + 5) : (cumPct + pct + 1.5);
-    h+='<div style="position:absolute; left:'+textLeft+'%; top:6px; font-family:monospace; font-size:0.7rem; color:#fff; white-space:nowrap; font-weight:bold">'+fS(v)+' <span style="color:#666">'+sp.note+'</span></div>';
-    if(!isLlm && pts[sp.key]){
-      h+='<div class="spark-popover"><svg width="80" height="25"><polyline points="'+sparkCoords(pts[sp.key],80,25)+'" fill="none" stroke="'+sp.color+'" stroke-width="2"/></svg></div>';
-    }
-    h+='</div></div>';
-    cumPct += pct;
-  });
-  el.innerHTML=h+'</div>';
-}
-
-function renderSkyline(cid,vals){
-  var el=document.getElementById(cid);
-  function draw(){
-    var rect=el.getBoundingClientRect();
-    var p=1-Math.max(0,Math.min(1, rect.top/window.innerHeight));
-    var stage = 0; if(p > 0.3) stage=1; if(p > 0.7) stage=2;
-    var W=800, H=400, midX=400, midY=200;
-    var s='<svg viewBox="0 0 800 400" style="width:100%; height:auto">';
-    function rocket(x,y,sz,color){ s+='<circle cx="'+x+'" cy="'+y+'" r="'+sz+'" fill="#1a0a3a" stroke="'+color+'" stroke-width="2"/><text x="'+x+'" y="'+(y+sz/2)+'" text-anchor="middle" font-size="'+(sz*1.2)+'">🚀</text>'; }
-    rocket(400, 200, 30, "#a78bfa"); 
-    if(stage >= 1){
-      for(var i=0; i<5; i++){
-        var a=(i/5)*Math.PI*2, tx=400+Math.cos(a)*120, ty=200+Math.sin(a)*120;
-        s+='<line x1="400" y1="200" x2="'+tx+'" y2="'+ty+'" stroke="#a78bfa" opacity="0.3"/>';
-        rocket(tx,ty,18,"#8b5cf6");
-        if(stage >= 2){
-          for(var j=0; j<3; j++){
-            var sa=a+(j-1)*0.4, sx=tx+Math.cos(sa)*60, sy=ty+Math.sin(sa)*60;
-            s+='<line x1="'+tx+'" y1="'+ty+'" x2="'+sx+'" y2="'+sy+'" stroke="#8b5cf6" opacity="0.2"/>';
-            rocket(sx,sy,10,"#7c3aed");
-          }
-        }
-      }
-    }
-    s+='</svg>'; el.innerHTML=s;
-  }
-  window.addEventListener('scroll', draw); draw();
-}
-
-function renderPipe(cid,vals,pts){
-  var el=document.getElementById(cid);
-  var keys=Object.keys(vals).filter(k=>k.startsWith('test_')).sort();
-  el.innerHTML = keys.map(k=> `<button class="bench-btn" onclick="openModal('${k}')">${clean(k)} &rarr;</button>`).join('');
-}
-
-window.openModal = function(key){
-  var overlay=document.getElementById('modal-overlay'), body=document.getElementById('modal-body');
-  overlay.style.display='flex';
-  var history = window.GLOBAL_PTS[key] || [];
-  var chart = history.length ? '<svg viewBox="0 0 700 200" style="width:100%; height:200px; background:#0d1117; border-radius:8px"><polyline points="'+sparkCoords(history,700,200)+'" fill="none" stroke="#3fb950" stroke-width="3"/></svg>' : 'No data';
-  var table = '<table style="width:100%; margin-top:20px; color:#888; font-size:0.8rem">' + history.slice().reverse().map(p=> `<tr><td style="padding:8px">${p.run ? p.run.split('--')[0] : 'CI'}</td><td style="text-align:right; color:#3fb950; font-weight:bold">${fS(p.value)}</td></tr>`).join('') + '</table>';
-  body.innerHTML = `<h3 style="color:#3fb950; margin-bottom:15px">${clean(key)}</h3>` + chart + table;
-}
-window.closeBenchModal = () => document.getElementById('modal-overlay').style.display='none';
-
-function addFlyingFs(){
-  var hero=document.getElementById('hero');
-  for(var i=0;i<15;i++){
-    var el=document.createElement('span'); el.className='flying-f'; el.textContent='F';
-    el.style.left='-50px'; el.style.top=Math.random()*100+'%';
-    el.style.animationDuration=(3+Math.random()*6)+'s'; el.style.animationDelay=(Math.random()*5)+'s';
-    el.style.fontSize=(1+Math.random()*3)+'rem'; hero.appendChild(el);
-  }
-}
-function addTwinkles(){
-  var ch=document.getElementById('mount');
-  for(var i=0;i<12;i++){
-    var el=document.createElement('span'); el.className='twinkle'; el.textContent='✦';
-    el.style.left=Math.random()*100+'%'; el.style.top=Math.random()*100+'%';
-    el.style.fontSize=(0.4+Math.random()*0.5)+'rem'; ch.appendChild(el);
-  }
-}
-
-function addFadeIn(){
-  var obs=new IntersectionObserver(entries=>{ entries.forEach(e=>{ if(e.isIntersecting) e.target.classList.add('visible'); }); }, {threshold:0.15});
-  document.querySelectorAll('.fade-in').forEach(el=>obs.observe(el));
-}
-
-function main(){
-  addFlyingFs(); addTwinkles(); addFadeIn();
-  fj(BASE+'/data/index.json').then(idx => {
-    var runs=idx.runs||[], latest=runs[runs.length-1];
-    return Promise.all([fj(BASE+'/data/series/median.json'), latest?fj(BASE+'/data/views/runs/'+latest.id+'/detail.json'):null]).then(res => {
-      var med=res[0], rd=res[1], vals={}, pts={}; window.GLOBAL_PTS=pts;
-      if(rd) {
-          var snap = (rd.metricSnapshots||[]).find(s=>s.metric==='median');
-          if(snap) snap.values.forEach(v=>vals[v.name]=v.value);
-      }
-      if(med) Object.keys(med.series).forEach(n=>{ if(!vals[n]) vals[n]=med.series[n].points.slice(-1)[0].value; pts[n]=med.series[n].points; });
-      document.getElementById('loading-overlay').style.display='none';
-      renderRace('viz-import',vals,pts); renderPodium('viz-server',null,vals,pts); renderTrace('viz-calls',null,vals,pts); renderSkyline('viz-mount',vals); renderPipe('viz-stdio',vals,pts);
-      
-      var logEl=document.getElementById('run-log');
-      var h='<div class="run-table-wrap"><table class="run-table"><thead><tr><th>Run</th><th>Commit</th><th>Benchmarks</th><th>When</th></tr></thead><tbody>';
-      runs.slice().reverse().forEach(r => {
-        h+='<tr class="run-row"><td>'+r.id.split('--')[0]+'</td><td>'+(r.commit?r.commit.slice(0,7):'--')+'</td><td>'+r.benchmarks+' tests</td><td>'+ago(r.timestamp)+'</td></tr>';
-      });
-      logEl.innerHTML=h+'</tbody></table></div>';
-    });
-  });
-}
+var OWNER="strawgate", REPO="fastmcp", BRANCH="bench-data";
+var BASE="https://raw.githubusercontent.com/"+OWNER+"/"+REPO+"/"+BRANCH;
+function fmtTime(s){if(s==null||isNaN(s))return{v:"-",u:""};var ms=s*1000;if(ms>=1000)return{v:(ms/1000).toFixed(1),u:"s"};if(ms>=1)return{v:ms<10?ms.toFixed(1):ms.toFixed(0),u:"ms"};var us=ms*1000;return{v:us<10?us.toFixed(1):us.toFixed(0),u:"µs"};}
+function fS(s){var r=fmtTime(s);return r.v+" "+r.u;}
+function clean(n){return n.replace(/^test_/,"").replace(/_/g," ");}
+function ago(iso){var d=Date.now()-new Date(iso).getTime(),m=Math.floor(d/60000);if(m<60)return m+"m ago";var h=Math.floor(m/60);if(h<24)return h+"h ago";return Math.floor(h/24)+"d ago";}
+function fj(url){return fetch(url).then(r=>{if(!r.ok)throw new Error(r.status);return r.json();});}
+function sparkCoords(points,w,h){if(!points||points.length<2)return "";var vs=points.map(p=>p.value);var mn=Math.min(...vs),mx=Math.max(...vs),rng=mx-mn||mx*0.1;return vs.map((v,i)=>{var x=(i/(vs.length-1))*w;var y=h-((v-mn)/(rng||1))*h;return x.toFixed(1)+","+y.toFixed(1);}).join(" ");}
+function renderRace(cid,v){var s="<svg viewBox='0 0 800 200' style='width:100%'>";s+="<rect x='40' y='30' width='720' height='140' rx='14' fill='#f5efe5' stroke='#e0d6c4'/>";s+="<text x='120' y='85' font-size='24'>🐢</text><rect x='138' y='63' width='70' height='24' rx='12' fill='#dc2626'/><text x='173' y='80' text-anchor='middle' font-size='11' fill='#fff' font-weight='bold'>"+fS(v.test_cold_import)+"</text>";s+="<text x='600' y='145' font-size='24'>⚡</text><rect x='618' y='123' width='70' height='24' rx='12' fill='#16a34a'/><text x='653' y='140' text-anchor='middle' font-size='11' fill='#fff' font-weight='bold'>"+fS(v.test_warm_import)+"</text>";return s+"</svg>";}
+function renderPodium(cid,v){var s="<svg viewBox='0 0 800 340' style='width:100%'>";s+="<rect x='40' y='20' width='320' height='280' rx='12' fill='rgba(245,158,11,0.05)' stroke='#f59e0b'/><text x='200' y='50' text-anchor='middle' fill='#f59e0b' font-weight='900'>THINKING 🧠</text>";s+="<rect x='440' y='20' width='320' height='280' rx='12' fill='rgba(63,185,80,0.05)' stroke='#3fb950'/><text x='600' y='50' text-anchor='middle' fill='#3fb950' font-weight='900'>DOING ⚡</text>";var pairs=[{t:"Deciding on a server",d:"45 beers",k:"test_server_create_empty"},{t:"Adding 100 tools",d:"Endless meetings",k:"test_server_create_100_tools"}];pairs.forEach((p,i)=>{var y=120+i*100;s+="<text x='200' y='"+y+"' text-anchor='middle' fill='#fff'>"+p.t+"</text><text x='200' y='"+(y+20)+"' text-anchor='middle' fill='#888' font-size='12'>"+p.d+"</text>";s+="<text x='600' y='"+y+"' text-anchor='middle' fill='#fff' font-weight='900' font-size='20'>"+fS(v[p.k])+"</text>";});return s+"</svg>";}
+function renderTrace(cid,v){var spans=[{k:"test_list_tools_10",e:"📋",l:"list_tools"},{k:"test_call_tool_10",e:"🎯",l:"call_tool"},{k:"llm_ref",e:"🤖",l:"llm.generate",isLlm:true}];var s="<div style='background:#1e1e1e;padding:20px;border-radius:12px'>";var cum=0;spans.forEach(sp=>{var val=sp.isLlm?5:v[sp.k]||0.001;var pct=sp.isLlm?(98-cum):Math.max(2, (val/5)*100);s+="<div style='display:flex;align-items:center;margin-bottom:12px'><div style='width:120px;color:#aaa;font-size:0.8rem'>"+sp.e+" "+sp.l+"</div><div style='flex:1;position:relative;height:20px;background:#333;border-radius:4px'><div style='position:absolute;left:"+cum+"%;width:"+pct+"%;height:100%;background:"+(sp.isLlm?"#dc2626":"#6366f1")+"'></div></div><div style='width:80px;text-align:right;color:#fff;font-weight:bold;font-size:0.8rem'>"+fS(val)+"</div></div>";cum+=pct;});return s+"</div>";}
+function renderSkyline(cid,v){var s="<svg viewBox='0 0 800 300' style='width:100%'>";function rkt(x,y,sz){s+="<circle cx='"+x+"' cy='"+y+"' r='"+sz+"' fill='#1a0a3a' stroke='#a78bfa'/><text x='"+x+"' y='"+(y+sz/2)+"' text-anchor='middle' font-size='"+(sz*1.2)+"'>🚀</text>";}rkt(400,150,30);for(var i=0;i<5;i++){var a=i*Math.PI*2/5;rkt(400+Math.cos(a)*100,150+Math.sin(a)*100,15);}return s+"</svg>";}
+window.openModal=function(k){var o=document.getElementById("modal-overlay"),b=document.getElementById("modal-body");o.style.display="flex";var h=window.GLB_PTS[k]||[];b.innerHTML="<h3 style='color:#3fb950;margin-bottom:15px'>"+clean(k)+"</h3><svg viewBox='0 0 700 200' style='width:100%;height:200px;background:#0d1117'><polyline points='"+sparkCoords(h,700,200)+"' fill='none' stroke='#3fb950' stroke-width='3'/></svg>";};
+window.closeBenchModal=()=>document.getElementById("modal-overlay").style.display="none";
+function main(){fj(BASE+"/data/index.json").then(idx=>{var runs=idx.runs||[],latest=runs[runs.length-1];return Promise.all([fj(BASE+"/data/series/median.json"),latest?fj(BASE+"/data/views/runs/"+latest.id+"/detail.json"):null]).then(res=>{var med=res[0],rd=res[1],vals={},pts={};window.GLB_PTS=pts;if(rd){var sn=(rd.metricSnapshots||[]).find(s=>s.metric==="median");if(sn)sn.values.forEach(v=>vals[v.name]=v.value);}if(med)Object.keys(med.series).forEach(n=>{if(!vals[n])vals[n]=med.series[n].points.slice(-1)[0].value;pts[n]=med.series[n].points;});
+document.getElementById("loading-overlay").style.display="none";
+document.getElementById("narr-import").innerHTML="Cold import: <span class='num'>"+fS(vals.test_cold_import)+"</span>. Warm: <span class='num'>"+fS(vals.test_warm_import)+"</span>.";document.getElementById("viz-import").innerHTML=renderRace("viz-import",vals);
+document.getElementById("narr-server").innerHTML="Creating an empty server takes <span class='num'>"+fS(vals.test_server_create_empty)+"</span>.";document.getElementById("viz-server").innerHTML=renderPodium("viz-server",vals);
+document.getElementById("narr-calls").innerHTML="Calling a tool: <span class='num'>"+fS(vals.test_call_tool_10)+"</span>.";document.getElementById("viz-calls").innerHTML=renderTrace("viz-calls",vals);
+document.getElementById("viz-mount").innerHTML=renderSkyline("viz-mount",vals);
+var std=document.getElementById("viz-stdio");Object.keys(vals).filter(k=>k.startsWith("test_")).sort().forEach(k=>{var btn=document.createElement("button");btn.className="bench-btn";btn.innerHTML=clean(k)+" &rarr;";btn.onclick=()=>openModal(k);std.appendChild(btn);});
+var log=document.getElementById("run-log"),h="<div class='run-table-wrap'><table class='run-table'><thead><tr><th>Run</th><th>Benchmarks</th><th>When</th></tr></thead><tbody>";runs.slice().reverse().forEach(r=>{h+="<tr><td>"+r.id.split("--")[0]+"</td><td>"+r.benchmarks+"</td><td>"+ago(r.timestamp)+"</td></tr>";});log.innerHTML=h+"</tbody></table></div>";});});}
 main();
 </script>
-<div id="modal-overlay" onclick="if(event.target===this)closeBenchModal()">
-  <div id="modal-content"><span class="close-modal" onclick="closeBenchModal()">×</span><div id="modal-body"></div></div>
-</div>
-</body></html>
+<div id="modal-overlay" onclick="if(event.target===this)closeBenchModal()"><div id="modal-content"><span class="close-modal" onclick="closeBenchModal()">&times;</span><div id="modal-body"></div></div></div>
+</body>
+</html>
