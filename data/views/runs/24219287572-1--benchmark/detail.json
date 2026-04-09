@@ -1,0 +1,683 @@
+{
+  "run": {
+    "id": "24219287572-1--benchmark",
+    "timestamp": "2026-04-09T23:59:35.255Z",
+    "commit": "f36ce6071c03ef5aae6294fb8879468a3b1dd397",
+    "ref": "refs/heads/main",
+    "benchmarks": 15,
+    "metrics": [
+      "max",
+      "mean",
+      "median",
+      "min",
+      "ops",
+      "rounds",
+      "stddev"
+    ]
+  },
+  "metricSnapshots": [
+    {
+      "metric": "max",
+      "unit": "s",
+      "direction": "smaller_is_better",
+      "values": [
+        {
+          "name": "test_cold_import",
+          "value": 1.4591259030000003,
+          "unit": "s",
+          "direction": "smaller_is_better"
+        },
+        {
+          "name": "test_warm_import",
+          "value": 0.002430692000004342,
+          "unit": "s",
+          "direction": "smaller_is_better"
+        },
+        {
+          "name": "test_mount_1_child",
+          "value": 0.07478678599999711,
+          "unit": "s",
+          "direction": "smaller_is_better"
+        },
+        {
+          "name": "test_mount_5_children",
+          "value": 0.14289967900000278,
+          "unit": "s",
+          "direction": "smaller_is_better"
+        },
+        {
+          "name": "test_mount_10_children",
+          "value": 0.19981327600000043,
+          "unit": "s",
+          "direction": "smaller_is_better"
+        },
+        {
+          "name": "test_server_create_empty",
+          "value": 0.0009555019999964998,
+          "unit": "s",
+          "direction": "smaller_is_better"
+        },
+        {
+          "name": "test_server_create_1_tool",
+          "value": 0.0019737000000006333,
+          "unit": "s",
+          "direction": "smaller_is_better"
+        },
+        {
+          "name": "test_server_create_10_tools",
+          "value": 0.12497438999999844,
+          "unit": "s",
+          "direction": "smaller_is_better"
+        },
+        {
+          "name": "test_server_create_100_tools",
+          "value": 0.0985120280000018,
+          "unit": "s",
+          "direction": "smaller_is_better"
+        },
+        {
+          "name": "test_stdio_startup_time",
+          "value": 1.3118628040000004,
+          "unit": "s",
+          "direction": "smaller_is_better"
+        },
+        {
+          "name": "test_stdio_tool_call_latency",
+          "value": 1.310600401000002,
+          "unit": "s",
+          "direction": "smaller_is_better"
+        },
+        {
+          "name": "test_list_tools_10",
+          "value": 0.1699061300000011,
+          "unit": "s",
+          "direction": "smaller_is_better"
+        },
+        {
+          "name": "test_list_tools_100",
+          "value": 0.008027931000000876,
+          "unit": "s",
+          "direction": "smaller_is_better"
+        },
+        {
+          "name": "test_call_tool_10",
+          "value": 0.008896723000006546,
+          "unit": "s",
+          "direction": "smaller_is_better"
+        },
+        {
+          "name": "test_call_tool_burst_10",
+          "value": 0.044526797999992596,
+          "unit": "s",
+          "direction": "smaller_is_better"
+        }
+      ]
+    },
+    {
+      "metric": "mean",
+      "unit": "s",
+      "direction": "smaller_is_better",
+      "values": [
+        {
+          "name": "test_cold_import",
+          "value": 1.4424742859999982,
+          "unit": "s",
+          "direction": "smaller_is_better"
+        },
+        {
+          "name": "test_warm_import",
+          "value": 0.0023657228500006513,
+          "unit": "s",
+          "direction": "smaller_is_better"
+        },
+        {
+          "name": "test_mount_1_child",
+          "value": 0.011827633619047572,
+          "unit": "s",
+          "direction": "smaller_is_better"
+        },
+        {
+          "name": "test_mount_5_children",
+          "value": 0.05557915555000008,
+          "unit": "s",
+          "direction": "smaller_is_better"
+        },
+        {
+          "name": "test_mount_10_children",
+          "value": 0.11126993239999905,
+          "unit": "s",
+          "direction": "smaller_is_better"
+        },
+        {
+          "name": "test_server_create_empty",
+          "value": 0.0005029415686556953,
+          "unit": "s",
+          "direction": "smaller_is_better"
+        },
+        {
+          "name": "test_server_create_1_tool",
+          "value": 0.0015035174071294218,
+          "unit": "s",
+          "direction": "smaller_is_better"
+        },
+        {
+          "name": "test_server_create_10_tools",
+          "value": 0.011231887454545375,
+          "unit": "s",
+          "direction": "smaller_is_better"
+        },
+        {
+          "name": "test_server_create_100_tools",
+          "value": 0.0975189862727274,
+          "unit": "s",
+          "direction": "smaller_is_better"
+        },
+        {
+          "name": "test_stdio_startup_time",
+          "value": 1.3017141371999998,
+          "unit": "s",
+          "direction": "smaller_is_better"
+        },
+        {
+          "name": "test_stdio_tool_call_latency",
+          "value": 1.3057727397999996,
+          "unit": "s",
+          "direction": "smaller_is_better"
+        },
+        {
+          "name": "test_list_tools_10",
+          "value": 0.013942123100002845,
+          "unit": "s",
+          "direction": "smaller_is_better"
+        },
+        {
+          "name": "test_list_tools_100",
+          "value": 0.007603199000000416,
+          "unit": "s",
+          "direction": "smaller_is_better"
+        },
+        {
+          "name": "test_call_tool_10",
+          "value": 0.008703000000003413,
+          "unit": "s",
+          "direction": "smaller_is_better"
+        },
+        {
+          "name": "test_call_tool_burst_10",
+          "value": 0.0438921322000013,
+          "unit": "s",
+          "direction": "smaller_is_better"
+        }
+      ]
+    },
+    {
+      "metric": "median",
+      "unit": "s",
+      "direction": "smaller_is_better",
+      "values": [
+        {
+          "name": "test_cold_import",
+          "value": 1.442066226999998,
+          "unit": "s",
+          "direction": "smaller_is_better"
+        },
+        {
+          "name": "test_warm_import",
+          "value": 0.002358417499998211,
+          "unit": "s",
+          "direction": "smaller_is_better"
+        },
+        {
+          "name": "test_mount_1_child",
+          "value": 0.01071573200000131,
+          "unit": "s",
+          "direction": "smaller_is_better"
+        },
+        {
+          "name": "test_mount_5_children",
+          "value": 0.05096440450000017,
+          "unit": "s",
+          "direction": "smaller_is_better"
+        },
+        {
+          "name": "test_mount_10_children",
+          "value": 0.10132673100000389,
+          "unit": "s",
+          "direction": "smaller_is_better"
+        },
+        {
+          "name": "test_server_create_empty",
+          "value": 0.0004782809999994697,
+          "unit": "s",
+          "direction": "smaller_is_better"
+        },
+        {
+          "name": "test_server_create_1_tool",
+          "value": 0.0015054270000049996,
+          "unit": "s",
+          "direction": "smaller_is_better"
+        },
+        {
+          "name": "test_server_create_10_tools",
+          "value": 0.01005964400000181,
+          "unit": "s",
+          "direction": "smaller_is_better"
+        },
+        {
+          "name": "test_server_create_100_tools",
+          "value": 0.0975804600000032,
+          "unit": "s",
+          "direction": "smaller_is_better"
+        },
+        {
+          "name": "test_stdio_startup_time",
+          "value": 1.302573283000001,
+          "unit": "s",
+          "direction": "smaller_is_better"
+        },
+        {
+          "name": "test_stdio_tool_call_latency",
+          "value": 1.3068662529999955,
+          "unit": "s",
+          "direction": "smaller_is_better"
+        },
+        {
+          "name": "test_list_tools_10",
+          "value": 0.005659271000006072,
+          "unit": "s",
+          "direction": "smaller_is_better"
+        },
+        {
+          "name": "test_list_tools_100",
+          "value": 0.007621698000001231,
+          "unit": "s",
+          "direction": "smaller_is_better"
+        },
+        {
+          "name": "test_call_tool_10",
+          "value": 0.00866969599999834,
+          "unit": "s",
+          "direction": "smaller_is_better"
+        },
+        {
+          "name": "test_call_tool_burst_10",
+          "value": 0.04381488450000859,
+          "unit": "s",
+          "direction": "smaller_is_better"
+        }
+      ]
+    },
+    {
+      "metric": "min",
+      "unit": "s",
+      "direction": "smaller_is_better",
+      "values": [
+        {
+          "name": "test_cold_import",
+          "value": 1.429291702999997,
+          "unit": "s",
+          "direction": "smaller_is_better"
+        },
+        {
+          "name": "test_warm_import",
+          "value": 0.0023115800000041986,
+          "unit": "s",
+          "direction": "smaller_is_better"
+        },
+        {
+          "name": "test_mount_1_child",
+          "value": 0.010521739999994395,
+          "unit": "s",
+          "direction": "smaller_is_better"
+        },
+        {
+          "name": "test_mount_5_children",
+          "value": 0.05023589600000378,
+          "unit": "s",
+          "direction": "smaller_is_better"
+        },
+        {
+          "name": "test_mount_10_children",
+          "value": 0.10082421899999616,
+          "unit": "s",
+          "direction": "smaller_is_better"
+        },
+        {
+          "name": "test_server_create_empty",
+          "value": 0.0004395089999960078,
+          "unit": "s",
+          "direction": "smaller_is_better"
+        },
+        {
+          "name": "test_server_create_1_tool",
+          "value": 0.0013759859999993296,
+          "unit": "s",
+          "direction": "smaller_is_better"
+        },
+        {
+          "name": "test_server_create_10_tools",
+          "value": 0.009742445000000544,
+          "unit": "s",
+          "direction": "smaller_is_better"
+        },
+        {
+          "name": "test_server_create_100_tools",
+          "value": 0.09618098299999644,
+          "unit": "s",
+          "direction": "smaller_is_better"
+        },
+        {
+          "name": "test_stdio_startup_time",
+          "value": 1.2933037170000006,
+          "unit": "s",
+          "direction": "smaller_is_better"
+        },
+        {
+          "name": "test_stdio_tool_call_latency",
+          "value": 1.296017513999999,
+          "unit": "s",
+          "direction": "smaller_is_better"
+        },
+        {
+          "name": "test_list_tools_10",
+          "value": 0.005591394000006744,
+          "unit": "s",
+          "direction": "smaller_is_better"
+        },
+        {
+          "name": "test_list_tools_100",
+          "value": 0.007361548999995193,
+          "unit": "s",
+          "direction": "smaller_is_better"
+        },
+        {
+          "name": "test_call_tool_10",
+          "value": 0.00860249000000124,
+          "unit": "s",
+          "direction": "smaller_is_better"
+        },
+        {
+          "name": "test_call_tool_burst_10",
+          "value": 0.04343017700000473,
+          "unit": "s",
+          "direction": "smaller_is_better"
+        }
+      ]
+    },
+    {
+      "metric": "ops",
+      "unit": "ops/s",
+      "direction": "bigger_is_better",
+      "values": [
+        {
+          "name": "test_cold_import",
+          "value": 0.693253259143367,
+          "unit": "ops/s",
+          "direction": "bigger_is_better"
+        },
+        {
+          "name": "test_warm_import",
+          "value": 422.70378375037666,
+          "unit": "ops/s",
+          "direction": "bigger_is_better"
+        },
+        {
+          "name": "test_mount_1_child",
+          "value": 84.54776603745742,
+          "unit": "ops/s",
+          "direction": "bigger_is_better"
+        },
+        {
+          "name": "test_mount_5_children",
+          "value": 17.99235684860992,
+          "unit": "ops/s",
+          "direction": "bigger_is_better"
+        },
+        {
+          "name": "test_mount_10_children",
+          "value": 8.987153837796424,
+          "unit": "ops/s",
+          "direction": "bigger_is_better"
+        },
+        {
+          "name": "test_server_create_empty",
+          "value": 1988.3025431222252,
+          "unit": "ops/s",
+          "direction": "bigger_is_better"
+        },
+        {
+          "name": "test_server_create_1_tool",
+          "value": 665.1070318562136,
+          "unit": "ops/s",
+          "direction": "bigger_is_better"
+        },
+        {
+          "name": "test_server_create_10_tools",
+          "value": 89.03223114075232,
+          "unit": "ops/s",
+          "direction": "bigger_is_better"
+        },
+        {
+          "name": "test_server_create_100_tools",
+          "value": 10.254413404209725,
+          "unit": "ops/s",
+          "direction": "bigger_is_better"
+        },
+        {
+          "name": "test_stdio_startup_time",
+          "value": 0.7682178225021126,
+          "unit": "ops/s",
+          "direction": "bigger_is_better"
+        },
+        {
+          "name": "test_stdio_tool_call_latency",
+          "value": 0.7658300480014357,
+          "unit": "ops/s",
+          "direction": "bigger_is_better"
+        },
+        {
+          "name": "test_list_tools_10",
+          "value": 71.72508755139279,
+          "unit": "ops/s",
+          "direction": "bigger_is_better"
+        },
+        {
+          "name": "test_list_tools_100",
+          "value": 131.52358632201333,
+          "unit": "ops/s",
+          "direction": "bigger_is_better"
+        },
+        {
+          "name": "test_call_tool_10",
+          "value": 114.90290704350313,
+          "unit": "ops/s",
+          "direction": "bigger_is_better"
+        },
+        {
+          "name": "test_call_tool_burst_10",
+          "value": 22.783126493908863,
+          "unit": "ops/s",
+          "direction": "bigger_is_better"
+        }
+      ]
+    },
+    {
+      "metric": "rounds",
+      "direction": "bigger_is_better",
+      "values": [
+        {
+          "name": "test_cold_import",
+          "value": 5,
+          "direction": "bigger_is_better"
+        },
+        {
+          "name": "test_warm_import",
+          "value": 20,
+          "direction": "bigger_is_better"
+        },
+        {
+          "name": "test_mount_1_child",
+          "value": 63,
+          "direction": "bigger_is_better"
+        },
+        {
+          "name": "test_mount_5_children",
+          "value": 20,
+          "direction": "bigger_is_better"
+        },
+        {
+          "name": "test_mount_10_children",
+          "value": 10,
+          "direction": "bigger_is_better"
+        },
+        {
+          "name": "test_server_create_empty",
+          "value": 1391,
+          "direction": "bigger_is_better"
+        },
+        {
+          "name": "test_server_create_1_tool",
+          "value": 533,
+          "direction": "bigger_is_better"
+        },
+        {
+          "name": "test_server_create_10_tools",
+          "value": 99,
+          "direction": "bigger_is_better"
+        },
+        {
+          "name": "test_server_create_100_tools",
+          "value": 11,
+          "direction": "bigger_is_better"
+        },
+        {
+          "name": "test_stdio_startup_time",
+          "value": 5,
+          "direction": "bigger_is_better"
+        },
+        {
+          "name": "test_stdio_tool_call_latency",
+          "value": 5,
+          "direction": "bigger_is_better"
+        },
+        {
+          "name": "test_list_tools_10",
+          "value": 20,
+          "direction": "bigger_is_better"
+        },
+        {
+          "name": "test_list_tools_100",
+          "value": 10,
+          "direction": "bigger_is_better"
+        },
+        {
+          "name": "test_call_tool_10",
+          "value": 20,
+          "direction": "bigger_is_better"
+        },
+        {
+          "name": "test_call_tool_burst_10",
+          "value": 10,
+          "direction": "bigger_is_better"
+        }
+      ]
+    },
+    {
+      "metric": "stddev",
+      "unit": "s",
+      "direction": "smaller_is_better",
+      "values": [
+        {
+          "name": "test_cold_import",
+          "value": 0.01126830508692513,
+          "unit": "s",
+          "direction": "smaller_is_better"
+        },
+        {
+          "name": "test_warm_import",
+          "value": 0.000041865111140982756,
+          "unit": "s",
+          "direction": "smaller_is_better"
+        },
+        {
+          "name": "test_mount_1_child",
+          "value": 0.008063462842769728,
+          "unit": "s",
+          "direction": "smaller_is_better"
+        },
+        {
+          "name": "test_mount_5_children",
+          "value": 0.020563092942482864,
+          "unit": "s",
+          "direction": "smaller_is_better"
+        },
+        {
+          "name": "test_mount_10_children",
+          "value": 0.031115802018484493,
+          "unit": "s",
+          "direction": "smaller_is_better"
+        },
+        {
+          "name": "test_server_create_empty",
+          "value": 0.0000755604364792227,
+          "unit": "s",
+          "direction": "smaller_is_better"
+        },
+        {
+          "name": "test_server_create_1_tool",
+          "value": 0.0001071775636096437,
+          "unit": "s",
+          "direction": "smaller_is_better"
+        },
+        {
+          "name": "test_server_create_10_tools",
+          "value": 0.011549743624177329,
+          "unit": "s",
+          "direction": "smaller_is_better"
+        },
+        {
+          "name": "test_server_create_100_tools",
+          "value": 0.0006808582748387334,
+          "unit": "s",
+          "direction": "smaller_is_better"
+        },
+        {
+          "name": "test_stdio_startup_time",
+          "value": 0.006993491389672058,
+          "unit": "s",
+          "direction": "smaller_is_better"
+        },
+        {
+          "name": "test_stdio_tool_call_latency",
+          "value": 0.005957962668795041,
+          "unit": "s",
+          "direction": "smaller_is_better"
+        },
+        {
+          "name": "test_list_tools_10",
+          "value": 0.03671087588075359,
+          "unit": "s",
+          "direction": "smaller_is_better"
+        },
+        {
+          "name": "test_list_tools_100",
+          "value": 0.00020145810491177548,
+          "unit": "s",
+          "direction": "smaller_is_better"
+        },
+        {
+          "name": "test_call_tool_10",
+          "value": 0.00008231553294403547,
+          "unit": "s",
+          "direction": "smaller_is_better"
+        },
+        {
+          "name": "test_call_tool_burst_10",
+          "value": 0.0003814872170534876,
+          "unit": "s",
+          "direction": "smaller_is_better"
+        }
+      ]
+    }
+  ]
+}
