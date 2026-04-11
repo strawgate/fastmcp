@@ -1,4 +1,4 @@
-from mcp.types import TextContent
+from mcp.types import CreateMessageResultWithTools, TextContent, ToolUseContent
 
 from fastmcp import Client, Context, FastMCP
 from fastmcp.client.sampling import RequestContext, SamplingMessage, SamplingParams
@@ -442,25 +442,29 @@ class TestSampleStep:
         assert result.data == "ok"
 
 
-def _final_response(call_id: str, input_data: dict) -> "CreateMessageResultWithTools":
+def _final_response(call_id: str, input_data: dict) -> CreateMessageResultWithTools:
     """Build a final_response tool-use reply."""
-    from mcp.types import CreateMessageResultWithTools, ToolUseContent
-
     return CreateMessageResultWithTools(
         role="assistant",
-        content=[ToolUseContent(type="tool_use", id=call_id, name="final_response", input=input_data)],
+        content=[
+            ToolUseContent(
+                type="tool_use", id=call_id, name="final_response", input=input_data
+            )
+        ],
         model="test-model",
         stopReason="toolUse",
     )
 
 
-def _tool_call(call_id: str, name: str, input_data: dict) -> "CreateMessageResultWithTools":
+def _tool_call(
+    call_id: str, name: str, input_data: dict
+) -> CreateMessageResultWithTools:
     """Build a regular tool-use reply."""
-    from mcp.types import CreateMessageResultWithTools, ToolUseContent
-
     return CreateMessageResultWithTools(
         role="assistant",
-        content=[ToolUseContent(type="tool_use", id=call_id, name=name, input=input_data)],
+        content=[
+            ToolUseContent(type="tool_use", id=call_id, name=name, input=input_data)
+        ],
         model="test-model",
         stopReason="toolUse",
     )
@@ -501,7 +505,6 @@ class TestValidationRetryCap:
     async def test_consecutive_validation_failures_exceed_cap(self):
         """Always-invalid responses raise ToolError after exceeding the cap."""
         import pytest
-
         from pydantic import BaseModel
 
         from fastmcp.exceptions import ToolError
