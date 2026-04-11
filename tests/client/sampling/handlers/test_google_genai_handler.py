@@ -432,3 +432,32 @@ def test_response_to_result_with_tools_mixed_content():
     assert isinstance(tool_use, ToolUseContent)
     assert tool_use.type == "tool_use"
     assert tool_use.name == "search"
+
+
+# ────────────────────────────────────────────────────────────
+# Test for title stripping (PR #3860)
+# ────────────────────────────────────────────────────────────
+
+
+def test_convert_tool_strips_titles():
+    """_convert_tool_to_google_genai should strip titles from inputSchema."""
+    from fastmcp.client.sampling.handlers.google_genai import (
+        _convert_tool_to_google_genai,
+    )
+
+    tool = MagicMock()
+    tool.name = "my_tool"
+    tool.description = "A tool"
+    tool.inputSchema = {
+        "title": "Params",
+        "type": "object",
+        "properties": {
+            "query": {"title": "Query", "type": "string"},
+        },
+    }
+
+    result = _convert_tool_to_google_genai(tool)
+    schema = result.function_declarations[0].parameters_json_schema
+    assert "title" not in schema
+    assert "title" not in schema["properties"]["query"]
+    assert schema["properties"]["query"]["type"] == "string"
