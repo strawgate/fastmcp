@@ -1,3 +1,4 @@
+import pytest
 from mcp.types import TextContent
 
 from fastmcp import Client, Context, FastMCP
@@ -440,3 +441,224 @@ class TestSampleStep:
             result = await client.call_tool("test_step", {})
 
         assert result.data == "ok"
+
+
+class TestTextResponseRetry:
+    """Tests for retry logic when LLM returns text instead of calling final_response."""
+
+    async def test_text_response_then_success(self):
+        """Handler returns text on first call, then final_response on second call.
+
+        Verifies that the retry mechanism works: after a text response, the LLM
+        is asked again and successfully calls final_response.
+        """
+        from mcp.types import CreateMessageResultWithTools, ToolUseContent
+        from pydantic import BaseModel
+
+        class MyResult(BaseModel):
+            value: int
+
+        call_count = 0
+
+        def sampling_handler(
+            messages: list[SamplingMessage], params: SamplingParams, ctx: RequestContext
+        ) -> CreateMessageResultWithTools:
+            nonlocal call_count
+            call_count += 1
+
+            if call_count == 1:
+                # First call: return text (no tool use) - this should trigger retry
+                return CreateMessageResultWithTools(
+                    role="assistant",
+                    content=[TextContent(type="text", text="I think the answer is 42")],
+                    model="test-model",
+                    stopReason="endTurn",
+                )
+            else:
+                # Second call: correctly call final_response
+                return CreateMessageResultWithTools(
+                    role="assistant",
+                    content=[
+                        ToolUseContent(
+                            type="tool_use",
+                            id="call_1",
+                            name="final_response",
+                            input={"value": 42},
+                        )
+                    ],
+                    model="test-model",
+                    stopReason="toolUse",
+                )
+
+        mcp = FastMCP(sampling_handler=sampling_handler)
+
+        @mcp.tool
+        async def my_tool(context: Context) -> str:
+            result = await context.sample(
+                messages="What is the answer?",
+                result_type=MyResult,
+            )
+            assert isinstance(result.result, MyResult)
+            return str(result.result.value)
+
+        async with Client(mcp) as client:
+            result = await client.call_tool("my_tool", {})
+
+        assert call_count == 2
+        assert result.data == "42"
+
+    async def test_text_response_exceeds_max_retries(self):
+        """Handler always returns text, never calls final_response.
+
+        Verifies that RuntimeError is raised after exceeding max retries,
+        and the error message includes the attempt count.
+        """
+        from mcp.types import CreateMessageResultWithTools
+        from pydantic import BaseModel
+
+        from fastmcp.exceptions import ToolError
+
+        class MyResult(BaseModel):
+            value: int
+
+        call_count = 0
+
+        def sampling_handler(
+            messages: list[SamplingMessage], params: SamplingParams, ctx: RequestContext
+        ) -> CreateMessageResultWithTools:
+            nonlocal call_count
+            call_count += 1
+            # Always return text, never call final_response
+            return CreateMessageResultWithTools(
+                role="assistant",
+                content=[TextContent(type="text", text="I refuse to use tools")],
+                model="test-model",
+                stopReason="endTurn",
+            )
+
+        mcp = FastMCP(sampling_handler=sampling_handler)
+
+        @mcp.tool
+        async def my_tool(context: Context) -> str:
+            result = await context.sample(
+                messages="What is the answer?",
+                result_type=MyResult,
+            )
+            return str(result.result)
+
+        async with Client(mcp) as client:
+            with pytest.raises(ToolError, match="attempts"):
+                await client.call_tool("my_tool", {})
+
+        # _MAX_TEXT_RESPONSE_RETRIES is 3, error is raised when retries > 3
+        # So we expect 4 calls: initial + 3 retries, then error on the 4th text response
+        assert call_count == 4
+
+    async def test_nudge_message_in_history(self):
+        """After a text response retry, the history contains the nudge message.
+
+        Verifies that the nudge ("You must call the `final_response` tool...")
+        is appended to the message history before the next sampling call.
+        """
+        from mcp.types import CreateMessageResultWithTools, ToolUseContent
+        from pydantic import BaseModel
+
+        class MyResult(BaseModel):
+            value: int
+
+        messages_per_call: list[list[SamplingMessage]] = []
+
+        def sampling_handler(
+            messages: list[SamplingMessage], params: SamplingParams, ctx: RequestContext
+        ) -> CreateMessageResultWithTools:
+            messages_per_call.append(list(messages))
+
+            if len(messages_per_call) == 1:
+                # First call: return text to trigger retry
+                return CreateMessageResultWithTools(
+                    role="assistant",
+                    content=[TextContent(type="text", text="Let me think...")],
+                    model="test-model",
+                    stopReason="endTurn",
+                )
+            else:
+                # Second call: correctly call final_response
+                return CreateMessageResultWithTools(
+                    role="assistant",
+                    content=[
+                        ToolUseContent(
+                            type="tool_use",
+                            id="call_1",
+                            name="final_response",
+                            input={"value": 7},
+                        )
+                    ],
+                    model="test-model",
+                    stopReason="toolUse",
+                )
+
+        mcp = FastMCP(sampling_handler=sampling_handler)
+
+        @mcp.tool
+        async def my_tool(context: Context) -> str:
+            result = await context.sample(
+                messages="Give me a number",
+                result_type=MyResult,
+            )
+            return str(result.result.value)
+
+        async with Client(mcp) as client:
+            result = await client.call_tool("my_tool", {})
+
+        assert result.data == "7"
+        assert len(messages_per_call) == 2
+
+        # The second call's messages should contain the nudge
+        second_call_messages = messages_per_call[1]
+        nudge_found = False
+        for msg in second_call_messages:
+            if isinstance(msg.content, TextContent) and msg.role == "user":
+                if "You must call the `final_response` tool" in msg.content.text:
+                    nudge_found = True
+                    break
+        assert nudge_found, (
+            "Expected nudge message 'You must call the `final_response` tool...' "
+            "in the history for the second sampling call"
+        )
+
+    async def test_no_retry_when_result_type_is_none(self):
+        """Handler returns text with no result_type set.
+
+        Verifies that text responses are returned normally without retry
+        when result_type is None (the default).
+        """
+        from mcp.types import CreateMessageResultWithTools
+
+        call_count = 0
+
+        def sampling_handler(
+            messages: list[SamplingMessage], params: SamplingParams, ctx: RequestContext
+        ) -> CreateMessageResultWithTools:
+            nonlocal call_count
+            call_count += 1
+            return CreateMessageResultWithTools(
+                role="assistant",
+                content=[TextContent(type="text", text="Just a text reply")],
+                model="test-model",
+                stopReason="endTurn",
+            )
+
+        mcp = FastMCP(sampling_handler=sampling_handler)
+
+        @mcp.tool
+        async def my_tool(context: Context) -> str:
+            # No result_type parameter - defaults to None
+            result = await context.sample(messages="Say something")
+            return result.text or ""
+
+        async with Client(mcp) as client:
+            result = await client.call_tool("my_tool", {})
+
+        # Should return normally after a single call (no retry)
+        assert call_count == 1
+        assert result.data == "Just a text reply"
