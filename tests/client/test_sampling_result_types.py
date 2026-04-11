@@ -465,7 +465,10 @@ class TestTextResponseRetry:
             role="assistant",
             content=[
                 ToolUseContent(
-                    type="tool_use", id="c1", name="final_response", input={"value": value}
+                    type="tool_use",
+                    id="c1",
+                    name="final_response",
+                    input={"value": value},
                 )
             ],
             model="m",
