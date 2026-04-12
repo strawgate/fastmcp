@@ -432,3 +432,31 @@ def test_response_to_result_with_tools_mixed_content():
     assert isinstance(tool_use, ToolUseContent)
     assert tool_use.type == "tool_use"
     assert tool_use.name == "search"
+
+
+# ────────────────────────────────────────────────────────────
+# Test for title stripping (PR #3860)
+# ────────────────────────────────────────────────────────────
+
+
+def test_convert_tool_strips_titles():
+    """_convert_tool_to_google_genai should strip titles from inputSchema.
+
+    We test via compress_schema directly rather than constructing a
+    FunctionDeclaration because older google-genai versions may not
+    support the parameters_json_schema field.
+    """
+    from fastmcp.utilities.json_schema import compress_schema
+
+    input_schema = {
+        "title": "Params",
+        "type": "object",
+        "properties": {
+            "query": {"title": "Query", "type": "string"},
+        },
+    }
+
+    schema = compress_schema(input_schema, prune_titles=True)
+    assert "title" not in schema
+    assert "title" not in schema["properties"]["query"]
+    assert schema["properties"]["query"]["type"] == "string"
