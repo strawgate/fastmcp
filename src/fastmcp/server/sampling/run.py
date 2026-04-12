@@ -49,6 +49,9 @@ ResultT = TypeVar("ResultT")
 # Simplified tool choice type - just the mode string instead of the full MCP object
 ToolChoiceOption = Literal["auto", "required", "none"]
 
+# How many times we retry when the LLM returns text instead of calling final_response
+_MAX_TEXT_RESPONSE_RETRIES = 3
+
 
 @dataclass
 class SamplingResult(Generic[ResultT]):
@@ -611,6 +614,8 @@ async def sample_impl(
     # Convert messages for the loop
     current_messages: str | Sequence[str | SamplingMessage] = messages
 
+    text_response_retries = 0
+
     for _iteration in range(max_iterations):
         step = await sample_step_impl(
             context,
@@ -682,11 +687,28 @@ async def sample_impl(
         if not step.is_tool_use:
             # For structured output, the LLM must use the final_response tool
             if result_type is not None and result_type is not str:
-                raise RuntimeError(
-                    f"Expected structured output of type {result_type.__name__}, "
-                    "but the LLM returned a text response instead of calling "
-                    "the final_response tool."
+                text_response_retries += 1
+                if text_response_retries > _MAX_TEXT_RESPONSE_RETRIES:
+                    raise RuntimeError(
+                        f"Expected structured output of type {result_type.__name__}, "
+                        "but the LLM returned a text response instead of calling "
+                        f"the final_response tool ({text_response_retries} attempts)."
+                    )
+                # Nudge the LLM to use the tool
+                step.history.append(
+                    SamplingMessage(
+                        role="user",
+                        content=TextContent(
+                            type="text",
+                            text=(
+                                "You must call the `final_response` tool to provide "
+                                "your answer. Do not respond with text — use the tool."
+                            ),
+                        ),
+                    )
                 )
+                current_messages = step.history
+                continue
             return SamplingResult(
                 text=step.text,
                 result=cast(ResultT, step.text if step.text else ""),

@@ -1,3 +1,4 @@
+import pytest
 from mcp.types import TextContent
 
 from fastmcp import Client, Context, FastMCP
@@ -440,3 +441,112 @@ class TestSampleStep:
             result = await client.call_tool("test_step", {})
 
         assert result.data == "ok"
+
+
+class TestTextResponseRetry:
+    """Tests for retry logic when LLM returns text instead of calling final_response."""
+
+    @staticmethod
+    def _text_reply(text: str = "some text"):
+        from mcp.types import CreateMessageResultWithTools
+
+        return CreateMessageResultWithTools(
+            role="assistant",
+            content=[TextContent(type="text", text=text)],
+            model="m",
+            stopReason="endTurn",
+        )
+
+    @staticmethod
+    def _tool_reply(value: int):
+        from mcp.types import CreateMessageResultWithTools, ToolUseContent
+
+        return CreateMessageResultWithTools(
+            role="assistant",
+            content=[
+                ToolUseContent(
+                    type="tool_use",
+                    id="c1",
+                    name="final_response",
+                    input={"value": value},
+                )
+            ],
+            model="m",
+            stopReason="toolUse",
+        )
+
+    async def test_text_response_then_success(self):
+        """Text on first call, final_response on second -- verify call_count == 2."""
+        from pydantic import BaseModel
+
+        class R(BaseModel):
+            value: int
+
+        call_count = 0
+
+        def handler(messages, params, ctx):
+            nonlocal call_count
+            call_count += 1
+            return self._text_reply() if call_count == 1 else self._tool_reply(42)
+
+        mcp = FastMCP(sampling_handler=handler)
+
+        @mcp.tool
+        async def t(context: Context) -> str:
+            return str((await context.sample(messages="q", result_type=R)).result.value)
+
+        async with Client(mcp) as client:
+            result = await client.call_tool("t", {})
+
+        assert call_count == 2
+        assert result.data == "42"
+
+    async def test_text_response_exceeds_max_retries(self):
+        """Always text, never tool -- verify error after _MAX_TEXT_RESPONSE_RETRIES+1 calls."""
+        from pydantic import BaseModel
+
+        from fastmcp.exceptions import ToolError
+        from fastmcp.server.sampling.run import _MAX_TEXT_RESPONSE_RETRIES
+
+        class R(BaseModel):
+            value: int
+
+        call_count = 0
+
+        def handler(messages, params, ctx):
+            nonlocal call_count
+            call_count += 1
+            return self._text_reply()
+
+        mcp = FastMCP(sampling_handler=handler)
+
+        @mcp.tool
+        async def t(context: Context) -> str:
+            return str((await context.sample(messages="q", result_type=R)).result)
+
+        async with Client(mcp) as client:
+            with pytest.raises(ToolError, match="attempts"):
+                await client.call_tool("t", {})
+
+        assert call_count == _MAX_TEXT_RESPONSE_RETRIES + 1
+
+    async def test_no_retry_when_result_type_is_none(self):
+        """Text response with no result_type -- single call, normal return."""
+        call_count = 0
+
+        def handler(messages, params, ctx):
+            nonlocal call_count
+            call_count += 1
+            return self._text_reply("hello")
+
+        mcp = FastMCP(sampling_handler=handler)
+
+        @mcp.tool
+        async def t(context: Context) -> str:
+            return (await context.sample(messages="q")).text or ""
+
+        async with Client(mcp) as client:
+            result = await client.call_tool("t", {})
+
+        assert call_count == 1
+        assert result.data == "hello"
