@@ -621,6 +621,15 @@ async def sample_impl(
     consecutive_validation_failures = 0
     text_response_retries = 0
 
+    result_type_name = result_type.__name__ if result_type and result_type is not str else "str"
+    n_tools = len(sampling_tools) if sampling_tools else 0
+    logger.debug(
+        "sample: starting (result_type=%s, tools=%d, max_tokens=%s)",
+        result_type_name,
+        n_tools,
+        max_tokens,
+    )
+
     for _iteration in range(max_iterations):
         step = await sample_step_impl(
             context,
@@ -660,6 +669,12 @@ async def sample_impl(
                         validated_result = type_adapter.validate_python(input_data)
                         text = json.dumps(
                             type_adapter.dump_python(validated_result, mode="json")
+                        )
+                        logger.debug(
+                            "sample: completed in %d iteration(s) "
+                            "(result_type=%s)",
+                            _iteration + 1,
+                            result_type_name,
                         )
                         return SamplingResult(
                             text=text,
@@ -727,6 +742,10 @@ async def sample_impl(
                 )
                 current_messages = step.history
                 continue
+            logger.debug(
+                "sample: completed in %d iteration(s) (text response)",
+                _iteration + 1,
+            )
             return SamplingResult(
                 text=step.text,
                 result=cast(ResultT, step.text if step.text else ""),
