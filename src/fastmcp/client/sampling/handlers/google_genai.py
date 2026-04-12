@@ -1,6 +1,7 @@
 """Google GenAI sampling handler with tool support for FastMCP 3.0."""
 
 import base64
+import logging
 from collections.abc import Sequence
 from uuid import uuid4
 
@@ -51,6 +52,8 @@ from mcp.types import CreateMessageRequestParams as SamplingParams
 from mcp.types import Tool as MCPTool
 
 __all__ = ["GoogleGenaiSamplingHandler"]
+
+logger = logging.getLogger(__name__)
 
 
 class GoogleGenaiSamplingHandler:
@@ -127,6 +130,19 @@ class GoogleGenaiSamplingHandler:
                 ),
             )
         )
+
+        # Log token usage from the response
+        if response.usage_metadata:
+            u = response.usage_metadata
+            logger.debug(
+                "gemini usage [%s]: prompt=%s output=%s total=%s cached=%s thoughts=%s",
+                selected_model,
+                u.prompt_token_count,
+                u.candidates_token_count,
+                u.total_token_count,
+                u.cached_content_token_count,
+                u.thoughts_token_count,
+            )
 
         # Return appropriate result type based on whether tools were provided
         if params.tools:
