@@ -144,15 +144,19 @@ class GoogleGenaiSamplingHandler:
 def _convert_tool_to_google_genai(tool: MCPTool) -> GoogleTool:
     """Convert an MCP Tool to Google GenAI format.
 
-    Google's parameters_json_schema accepts standard JSON Schema format,
-    so we pass tool.inputSchema directly without conversion.
+    We prune ``title`` fields from the schema because Gemini 2.5 Flash
+    produces ``MALFORMED_FUNCTION_CALL`` when Pydantic's auto-generated
+    title annotations are present.
     """
+    from fastmcp.utilities.json_schema import compress_schema
+
+    schema = compress_schema(tool.inputSchema, prune_titles=True)
     return GoogleTool(
         function_declarations=[
             FunctionDeclaration(
                 name=tool.name,
                 description=tool.description or "",
-                parameters_json_schema=tool.inputSchema,
+                parameters_json_schema=schema,
             )
         ]
     )
