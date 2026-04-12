@@ -24,8 +24,11 @@ from pydantic import Field
 from pydantic.json_schema import SkipJsonSchema
 
 import fastmcp
-from fastmcp.decorators import get_fastmcp_meta, resolve_task_config
+from fastmcp.decorators import get_fastmcp_meta, resolve_task_config, set_fastmcp_meta
 from fastmcp.exceptions import FastMCPDeprecationWarning
+from fastmcp.server.auth.authorization import AuthCheck
+from fastmcp.server.dependencies import without_injected_parameters
+from fastmcp.server.tasks.config import TaskConfig
 from fastmcp.tools.base import (
     Tool,
     ToolResult,
@@ -36,9 +39,8 @@ from fastmcp.utilities.async_utils import (
     call_sync_fn_in_threadpool,
     is_coroutine_function,
 )
-from fastmcp.utilities.authorization import AuthCheck
+from fastmcp.utilities.callable_utils import is_callable_object
 from fastmcp.utilities.logging import get_logger
-from fastmcp.utilities.tasks import TaskConfig
 from fastmcp.utilities.types import (
     NotSet,
     NotSetT,
@@ -236,14 +238,7 @@ class FunctionTool(Tool):
                 "accept worker-thread dispatch."
             )
 
-        # Normalize task to TaskConfig
-        task_value = metadata.task
-        if task_value is None:
-            task_config = TaskConfig(mode="forbidden")
-        elif isinstance(task_value, bool):
-            task_config = TaskConfig.from_bool(task_value)
-        else:
-            task_config = task_value
+        task_config = TaskConfig.normalize(metadata.task)
         task_config.validate_function(fn, func_name)
 
         # Handle output_schema
@@ -283,8 +278,6 @@ class FunctionTool(Tool):
 
     async def run(self, arguments: dict[str, Any]) -> ToolResult:
         """Run the tool with arguments."""
-        from fastmcp.server.dependencies import without_injected_parameters
-
         wrapper_fn = without_injected_parameters(
             self.fn, run_in_thread=self.run_in_thread
         )
@@ -517,8 +510,7 @@ def tool(
             auth=auth,
             run_in_thread=run_in_thread,
         )
-        target = fn.__func__ if hasattr(fn, "__func__") else fn
-        target.__fastmcp__ = metadata
+        set_fastmcp_meta(fn, metadata)
         return fn
 
     def decorator(fn: F, tool_name: str | None) -> F:
@@ -532,7 +524,7 @@ def tool(
             return create_tool(fn, tool_name)  # type: ignore[return-value]  # ty:ignore[invalid-return-type]
         return attach_metadata(fn, tool_name)
 
-    if inspect.isroutine(name_or_fn):
+    if is_callable_object(name_or_fn):
         return decorator(name_or_fn, name)
     elif isinstance(name_or_fn, str):
         if name is not None:
