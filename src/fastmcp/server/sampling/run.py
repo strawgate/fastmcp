@@ -555,6 +555,8 @@ async def sample_step_impl(
     # Execute tools and add results to history
     step_tool_calls = extract_tool_calls(response)
     if step_tool_calls:
+        tool_names = [tc.name for tc in step_tool_calls]
+        logger.debug("sample_step: %d tool call(s): %s", len(step_tool_calls), tool_names)
         effective_mask = (
             mask_error_details
             if mask_error_details is not None
