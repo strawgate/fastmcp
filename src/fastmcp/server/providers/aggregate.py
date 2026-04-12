@@ -74,7 +74,6 @@ class AggregateProvider(Provider):
         """
         super().__init__()
         self.providers: list[Provider] = list(providers or [])
-        self._on_duplicate: str = "warn"
 
     def add_provider(self, provider: Provider, *, namespace: str = "") -> None:
         """Add a provider with optional namespace.
@@ -109,12 +108,17 @@ class AggregateProvider(Provider):
     ) -> list[T]:
         """Collect successful list results, logging any exceptions.
 
-        Detects duplicate component names across providers and applies
-        the on_duplicate behavior (error/warn/replace/ignore).
+        Emits a warning when the same MCP identity is returned by more than
+        one provider — surfaces composition mistakes to the server author.
+        This is always a warning: cross-provider collisions happen at runtime
+        (sometimes dynamically), so an errorable/strict mode would give the
+        author no way to react and would crash list calls in production.
         """
         collected: list[T] = []
-        # Track (name, provider_index) to allow version variants from same provider
-        seen_names: dict[str, int] = {}  # name -> provider index of first occurrence
+        # FastMCPComponent.key encodes type, identifier, and version —
+        # so version variants of the same component are NOT reported as
+        # collisions (matching _get_highest_version_result behavior).
+        seen_keys: dict[str, int] = {}
         for i, result in enumerate(results):
             if isinstance(result, BaseException):
                 logger.warning(
@@ -123,27 +127,15 @@ class AggregateProvider(Provider):
                 )
                 continue
             for item in result:
-                # Extract identity key: name, uri, or uri_template
-                name = (
-                    getattr(item, "name", None)
-                    or getattr(item, "uri", None)
-                    or getattr(item, "uri_template", None)
-                )
-                if name is not None:
-                    name = str(name)
-                    if name in seen_names and seen_names[name] != i:
-                        # Duplicate from a DIFFERENT provider — flag it
-                        msg = (
-                            f"Duplicate {operation} component '{name}' "
+                key = getattr(item, "key", None)
+                if key is not None:
+                    first = seen_keys.setdefault(key, i)
+                    if first != i:
+                        logger.warning(
+                            f"Duplicate {operation} component {key!r} "
                             f"from provider {self.providers[i]} "
-                            f"(first seen from provider "
-                            f"{self.providers[seen_names[name]]})"
+                            f"(first seen from provider {self.providers[first]})"
                         )
-                        if self._on_duplicate == "error":
-                            raise ValueError(msg)
-                        elif self._on_duplicate == "warn":
-                            logger.warning(msg)
-                    seen_names.setdefault(name, i)
                 collected.append(item)
         return collected
 
