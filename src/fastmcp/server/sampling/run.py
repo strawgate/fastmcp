@@ -619,6 +619,7 @@ async def sample_impl(
     current_messages: str | Sequence[str | SamplingMessage] = messages
 
     consecutive_validation_failures = 0
+    text_response_retries = 0
 
     for _iteration in range(max_iterations):
         step = await sample_step_impl(
