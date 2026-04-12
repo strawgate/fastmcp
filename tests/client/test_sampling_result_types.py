@@ -1,5 +1,5 @@
 import pytest
-from mcp.types import TextContent
+from mcp.types import CreateMessageResultWithTools, TextContent, ToolUseContent
 
 from fastmcp import Client, Context, FastMCP
 from fastmcp.client.sampling import RequestContext, SamplingMessage, SamplingParams
@@ -550,3 +550,132 @@ class TestTextResponseRetry:
 
         assert call_count == 1
         assert result.data == "hello"
+
+
+def _final_response(call_id: str, input_data: dict) -> CreateMessageResultWithTools:
+    """Build a final_response tool-use reply."""
+    return CreateMessageResultWithTools(
+        role="assistant",
+        content=[
+            ToolUseContent(
+                type="tool_use", id=call_id, name="final_response", input=input_data
+            )
+        ],
+        model="test-model",
+        stopReason="toolUse",
+    )
+
+
+def _tool_call(
+    call_id: str, name: str, input_data: dict
+) -> CreateMessageResultWithTools:
+    """Build a regular tool-use reply."""
+    return CreateMessageResultWithTools(
+        role="assistant",
+        content=[
+            ToolUseContent(type="tool_use", id=call_id, name=name, input=input_data)
+        ],
+        model="test-model",
+        stopReason="toolUse",
+    )
+
+
+class TestValidationRetryCap:
+    """Tests for the consecutive validation retry cap (PR #3851)."""
+
+    async def test_validation_failures_within_cap_then_success(self):
+        """Two consecutive failures followed by a valid response succeeds."""
+        from pydantic import BaseModel
+
+        class R(BaseModel):
+            value: int
+
+        call_count = 0
+
+        def handler(messages, params, ctx):
+            nonlocal call_count
+            call_count += 1
+            if call_count <= 2:
+                return _final_response(f"c{call_count}", {"value": "bad"})
+            return _final_response(f"c{call_count}", {"value": 99})
+
+        mcp = FastMCP(sampling_handler=handler)
+
+        @mcp.tool
+        async def t(context: Context) -> str:
+            r = await context.sample(messages="go", result_type=R)
+            return str(r.result.value)
+
+        async with Client(mcp) as client:
+            result = await client.call_tool("t", {})
+
+        assert call_count == 3
+        assert result.data == "99"
+
+    async def test_consecutive_validation_failures_exceed_cap(self):
+        """Always-invalid responses raise ToolError after exceeding the cap."""
+        from pydantic import BaseModel
+
+        from fastmcp.exceptions import ToolError
+        from fastmcp.server.sampling.run import _MAX_VALIDATION_RETRIES
+
+        class R(BaseModel):
+            value: int
+
+        call_count = 0
+
+        def handler(messages, params, ctx):
+            nonlocal call_count
+            call_count += 1
+            return _final_response(f"c{call_count}", {"value": "wrong"})
+
+        mcp = FastMCP(sampling_handler=handler)
+
+        @mcp.tool
+        async def t(context: Context) -> str:
+            return str((await context.sample(messages="go", result_type=R)).result)
+
+        async with Client(mcp) as client:
+            with pytest.raises(ToolError, match="consecutive"):
+                await client.call_tool("t", {})
+
+        # 1 initial attempt + _MAX_VALIDATION_RETRIES retries
+        assert call_count == _MAX_VALIDATION_RETRIES + 1
+
+    async def test_validation_counter_resets_after_other_tool_call(self):
+        """A tool call between validation failures resets the counter."""
+        from pydantic import BaseModel
+
+        class R(BaseModel):
+            value: int
+
+        def helper_tool(x: int) -> str:
+            """A helper tool."""
+            return f"result:{x}"
+
+        call_count = 0
+
+        def handler(messages, params, ctx):
+            nonlocal call_count
+            call_count += 1
+            # fail -> other tool (resets counter) -> fail -> succeed
+            if call_count == 1:
+                return _final_response("c1", {"value": "bad"})
+            if call_count == 2:
+                return _tool_call("c2", "helper_tool", {"x": 1})
+            if call_count == 3:
+                return _final_response("c3", {"value": "bad"})
+            return _final_response("c4", {"value": 42})
+
+        mcp = FastMCP(sampling_handler=handler)
+
+        @mcp.tool
+        async def t(context: Context) -> str:
+            r = await context.sample(messages="go", tools=[helper_tool], result_type=R)
+            return str(r.result.value)
+
+        async with Client(mcp) as client:
+            result = await client.call_tool("t", {})
+
+        assert call_count == 4
+        assert result.data == "42"
