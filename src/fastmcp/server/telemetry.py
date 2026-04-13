@@ -93,7 +93,12 @@ def server_span(
         try:
             yield span
         except Exception as e:
-            span.set_attribute("error.type", type(e).__name__)
+            span.set_attribute(
+                "error.type",
+                "tool_error"
+                if type(e).__name__ == "ToolError"
+                else type(e).__name__,
+            )
             span.record_exception(e)
             span.set_status(Status(StatusCode.ERROR, str(e)))
             raise
@@ -123,8 +128,14 @@ def delegate_span(
         try:
             yield span
         except Exception as e:
+            span.set_attribute(
+                "error.type",
+                "tool_error"
+                if type(e).__name__ == "ToolError"
+                else type(e).__name__,
+            )
             span.record_exception(e)
-            span.set_status(Status(StatusCode.ERROR))
+            span.set_status(Status(StatusCode.ERROR, str(e)))
             raise
 
 

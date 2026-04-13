@@ -74,7 +74,7 @@ class TestClientToolTracing:
     async def test_call_tool_error_caught_by_client_span(
         self, trace_exporter: InMemorySpanExporter
     ):
-        """ToolError from _parse_call_tool_result should be caught by the client span."""
+        """Tool error should be reflected on the client span via isError check."""
         server = FastMCP("test-server")
 
         @server.tool()
@@ -88,7 +88,7 @@ class TestClientToolTracing:
 
         spans = trace_exporter.get_finished_spans()
 
-        # Find the outer client span (from call_tool wrapping _parse_call_tool_result)
+        # Find the client span (from call_tool_mcp)
         client_spans = [
             s
             for s in spans
@@ -97,17 +97,15 @@ class TestClientToolTracing:
             and "fastmcp.server.name" not in s.attributes
         ]
 
-        # At least one client span should have ERROR status (the one catching ToolError)
-        error_client_spans = [
-            s for s in client_spans if s.status.status_code == StatusCode.ERROR
-        ]
-        assert len(error_client_spans) >= 1, (
-            "At least one client span should capture the ToolError"
+        # Exactly one client span should exist (no duplicate from call_tool)
+        assert len(client_spans) == 1, (
+            "There should be exactly one client span for call_tool"
         )
 
-        error_span = error_client_spans[0]
+        error_span = client_spans[0]
+        assert error_span.status.status_code == StatusCode.ERROR
         assert error_span.attributes is not None
-        assert error_span.attributes["error.type"] == "ToolError"
+        assert error_span.attributes["error.type"] == "tool_error"
 
 
 class TestClientResourceTracing:

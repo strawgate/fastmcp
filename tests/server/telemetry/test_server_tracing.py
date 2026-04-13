@@ -64,7 +64,7 @@ class TestToolTracing:
         assert span.status.status_code == StatusCode.ERROR
         assert "Something went wrong" in span.status.description
         assert span.attributes is not None
-        assert span.attributes["error.type"] == "ToolError"
+        assert span.attributes["error.type"] == "tool_error"
         assert len(span.events) > 0  # Exception recorded
 
     async def test_call_nonexistent_tool_sets_error(
@@ -82,6 +82,7 @@ class TestToolTracing:
         assert span.name == "tools/call nonexistent"
         assert span.status.status_code == StatusCode.ERROR
         assert span.attributes is not None
+        # NotFoundError is not a ToolError, so uses class name as fallback
         assert span.attributes["error.type"] == "NotFoundError"
 
 

@@ -7,6 +7,7 @@ import weakref
 from typing import TYPE_CHECKING, Any, Literal, overload
 
 import mcp.types
+from opentelemetry.trace import Status, StatusCode
 from pydantic import RootModel
 
 if TYPE_CHECKING:
@@ -151,7 +152,7 @@ class ClientToolsMixin:
             name,
             session_id=self.transport.get_session_id(),
             tool_name=name,
-        ):
+        ) as span:
             logger.debug(f"[{self.name}] called call_tool: {name}")
 
             # Inject trace context into meta for propagation to server
@@ -166,6 +167,18 @@ class ClientToolsMixin:
                     meta=propagated_meta if propagated_meta else None,
                 )
             )
+
+            # Reflect tool-level errors on the span so callers see ERROR
+            # status even though the MCP protocol call itself succeeded.
+            if result.isError:
+                span.set_attribute("error.type", "tool_error")
+                description = ""
+                if result.content and isinstance(
+                    result.content[0], mcp.types.TextContent
+                ):
+                    description = result.content[0].text
+                span.set_status(Status(StatusCode.ERROR, description))
+
             return result
 
     async def _parse_call_tool_result(
@@ -284,23 +297,16 @@ class ClientToolsMixin:
                 name, arguments, task_id, ttl, meta=request_meta or None
             )
 
-        with client_span(
-            f"tools/call {name}",
-            "tools/call",
-            name,
-            session_id=self.transport.get_session_id(),
-            tool_name=name,
-        ):
-            result = await self.call_tool_mcp(
-                name=name,
-                arguments=arguments or {},
-                timeout=timeout,
-                progress_handler=progress_handler,
-                meta=request_meta or None,
-            )
-            return await self._parse_call_tool_result(
-                name, result, raise_on_error=raise_on_error
-            )
+        result = await self.call_tool_mcp(
+            name=name,
+            arguments=arguments or {},
+            timeout=timeout,
+            progress_handler=progress_handler,
+            meta=request_meta or None,
+        )
+        return await self._parse_call_tool_result(
+            name, result, raise_on_error=raise_on_error
+        )
 
     async def _call_tool_as_task(
         self: Client,
