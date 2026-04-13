@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
 from mcp.types import (
     CreateMessageResultWithTools,
     TextContent,
@@ -87,9 +86,7 @@ class TestSamplingCreateMessageSpan:
         assert span.attributes is not None
         assert span.attributes["fastmcp.sampling.iterations"] == 1
 
-    async def test_result_type_attribute(
-        self, trace_exporter: InMemorySpanExporter
-    ):
+    async def test_result_type_attribute(self, trace_exporter: InMemorySpanExporter):
         """result_type is recorded on the span."""
 
         class MyResult(BaseModel):
@@ -231,9 +228,7 @@ class TestSamplingStepSpans:
 class TestSamplingToolExecutionSpans:
     """Verify sampling.execute_tool spans."""
 
-    async def test_tool_execution_span(
-        self, trace_exporter: InMemorySpanExporter
-    ):
+    async def test_tool_execution_span(self, trace_exporter: InMemorySpanExporter):
         """Tool call within sampling creates an execute_tool span."""
         call_count = 0
 
@@ -279,9 +274,7 @@ class TestSamplingToolExecutionSpans:
             await client.call_tool("do_sample", {})
 
         spans = trace_exporter.get_finished_spans()
-        tool_spans = [
-            s for s in spans if s.name == "sampling.execute_tool get_weather"
-        ]
+        tool_spans = [s for s in spans if s.name == "sampling.execute_tool get_weather"]
         assert len(tool_spans) == 1
         span = tool_spans[0]
         assert span.attributes is not None
@@ -349,9 +342,7 @@ class TestSamplingToolExecutionSpans:
 class TestSamplingValidationEvents:
     """Verify validation failure and text response retry events."""
 
-    async def test_validation_failure_event(
-        self, trace_exporter: InMemorySpanExporter
-    ):
+    async def test_validation_failure_event(self, trace_exporter: InMemorySpanExporter):
         """Validation failure adds a sampling.validation_failure event."""
 
         class StrictModel(BaseModel):
@@ -415,6 +406,7 @@ class TestSamplingValidationEvents:
             e for e in span.events if e.name == "sampling.validation_failure"
         ]
         assert len(validation_events) == 1
+        assert validation_events[0].attributes is not None
         assert (
             validation_events[0].attributes["fastmcp.sampling.consecutive_failures"]
             == 1
@@ -479,4 +471,5 @@ class TestSamplingValidationEvents:
             e for e in span.events if e.name == "sampling.text_response_retry"
         ]
         assert len(retry_events) == 1
+        assert retry_events[0].attributes is not None
         assert retry_events[0].attributes["fastmcp.sampling.retry_count"] == 1
