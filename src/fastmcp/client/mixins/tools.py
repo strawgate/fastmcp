@@ -52,12 +52,18 @@ class ClientToolsMixin:
             RuntimeError: If called while the client is not connected.
             McpError: If the request results in a TimeoutError | JSONRPCError
         """
-        logger.debug(f"[{self.name}] called list_tools")
+        with client_span(
+            "tools/list",
+            "tools/list",
+            "",
+            session_id=self.transport.get_session_id(),
+        ):
+            logger.debug(f"[{self.name}] called list_tools")
 
-        result = await self._await_with_session_monitoring(
-            self.session.list_tools(cursor=cursor)
-        )
-        return result
+            result = await self._await_with_session_monitoring(
+                self.session.list_tools(cursor=cursor)
+            )
+            return result
 
     async def list_tools(
         self: Client,
@@ -144,6 +150,7 @@ class ClientToolsMixin:
             "tools/call",
             name,
             session_id=self.transport.get_session_id(),
+            tool_name=name,
         ):
             logger.debug(f"[{self.name}] called call_tool: {name}")
 
@@ -277,16 +284,23 @@ class ClientToolsMixin:
                 name, arguments, task_id, ttl, meta=request_meta or None
             )
 
-        result = await self.call_tool_mcp(
-            name=name,
-            arguments=arguments or {},
-            timeout=timeout,
-            progress_handler=progress_handler,
-            meta=request_meta or None,
-        )
-        return await self._parse_call_tool_result(
-            name, result, raise_on_error=raise_on_error
-        )
+        with client_span(
+            f"tools/call {name}",
+            "tools/call",
+            name,
+            session_id=self.transport.get_session_id(),
+            tool_name=name,
+        ):
+            result = await self.call_tool_mcp(
+                name=name,
+                arguments=arguments or {},
+                timeout=timeout,
+                progress_handler=progress_handler,
+                meta=request_meta or None,
+            )
+            return await self._parse_call_tool_result(
+                name, result, raise_on_error=raise_on_error
+            )
 
     async def _call_tool_as_task(
         self: Client,

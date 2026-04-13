@@ -60,6 +60,8 @@ def server_span(
     component_type: str,
     component_key: str,
     resource_uri: str | None = None,
+    tool_name: str | None = None,
+    prompt_name: str | None = None,
 ) -> Generator[Span, None, None]:
     """Create a SERVER span with standard MCP attributes and auth context.
 
@@ -72,10 +74,6 @@ def server_span(
         kind=SpanKind.SERVER,
     ) as span:
         attrs: dict[str, str] = {
-            # RPC semantic conventions
-            "rpc.system": "mcp",
-            "rpc.service": server_name,
-            "rpc.method": method,
             # MCP semantic conventions
             "mcp.method.name": method,
             # FastMCP-specific attributes
@@ -87,12 +85,17 @@ def server_span(
         }
         if resource_uri is not None:
             attrs["mcp.resource.uri"] = resource_uri
+        if tool_name is not None:
+            attrs["gen_ai.tool.name"] = tool_name
+        if prompt_name is not None:
+            attrs["gen_ai.prompt.name"] = prompt_name
         span.set_attributes(attrs)
         try:
             yield span
         except Exception as e:
+            span.set_attribute("error.type", type(e).__name__)
             span.record_exception(e)
-            span.set_status(Status(StatusCode.ERROR))
+            span.set_status(Status(StatusCode.ERROR, str(e)))
             raise
 
 
@@ -101,6 +104,7 @@ def delegate_span(
     name: str,
     provider_type: str,
     component_key: str,
+    method: str | None = None,
 ) -> Generator[Span, None, None]:
     """Create an INTERNAL span for provider delegation.
 
@@ -109,12 +113,13 @@ def delegate_span(
     """
     tracer = get_tracer()
     with tracer.start_as_current_span(f"delegate {name}") as span:
-        span.set_attributes(
-            {
-                "fastmcp.provider.type": provider_type,
-                "fastmcp.component.key": component_key,
-            }
-        )
+        attrs: dict[str, str] = {
+            "fastmcp.provider.type": provider_type,
+            "fastmcp.component.key": component_key,
+        }
+        if method is not None:
+            attrs["mcp.method.name"] = method
+        span.set_attributes(attrs)
         try:
             yield span
         except Exception as e:
