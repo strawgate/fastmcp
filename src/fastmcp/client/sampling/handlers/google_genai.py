@@ -85,6 +85,21 @@ class GoogleGenaiSamplingHandler:
         self.client: GoogleGenaiClient = client or GoogleGenaiClient()
         self.default_model: str = default_model
         self.thinking_budget: int | None = thinking_budget
+        # Cumulative token usage across all calls. Call reset_usage()
+        # between pipeline runs to isolate per-run totals.
+        self.usage: dict[str, int] = {
+            "prompt": 0,
+            "output": 0,
+            "total": 0,
+            "cached": 0,
+            "thoughts": 0,
+            "calls": 0,
+        }
+
+    def reset_usage(self) -> None:
+        """Reset cumulative token counters. Call between pipeline runs."""
+        for k in self.usage:
+            self.usage[k] = 0
 
     async def __call__(
         self,
@@ -131,17 +146,23 @@ class GoogleGenaiSamplingHandler:
             )
         )
 
-        # Log token usage from the response
+        # Log and accumulate token usage
         if response.usage_metadata:
             u = response.usage_metadata
+            self.usage["prompt"] += u.prompt_token_count or 0
+            self.usage["output"] += u.candidates_token_count or 0
+            self.usage["total"] += u.total_token_count or 0
+            self.usage["cached"] += u.cached_content_token_count or 0
+            self.usage["thoughts"] += u.thoughts_token_count or 0
+            self.usage["calls"] += 1
             logger.debug(
-                "gemini usage [%s]: prompt=%s output=%s total=%s cached=%s thoughts=%s",
+                "gemini [%s]: prompt=%s output=%s cached=%s thoughts=%s (cumulative: %s)",
                 selected_model,
                 u.prompt_token_count,
                 u.candidates_token_count,
-                u.total_token_count,
                 u.cached_content_token_count,
                 u.thoughts_token_count,
+                self.usage,
             )
 
         # Return appropriate result type based on whether tools were provided
