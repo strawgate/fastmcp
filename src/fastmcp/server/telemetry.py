@@ -101,6 +101,7 @@ def delegate_span(
     name: str,
     provider_type: str,
     component_key: str,
+    method: str | None = None,
 ) -> Generator[Span, None, None]:
     """Create an INTERNAL span for provider delegation.
 
@@ -109,12 +110,13 @@ def delegate_span(
     """
     tracer = get_tracer()
     with tracer.start_as_current_span(f"delegate {name}") as span:
-        span.set_attributes(
-            {
-                "fastmcp.provider.type": provider_type,
-                "fastmcp.component.key": component_key,
-            }
-        )
+        attrs: dict[str, str] = {
+            "fastmcp.provider.type": provider_type,
+            "fastmcp.component.key": component_key,
+        }
+        if method is not None:
+            attrs["mcp.method.name"] = method
+        span.set_attributes(attrs)
         try:
             yield span
         except Exception as e:
