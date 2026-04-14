@@ -2047,6 +2047,9 @@ class FastMCP(
 
         from fastmcp.server.providers.fastmcp_provider import FastMCPProvider
 
+        if server is self:
+            raise ValueError("Cannot mount a server onto itself")
+
         # Handle deprecated prefix parameter
         if prefix is not None:
             warnings.warn(
