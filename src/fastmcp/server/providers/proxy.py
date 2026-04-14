@@ -158,7 +158,13 @@ class ProxyTool(Tool):
                     name=backend_name, arguments=arguments, meta=meta
                 )
             if result.isError:
-                raise ToolError(cast(mcp.types.TextContent, result.content[0]).text)
+                first = result.content[0] if result.content else None
+                if isinstance(first, mcp.types.TextContent):
+                    raise ToolError(first.text)
+                elif first is None:
+                    raise ToolError("Tool returned an error with no content")
+                else:
+                    raise ToolError(f"Tool returned an error ({type(first).__name__})")
             # Preserve backend's meta (includes task metadata for background tasks)
             return ToolResult(
                 content=result.content,
