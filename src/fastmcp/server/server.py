@@ -1346,7 +1346,7 @@ class FastMCP(
 
             # Core logic: find and read resource (providers queried in parallel)
             with server_span(
-                f"resources/read {uri}",
+                "resources/read",
                 "resources/read",
                 self.name,
                 "resource",
