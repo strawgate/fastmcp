@@ -1220,7 +1220,12 @@ class FastMCP(
 
             # Core logic: find and execute tool
             with server_span(
-                f"tools/call {name}", "tools/call", self.name, "tool", name
+                f"tools/call {name}",
+                "tools/call",
+                self.name,
+                "tool",
+                name,
+                tool_name=name,
             ) as span:
                 # Try normal display-name resolution first.
                 tool: Tool | None = await self.get_tool(name, version=version)
@@ -1357,7 +1362,7 @@ class FastMCP(
 
             # Core logic: find and read resource (providers queried in parallel)
             with server_span(
-                f"resources/read {uri}",
+                "resources/read",
                 "resources/read",
                 self.name,
                 "resource",
@@ -1522,7 +1527,12 @@ class FastMCP(
             # Core logic: find and render prompt (providers queried in parallel)
             # Use get_prompt to apply transforms and filter disabled
             with server_span(
-                f"prompts/get {name}", "prompts/get", self.name, "prompt", name
+                f"prompts/get {name}",
+                "prompts/get",
+                self.name,
+                "prompt",
+                name,
+                prompt_name=name,
             ) as span:
                 prompt = await self.get_prompt(name, version=version)
                 if prompt is None:
@@ -2062,6 +2072,9 @@ class FastMCP(
         import warnings
 
         from fastmcp.server.providers.fastmcp_provider import FastMCPProvider
+
+        if server is self:
+            raise ValueError("Cannot mount a server onto itself")
 
         # Handle deprecated prefix parameter
         if prefix is not None:

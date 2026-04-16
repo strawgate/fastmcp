@@ -5,6 +5,7 @@ from contextlib import contextmanager
 
 from opentelemetry.trace import Span, SpanKind, Status, StatusCode
 
+from fastmcp.exceptions import ToolError as _ToolError
 from fastmcp.telemetry import get_tracer
 
 
@@ -15,6 +16,8 @@ def client_span(
     component_key: str,
     session_id: str | None = None,
     resource_uri: str | None = None,
+    tool_name: str | None = None,
+    prompt_name: str | None = None,
 ) -> Generator[Span, None, None]:
     """Create a CLIENT span with standard MCP attributes.
 
@@ -24,26 +27,30 @@ def client_span(
     with tracer.start_as_current_span(name, kind=SpanKind.CLIENT) as span:
         if span.is_recording():
             attrs: dict[str, str] = {
-                # RPC semantic conventions
-                "rpc.system": "mcp",
-                "rpc.method": method,
                 # MCP semantic conventions
                 "mcp.method.name": method,
                 # FastMCP-specific attributes
                 "fastmcp.component.key": component_key,
             }
-            if session_id:
+            if session_id is not None:
                 attrs["mcp.session.id"] = session_id
             if resource_uri:
                 attrs["mcp.resource.uri"] = resource_uri
+            if tool_name is not None:
+                attrs["gen_ai.tool.name"] = tool_name
+            if prompt_name is not None:
+                attrs["gen_ai.prompt.name"] = prompt_name
             span.set_attributes(attrs)
         try:
             yield span
         except Exception as e:
             if span.is_recording():
-                span.set_attribute("error.type", type(e).__qualname__)
-            span.record_exception(e)
-            span.set_status(Status(StatusCode.ERROR))
+                error_type = (
+                    "tool_error" if isinstance(e, _ToolError) else type(e).__qualname__
+                )
+                span.set_attribute("error.type", error_type)
+                span.record_exception(e)
+                span.set_status(Status(StatusCode.ERROR, str(e)))
             raise
 
 
