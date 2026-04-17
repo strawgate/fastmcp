@@ -70,11 +70,15 @@ def pytest_sessionfinish(session: pytest.Session, exitstatus: int) -> None:
     )
 
     # Snapshot baselines (openapi-directory@f7207cf0).
-    # Ratcheted 2026-04-17: TypeErrors 420→0 (already fixed on main since
-    # original 2026-04-10 capture).  SchemaErrors unchanged — all 279 are
-    # Pydantic Rust-regex rejections (lookahead, \p{…}, size limits).
+    # Ratcheted 2026-04-17: TypeErrors 420→0 (already fixed on main).
+    # SchemaErrors 300→5: graceful pattern fallback in _create_string_type
+    # now catches unsupported Rust-regex patterns (lookahead, \p{…}, size
+    # limits) and degrades to str with a warning instead of crashing.
+    # 1 non-regex SchemaError remains: api.video's video-thumbnail-pick-payload
+    # declares `"pattern": 0.0` (a float, not a string) — a bug in the spec,
+    # intentionally not caught by the regex-only fallback guard.
     MAX_TYPE_ERRORS = 0
-    MAX_SCHEMA_ERRORS = 300  # was 277 — Pydantic regex rejections (not our code)
+    MAX_SCHEMA_ERRORS = 5  # was 279; ~1 remains as a legitimate non-regex error
     MAX_TIMEOUTS = 5  # was 0
     MAX_OTHER_ERRORS = 50  # was 0
 
