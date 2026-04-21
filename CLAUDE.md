@@ -50,6 +50,8 @@ When modifying MCP functionality, changes typically need to be applied across al
 - **Resource Templates** (`src/resources/`)
 - **Prompts** (`src/prompts/`)
 
+**Before writing cross-component logic (dedupe, grouping, lookups, identity checks), read `FastMCPComponent` in `src/fastmcp/utilities/components.py`.** The base class defines the shared surface — `name`, `version`, `tags`, `meta`, and critically the `key` property which is the canonical MCP identity (encodes type, identifier, and version). Prefer `item.key` over ad-hoc `name or uri or uri_template` fallbacks; overrides in `Resource` and `ResourceTemplate` already handle URI-based identity, and `.key` includes the version suffix so variants of the same component don't falsely collide.
+
 ## Development Rules
 
 **Read `CONTRIBUTING.md` before opening issues or PRs.** It describes when PRs are appropriate, what we expect from enhancement proposals, and what we'll close without review.
@@ -63,6 +65,9 @@ When modifying MCP functionality, changes typically need to be applied across al
 - **NEVER** force-push on collaborative repos
 - **ALWAYS** run prek before PRs
 - **NEVER** create a release, comment on an issue, or open a PR unless specifically instructed to do so.
+- **NEVER** merge a PR marked as do-not-merge or draft. Check title, body, AND labels for `[DNM]`, `DNM`, `DO NOT MERGE`, `DON'T MERGE`, `DONT MERGE`, `do-not-merge`, `dont-merge`, `[DRAFT]`, or `DRAFT` (case-insensitive, any variation — some authors use `[DRAFT]` in the title even when `isDraft` is false). Authors use these as hard stops — respect them even if CI is green and review looks clean. When triaging a batch of PRs, filter these out up front AND re-check each one's labels immediately before merging, since labels can change mid-session.
+- **ALWAYS** read review-bot comments before approving a PR. CodeRabbit and chatgpt-codex-connector (Codex) leave substantive review comments on most PRs in this repo — these bots have read the diff and often flag real issues that aren't in the PR description. Use `gh pr view <num> --comments` and read the bot feedback as part of review. Unlike proposed solutions from issue reporters, review-bot feedback should be evaluated on its merits, not discounted.
+- **Be constructively skeptical of bot review comments on your own PRs.** CodeRabbit, Codex, and claude[bot] run a fresh review pass on every push, which means a PR with active churn can accumulate bot comments in a stream that never really ends — each fix surfaces a new edge case the next pass can flag. Most of the early feedback is real and worth acting on; diminishing returns set in fast. Evaluate each comment on its merits, the same way you would a human reviewer: is this a real bug users will hit, or a hypothetical that requires an adversarial setup? Does the fix introduce more complexity than the problem? Has the bot missed context that's obvious to a human reader (a `*,` keyword-only marker, a design decision documented elsewhere, something already resolved on a later commit)? When a comment is pedantic, a false positive, or flagging something already fixed, reply on the thread explaining the reasoning and move on — don't keep iterating just because more comments arrive. If you find yourself three rounds deep and the feedback is shifting toward "what if someone does X" hypotheticals, you're past the point where each fix is improving the PR. Stop, document the contract as-is, and ship.
 
 ### Releases
 

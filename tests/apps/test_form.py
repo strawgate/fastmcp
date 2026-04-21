@@ -6,7 +6,12 @@ import pydantic
 import pytest
 
 from fastmcp import FastMCP
-from fastmcp.apps.form import FormInput, _backfill_boolean_defaults
+from fastmcp.apps.form import (
+    _FORM_SUPPORTS_DEFAULTS,
+    FormInput,
+    _backfill_boolean_defaults,
+)
+from fastmcp.server.providers.addressing import hashed_backend_name
 
 
 class Contact(pydantic.BaseModel):
@@ -52,7 +57,7 @@ class TestFormInputProvider:
         server = FastMCP("test", providers=[FormInput(model=Contact)])
 
         result = await server.call_tool(
-            "Contact___submit_form",
+            hashed_backend_name("Contact", "submit_form"),
             {"data": {"name": "Alice", "email": "alice@example.com"}},
         )
         text = result.content[0].text  # type: ignore[union-attr]  # ty:ignore[unresolved-attribute]
@@ -74,7 +79,7 @@ class TestFormInputProvider:
         )
 
         result = await server.call_tool(
-            "Contact___submit_form",
+            hashed_backend_name("Contact", "submit_form"),
             {"data": {"name": "Bob", "email": "bob@example.com"}},
         )
         text = result.content[0].text  # type: ignore[union-attr]  # ty:ignore[unresolved-attribute]
@@ -94,7 +99,7 @@ class TestFormInputProvider:
         server = FastMCP("test", providers=[FormInput(model=NoteForm)])
 
         result = await server.call_tool(
-            "NoteForm___submit_form",
+            hashed_backend_name("NoteForm", "submit_form"),
             {"data": {"title": "My Note", "content": "Hello"}},
         )
         text = result.content[0].text  # type: ignore[union-attr]  # ty:ignore[unresolved-attribute]
@@ -107,7 +112,7 @@ class TestFormInputProvider:
         server = FastMCP("test", providers=[FormInput(model=NoteForm)])
 
         result = await server.call_tool(
-            "NoteForm___submit_form",
+            hashed_backend_name("NoteForm", "submit_form"),
             {"data": {"title": "My Note", "content": "Hello", "archived": True}},
         )
         text = result.content[0].text  # type: ignore[union-attr]  # ty:ignore[unresolved-attribute]
@@ -122,7 +127,7 @@ class TestFormInputProvider:
         # for the data parameter itself). Pydantic will still reject missing
         # required fields like title/content, but that's expected.
         with pytest.raises(pydantic.ValidationError, match="title"):
-            await server.call_tool("NoteForm___submit_form", {})
+            await server.call_tool(hashed_backend_name("NoteForm", "submit_form"), {})
 
     async def test_multiple_models(self):
         class Address(pydantic.BaseModel):
@@ -141,6 +146,57 @@ class TestFormInputProvider:
         tool_names = [t.name for t in tools]
         assert "collect_contact" in tool_names
         assert "collect_address" in tool_names
+
+
+class TestCollectInputDefault:
+    """The `default` arg pre-fills the form for the user to confirm/edit."""
+
+    @pytest.mark.skipif(
+        not _FORM_SUPPORTS_DEFAULTS,
+        reason="prefab-ui<0.19.1 does not support Form.from_model(defaults=...)",
+    )
+    async def test_default_prefills_form_fields(self):
+        server = FastMCP("test", providers=[FormInput(model=Contact)])
+
+        result = await server.call_tool(
+            "collect_contact",
+            {
+                "prompt": "Confirm your details",
+                "default": {"name": "Alice", "email": "alice@example.com"},
+            },
+        )
+        # The form view should serialize with the prefilled values.
+        payload = json.dumps(result.structured_content)
+        assert "Alice" in payload
+        assert "alice@example.com" in payload
+
+    async def test_default_absent_still_renders_blank_form(self):
+        """Sanity: omitting `default` keeps the existing blank-form behavior."""
+        server = FastMCP("test", providers=[FormInput(model=Contact)])
+
+        result = await server.call_tool(
+            "collect_contact",
+            {"prompt": "Enter your details"},
+        )
+        assert result.structured_content is not None
+
+    async def test_default_silent_on_older_prefab(self):
+        """When the sniff says False, `default` is accepted but no-ops.
+
+        This test's real value is that `default` is part of the tool
+        signature regardless of prefab version, so agents can always pass
+        it without runtime errors.
+        """
+        server = FastMCP("test", providers=[FormInput(model=Contact)])
+
+        result = await server.call_tool(
+            "collect_contact",
+            {
+                "prompt": "Confirm your details",
+                "default": {"name": "Bob"},
+            },
+        )
+        assert result.structured_content is not None
 
 
 class TestBackfillBooleanDefaults:
