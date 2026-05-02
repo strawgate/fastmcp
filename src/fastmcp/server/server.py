@@ -307,6 +307,7 @@ class FastMCP(
         sampling_handler: SamplingHandler | None = None,
         sampling_handler_behavior: Literal["always", "fallback"] | None = None,
         client_log_level: mcp.types.LoggingLevel | None = None,
+        experimental_capabilities: dict[str, dict[str, Any]] | None = None,
         **kwargs: Any,
     ):
         _check_removed_kwargs(kwargs)
@@ -403,6 +404,10 @@ class FastMCP(
             client_log_level
             if client_log_level is not None
             else fastmcp.settings.client_log_level
+        )
+
+        self.experimental_capabilities: dict[str, dict[str, Any]] = (
+            experimental_capabilities or {}
         )
 
         self.middleware: list[Middleware] = list(middleware or [])
@@ -1613,6 +1618,7 @@ class FastMCP(
         task: bool | TaskConfig | None = None,
         timeout: float | None = None,
         auth: AuthCheck | list[AuthCheck] | None = None,
+        run_in_thread: bool = True,
     ) -> F: ...
 
     @overload
@@ -1634,6 +1640,7 @@ class FastMCP(
         task: bool | TaskConfig | None = None,
         timeout: float | None = None,
         auth: AuthCheck | list[AuthCheck] | None = None,
+        run_in_thread: bool = True,
     ) -> Callable[[F], F]: ...
 
     def tool(
@@ -1654,6 +1661,7 @@ class FastMCP(
         task: bool | TaskConfig | None = None,
         timeout: float | None = None,
         auth: AuthCheck | list[AuthCheck] | None = None,
+        run_in_thread: bool = True,
     ) -> (
         Callable[[AnyFunction], FunctionTool]
         | FunctionTool
@@ -1731,6 +1739,7 @@ class FastMCP(
             task=task if task is not None else self._support_tasks_by_default,
             timeout=timeout,
             auth=auth,
+            run_in_thread=run_in_thread,
         )
 
         return result
