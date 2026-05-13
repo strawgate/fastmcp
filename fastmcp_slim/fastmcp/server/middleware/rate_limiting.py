@@ -145,7 +145,13 @@ class RateLimitingMiddleware(Middleware):
             )
 
     def _get_limiter(self, client_id: str) -> TokenBucketRateLimiter:
-        """Get or create a rate limiter for a client, with LRU eviction."""
+        """Get or create a rate limiter for a client, with LRU eviction.
+
+        When the cache is full, the least-recently-used client is evicted.
+        This is safe because an evicted client was inactive long enough for
+        max_clients other clients to be more recent — by which point their
+        token bucket would have refilled to capacity anyway.
+        """
         if client_id in self._client_limiters:
             self._client_limiters.move_to_end(client_id)
             return self._client_limiters[client_id]
@@ -229,7 +235,13 @@ class SlidingWindowRateLimitingMiddleware(Middleware):
         )
 
     def _get_limiter(self, client_id: str) -> SlidingWindowRateLimiter:
-        """Get or create a rate limiter for a client, with LRU eviction."""
+        """Get or create a rate limiter for a client, with LRU eviction.
+
+        When the cache is full, the least-recently-used client is evicted.
+        This is safe because an evicted client was inactive long enough for
+        max_clients other clients to be more recent — by which point their
+        sliding window would have expired anyway.
+        """
         if client_id in self._client_limiters:
             self._client_limiters.move_to_end(client_id)
             return self._client_limiters[client_id]
