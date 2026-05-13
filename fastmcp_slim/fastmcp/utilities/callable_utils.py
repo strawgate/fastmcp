@@ -7,6 +7,7 @@ extraction logic, and callable unwrapping across the codebase.
 
 from __future__ import annotations
 
+import contextlib
 import functools
 import inspect
 from collections.abc import Callable
@@ -66,7 +67,15 @@ def prepare_callable(fn: Callable[..., Any]) -> Callable[..., Any]:
     # Strip __wrapped__ from partials so Pydantic sees the partial's own
     # signature with bound args removed, not the original function's signature.
     if isinstance(fn, functools.partial) and hasattr(fn, "__wrapped__"):
+        old = fn
         fn = functools.partial(fn.func, *fn.args, **fn.keywords)
+        # Preserve annotation metadata copied by functools.update_wrapper
+        # (e.g. __module__, __qualname__) needed for deferred annotation
+        # resolution when `from __future__ import annotations` is active.
+        for attr in functools.WRAPPER_ASSIGNMENTS:
+            with contextlib.suppress(AttributeError):
+                val = getattr(old, attr)
+                setattr(fn, attr, val)
 
     # Callable classes (not routines, not partials) → unwrap to __call__
     if not inspect.isroutine(fn) and not isinstance(fn, functools.partial):
