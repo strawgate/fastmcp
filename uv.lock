@@ -935,6 +935,7 @@ dev = [
 name = "fastmcp-slim"
 source = { editable = "fastmcp_slim" }
 dependencies = [
+    { name = "cachetools" },
     { name = "platformdirs" },
     { name = "pydantic", extra = ["email"] },
     { name = "pydantic-settings" },
@@ -1009,6 +1010,7 @@ requires-dist = [
     { name = "authlib", marker = "extra == 'client'", specifier = ">=1.6.11" },
     { name = "authlib", marker = "extra == 'server'", specifier = ">=1.6.11" },
     { name = "azure-identity", marker = "extra == 'azure'", specifier = ">=1.16.0" },
+    { name = "cachetools", specifier = ">=5.0.0" },
     { name = "cyclopts", marker = "extra == 'server'", specifier = ">=4.0.0" },
     { name = "exceptiongroup", marker = "extra == 'client'", specifier = ">=1.2.2" },
     { name = "exceptiongroup", marker = "extra == 'mcp'", specifier = ">=1.2.2" },

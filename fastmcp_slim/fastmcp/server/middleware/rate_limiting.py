@@ -1,11 +1,12 @@
 """Rate limiting middleware for protecting FastMCP servers from abuse."""
 
 import time
-from collections import OrderedDict, deque
+from collections import deque
 from collections.abc import Callable
 from typing import Any
 
 import anyio
+from cachetools import TTLCache
 from mcp import McpError
 from mcp.types import ErrorData
 
@@ -116,7 +117,6 @@ class RateLimitingMiddleware(Middleware):
         burst_capacity: int | None = None,
         get_client_id: Callable[[MiddlewareContext], str] | None = None,
         global_limit: bool = False,
-        max_clients: int = 10000,
     ):
         """Initialize rate limiting middleware.
 
@@ -125,18 +125,17 @@ class RateLimitingMiddleware(Middleware):
             burst_capacity: Maximum burst capacity. If None, defaults to 2x max_requests_per_second
             get_client_id: Function to extract client ID from context. If None, uses global limiting
             global_limit: If True, apply limit globally; if False, per-client
-            max_clients: Maximum number of per-client limiters to track. When reached,
-                the least recently used client is evicted to make room for a new client.
         """
         self.max_requests_per_second = max_requests_per_second
         self.burst_capacity = burst_capacity or int(max_requests_per_second * 2)
         self.get_client_id = get_client_id
         self.global_limit = global_limit
-        self._max_clients = max_clients
 
-        # Per-client limiters stored in LRU order (oldest at front, newest at back)
-
-        self._client_limiters: OrderedDict[str, TokenBucketRateLimiter] = OrderedDict()
+        # Storage for rate limiters per client — bounded by TTL+maxsize to
+        # prevent unbounded memory growth from abandoned clients.
+        self.limiters: TTLCache[str, TokenBucketRateLimiter] = TTLCache(
+            maxsize=10000, ttl=3600
+        )
 
         # Global rate limiter
         if self.global_limit:
@@ -145,24 +144,15 @@ class RateLimitingMiddleware(Middleware):
             )
 
     def _get_limiter(self, client_id: str) -> TokenBucketRateLimiter:
-        """Get or create a rate limiter for a client, with LRU eviction.
-
-        When the cache is full, the least-recently-used client is evicted.
-        This is safe because an evicted client was inactive long enough for
-        max_clients other clients to be more recent — by which point their
-        token bucket would have refilled to capacity anyway.
-        """
-        if client_id in self._client_limiters:
-            self._client_limiters.move_to_end(client_id)
-            return self._client_limiters[client_id]
-
-        limiter = TokenBucketRateLimiter(
-            self.burst_capacity, self.max_requests_per_second
-        )
-        self._client_limiters[client_id] = limiter
-        if len(self._client_limiters) > self._max_clients:
-            self._client_limiters.popitem(last=False)
-        return limiter
+        """Get or create a rate limiter for the given client ID."""
+        try:
+            return self.limiters[client_id]
+        except KeyError:
+            limiter = TokenBucketRateLimiter(
+                self.burst_capacity, self.max_requests_per_second
+            )
+            self.limiters[client_id] = limiter
+            return limiter
 
     def _get_client_identifier(self, context: MiddlewareContext) -> str:
         """Get client identifier for rate limiting."""
@@ -214,7 +204,6 @@ class SlidingWindowRateLimitingMiddleware(Middleware):
         max_requests: int,
         window_minutes: int = 1,
         get_client_id: Callable[[MiddlewareContext], str] | None = None,
-        max_clients: int = 10000,
     ):
         """Initialize sliding window rate limiting middleware.
 
@@ -222,35 +211,27 @@ class SlidingWindowRateLimitingMiddleware(Middleware):
             max_requests: Maximum requests allowed in the time window
             window_minutes: Time window in minutes
             get_client_id: Function to extract client ID from context
-            max_clients: Maximum number of per-client limiters to track. When reached,
-                the least recently used client is evicted to make room for a new client.
         """
         self.max_requests = max_requests
         self.window_seconds = window_minutes * 60
         self.get_client_id = get_client_id
-        self._max_clients = max_clients
 
-        self._client_limiters: OrderedDict[str, SlidingWindowRateLimiter] = (
-            OrderedDict()
+        # Storage for rate limiters per client — bounded by TTL+maxsize to
+        # prevent unbounded memory growth from abandoned clients.
+        self.limiters: TTLCache[str, SlidingWindowRateLimiter] = TTLCache(
+            maxsize=10000, ttl=3600
         )
 
     def _get_limiter(self, client_id: str) -> SlidingWindowRateLimiter:
-        """Get or create a rate limiter for a client, with LRU eviction.
-
-        When the cache is full, the least-recently-used client is evicted.
-        This is safe because an evicted client was inactive long enough for
-        max_clients other clients to be more recent — by which point their
-        sliding window would have expired anyway.
-        """
-        if client_id in self._client_limiters:
-            self._client_limiters.move_to_end(client_id)
-            return self._client_limiters[client_id]
-
-        limiter = SlidingWindowRateLimiter(self.max_requests, self.window_seconds)
-        self._client_limiters[client_id] = limiter
-        if len(self._client_limiters) > self._max_clients:
-            self._client_limiters.popitem(last=False)
-        return limiter
+        """Get or create a rate limiter for the given client ID."""
+        try:
+            return self.limiters[client_id]
+        except KeyError:
+            limiter = SlidingWindowRateLimiter(
+                self.max_requests, self.window_seconds
+            )
+            self.limiters[client_id] = limiter
+            return limiter
 
     def _get_client_identifier(self, context: MiddlewareContext) -> str:
         """Get client identifier for rate limiting."""
